@@ -154,3 +154,12 @@ All **26 planning documents** (27 total files in `00-DOCUMENTATION/` including `
 - **Phase 7:** BI Dashboards, Financial Reports Suite & Auto Stock Update
 - **Phase 8:** Multi-Branch, Multi-Terminal LAN Hardening & Future Expansion
 - **Phase 9:** Concurrency Stress Testing, Windows Packaging, Authenticode Signing & Production Release
+
+---
+
+## 10. Phase 1 Foundation Transition Addendum (2026-11-12)
+
+Phase 1 technical foundation has been implemented under approved decisions `OPEN-001` (**Strict Online LAN**), `OPEN-002` (**Pure Angular CDK + SCSS/CSS Tokens**), `OPEN-003` (**Deferred Auth/Tokens — Boundaries Only**), and `OPEN-004` (**Native `.NET 10 BackgroundService` + PostgreSQL Outbox**):
+- **Solution & Tooling:** `Magic.sln` across `.NET 10.0.403`, Node `v26.5.0`, Angular CLI `22.2.6`, and isolated PostgreSQL `18.6` (`magic_dev`).
+- **Verification Snapshot:** `.NET` Release build (`0` warnings, `0` errors), `15/15` `.NET` automated tests passing, Angular production bundle built (`351.44 kB` raw / `90.85 kB` transfer) with `8/8` Vitest specs passing, and `Magic.Desktop.Wpf` cross-targeted compile clean (**Pending Windows 10/11 Verification** for live desktop runtime/WebView2/Windows Service execution).
+- **Next Gate:** All business modules (`Accounting`, `Tax`, `Inventory`, `POS`, `Sales`, `Purchases`, etc.) and concrete `OPEN-003` authentication implementation remain deferred pending explicit user authorization.

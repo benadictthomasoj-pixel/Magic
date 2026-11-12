@@ -232,3 +232,16 @@ CREATE INDEX ix_stock_ledger_item_wh ON inventory.stock_ledger(item_id, warehous
 3. **Idempotency via Unique Constraints:**
    Every API mutation accepts a client-generated `Idempotency-Key` (UUIDv7). An `idempotency_keys` table stores keys and cached response payloads. Concurrent duplicate requests are absorbed safely without duplicate processing.
 
+
+---
+
+## Phase 1 Implemented Migration (`InitialPlatformFoundation` — 2026-11-12)
+
+- **Target Development Instance:** PostgreSQL `18.6` (`magic_dev` database owned by `magic_dev`, isolated from pre-existing databases).
+- **EF Core 10 Migration ID:** `20261112043621_InitialPlatformFoundation`
+- **Idempotent DDL Script:** `02-DATABASE/Migrations/0001_InitialPlatformFoundation.sql`
+- **Migration History Table:** `platform.__ef_migrations_history`
+- **Implemented Phase 1 Tables (Zero Business Tables):**
+  1. `platform.idempotency_records` (`uq_idempotency_records_branch_key_endpoint`, `ix_idempotency_records_expires_at_utc`)
+  2. `platform.outbox_messages` (`ix_outbox_messages_unprocessed WHERE processed_at_utc IS NULL`, concurrency `lock_token` / `lock_expires_at_utc`)
+  3. `audit.system_audit_logs` (`bigint GENERATED ALWAYS AS IDENTITY`, `ix_system_audit_logs_correlation_id`, `ix_system_audit_logs_entity`, `ix_system_audit_logs_event_timestamp`)

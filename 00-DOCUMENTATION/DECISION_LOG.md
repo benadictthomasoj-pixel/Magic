@@ -64,3 +64,15 @@
   3. Confirm current Indian statutory GST rounding rule details (line-level vs. invoice-total rounding under Section 170 CGST Act).
 - **Status:** **UNRESOLVED — Pending User & Statutory Review.**
 
+
+---
+
+## Phase 1 Decision Resolutions (Approved 2026-11-12)
+
+| Decision ID | Resolution | Status | Phase 1 Implementation Enforcement |
+|---|---|---|---|
+| **OPEN-001** | **Strict Online LAN Operation** | `[Approved]` | Single authoritative PostgreSQL 18 cluster (`magic_dev`); zero SQLite, offline sync, or local buffering packages/code. `ConnectivityMonitorService` enforces explicit offline warning state when LAN API is unreachable. |
+| **OPEN-002** | **Pure Angular CDK + Custom SCSS & CSS Design Tokens** | `[Approved]` | Angular 22 (`@angular/cdk ^22.2.7`) with `@layer`-ordered SCSS design tokens, CSS `color-scheme` + `light-dark()`, `BreakpointObserver`, and `CdkTrapFocus`. Zero Angular Material or PrimeNG dependencies. |
+| **OPEN-003** | **Concrete Authentication & Token Crypto Engine** | `[Deferred]` | Interfaces (`ICurrentUserContext`, `IPermissionEvaluator`, `ITokenService`, `ISupervisorElevationService`) and fail-closed `FailClosedPermissionEvaluator` / `DeferredTokenService` boundaries implemented; zero unapproved JWT crypto or Argon2id user tables added yet. |
+| **OPEN-004** | **Native `.NET 10 IHostedService` / `BackgroundService` + PostgreSQL Outbox** | `[Approved]` | Implemented `OutboxProcessorBackgroundService` polling `platform.outbox_messages` via partial index & lock tokens. Zero Quartz.NET dependencies. |
+| **OPEN-005** | **Tax & Statutory Scope (NIC e-Invoicing / Valuation Policy Lock)** | `[Open — Phase 2/4]` | Deferred without blocking Phase 1 technical foundation. |

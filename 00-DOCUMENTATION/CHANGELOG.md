@@ -25,3 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial Phase 0 Planning & Architecture Review Suite (`00-DOCUMENTATION/`).
 
+
+## [0.1.0-phase1] — 2026-11-12
+
+### Added (Phase 1 Technical Foundation)
+- Initialized Git repository on `main` (`.gitignore` protecting `00-DOCUMENTATION/`) with Phase 0 documentation baseline commit `737bcda`.
+- Provisioned isolated PostgreSQL 18 development database `magic_dev` owned by dedicated role `magic_dev`, leaving pre-existing cluster databases untouched.
+- Implemented `.NET 10` Clean Architecture solution (`Magic.sln`): `Magic.Contracts`, `Magic.Domain`, `Magic.Application`, `Magic.Infrastructure`, `Magic.Platform`, and `Magic.Api` with centralized package management (`Directory.Packages.props`) and analyzer enforcement (`Directory.Build.props`).
+- Applied EF Core 10 migration `20261112043621_InitialPlatformFoundation` creating `platform.outbox_messages`, `platform.idempotency_records`, `audit.system_audit_logs`, and `platform.__ef_migrations_history` (plus `02-DATABASE/Migrations/0001_InitialPlatformFoundation.sql`).
+- Implemented `01-SRC/Frontend` Angular 22 + `@angular/cdk` responsive shell, layered SCSS/CSS tokens, tri-state color-scheme switching, strict online LAN connectivity monitor, deferred `OPEN-003` boundary service, and WebView2 bridge service.
+- Authored `01-SRC/Desktop/Magic.Desktop.Wpf` WPF + WebView2 container scaffold (`EnableWindowsTargeting=true`; runtime pending Windows 10/11 verification).
+- Added Windows Service and Mode A/Mode B deployment templates (`04-DEPLOYMENT/`).
+- Verified `15/15` `.NET` tests (`Unit`, `Architecture`, `Integration`) and `8/8` Angular Vitest specs passing.

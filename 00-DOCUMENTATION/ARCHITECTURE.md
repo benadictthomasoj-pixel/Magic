@@ -227,3 +227,31 @@ MAGIC/
 *(Folders in `01-SRC` through `06-PROJECT-MANAGEMENT` are created only after explicit Phase 1 implementation authorization.)*
 
 
+
+---
+
+## Phase 1 Technical Foundation Implementation & Approved Packages (2026-11-12)
+
+### Solution Structure (`Magic.sln`)
+- `01-SRC/Contracts/Magic.Contracts` — API envelopes (`ApiResponse<T>`, `ApiErrorResponse`), HTTP header constants (`MagicHttpHeaders`), diagnostics DTOs, security/audit/event/desktop bridge contracts.
+- `01-SRC/Backend/Magic.Domain` — Pure domain base types (`DomainEntity` with UUIDv7, `DomainException`, `DomainGuard`, `Money` in 64-bit integer paise).
+- `01-SRC/Backend/Magic.Application` — Persistence abstractions (`IUnitOfWork`, `IDatabaseConnectivityProbe`), `ValidationRunner`, `SystemDiagnosticsService`.
+- `01-SRC/Backend/Magic.Infrastructure` — `MagicDbContext` (`Npgsql.EntityFrameworkCore.PostgreSQL`), `PostgresUnitOfWork`, `PostgresAuditLogger`, `OutboxProcessorBackgroundService`, deferred security boundaries, `PostgresHealthCheck`.
+- `01-SRC/Backend/Magic.Platform` — Serilog logging, OpenTelemetry tracing, options validation, Windows Service hosting integration (`Microsoft.Extensions.Hosting.WindowsServices`).
+- `01-SRC/Backend/Magic.Api` — ASP.NET Core .NET 10 Web API (`/health`, `/health/ready`, `/api/v1/system/status`, `/api/v1/system/context`, `/openapi/v1.json`), `GlobalExceptionHandler`, `RequestContextMiddleware`.
+- `01-SRC/Desktop/Magic.Desktop.Wpf` — Cross-targeted `net10.0-windows` WPF + Microsoft WebView2 shell scaffold (compiled on macOS via `EnableWindowsTargeting=true`; runtime execution **Pending Windows 10/11 Verification**).
+- `01-SRC/Frontend` — Angular 22 SPA with `@angular/cdk`, custom SCSS/CSS design tokens, and strict online connectivity monitoring.
+
+### Central NuGet Package Inventory (`Directory.Packages.props`)
+| Package | Version | Justification |
+|---|---|---|
+| `Microsoft.EntityFrameworkCore` / `.Design` | `10.0.15` | .NET 10 LTS ORM, migrations, and transactional unit of work. |
+| `Npgsql.EntityFrameworkCore.PostgreSQL` / `Npgsql` | `10.0.3` | Native PostgreSQL 18 driver, `timestamptz`, `jsonb`, and partial index support. |
+| `Serilog.AspNetCore` | `10.0.0` | Structured correlation-enriched diagnostics across requests and outbox workers. |
+| `OpenTelemetry.Extensions.Hosting` / `.AspNetCore` / `.Http` | `1.21.0` | Local-first request and database latency/trace instrumentation. |
+| `FluentValidation` / `.DependencyInjectionExtensions` | `12.2.0` | Structured field-level command/input validation mapped to `ApiErrorResponse`. |
+| `Asp.Versioning.Mvc` / `.ApiExplorer` / `.OpenApi` | `10.2.1` | Strict `/api/v1/` URI segment versioning paired with .NET 10 OpenAPI per version. |
+| `Microsoft.AspNetCore.OpenApi` | `10.0.15` | OpenAPI 3 document generation (`/openapi/v1.json`). |
+| `Microsoft.Extensions.Hosting.WindowsServices` | `10.0.15` | Native Windows Service lifecycle integration for Mode A/B local LAN hosts. |
+| `Microsoft.Web.WebView2` | `1.0.4314.35` | Embedded Chromium WebView2 host inside `Magic.Desktop.Wpf`. |
+| `Microsoft.NET.Test.Sdk` (`18.12.0`), `xunit` (`2.9.3`), `xunit.runner.visualstudio` (`4.0.1`), `Microsoft.AspNetCore.Mvc.Testing` (`10.0.15`), `NetArchTest.Rules` (`1.3.2`) | `.NET 10 aligned` | Automated unit, Clean Architecture dependency boundary, and live PostgreSQL API integration suites. |

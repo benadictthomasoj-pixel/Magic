@@ -70,3 +70,17 @@ Financial software requires rigorous, deterministic verification across all edge
 - Tests assert that an operator with `pos:checkout` cannot execute `accounting:periods:lock` or `admin:users:create`.
 - Tests verify that supervisor override PIN validation fails when an invalid PIN is supplied.
 
+
+---
+
+## Phase 1 Verified Test Execution Results (2026-11-12)
+
+Executed in Release configuration on macOS ARM64 (`.NET 10.0.403`, Node `v26.5.0`, Angular `22.2.6`, Vitest `5.1.0`) against isolated PostgreSQL `18.6` (`magic_dev`):
+
+| Test Suite | Location | Outcome | Scope Verified |
+|---|---|---|---|
+| Domain Unit Tests (`Magic.Domain.UnitTests`) | `03-TESTS/Unit/Magic.Domain.UnitTests/` | **5 / 5 Passed** | 64-bit `Money` arithmetic/overflow, `DomainGuard`, `DomainEntity` UUIDv7 & domain events |
+| Architecture Boundary Tests (`Magic.ArchitectureTests`) | `03-TESTS/Architecture/Magic.ArchitectureTests/` | **4 / 4 Passed** | Clean Architecture dependency rules (`Contracts`, `Domain`, `Application`) + zero SQLite/Quartz references |
+| Backend & DB Integration Tests (`Magic.Api.IntegrationTests`) | `03-TESTS/Integration/Magic.Api.IntegrationTests/` | **6 / 6 Passed** | `/health`, PostgreSQL `/health/ready`, `/api/v1/system/status`, `/api/v1/system/context` header propagation, RFC 7807 `ApiErrorResponse`, OpenAPI `/openapi/v1.json` |
+| Frontend Unit Tests (`Vitest` / Angular TestBed) | `01-SRC/Frontend/src/app/**/*.spec.ts` | **8 / 8 Passed (6 files)** | `ThemeService` dark/light meta state, `AuthBoundaryService` (`OPEN-003` fail-closed), `correlationInterceptor`, `ConnectivityMonitorService` strict LAN state, `ShellComponent`, `App` |
+| WPF Desktop + E2E UI Tests | `03-TESTS/Desktop/` | **Pending Windows 10/11 Verification** | Live WPF/WebView2 rendering, bridge runtime, and FlaUI/Playwright E2E cannot run on macOS ARM64 |

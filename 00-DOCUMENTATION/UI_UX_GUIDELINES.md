@@ -61,3 +61,13 @@ The MAGIC user interface is built with **Angular (TypeScript)** using SCSS and C
 3. **High-Contrast Dark & Light Themes:**
    - Support crisp, contrast-optimized themes compliant with WCAG AA standards to reduce eye strain in 10-hour retail shift environments.
 
+
+---
+
+## Phase 1 Angular CDK & CSS Design Token Implementation (`01-SRC/Frontend/` — 2026-11-12)
+
+- **Approved Foundation (`OPEN-002`):** `@angular/cdk ^22.2.7` (`BreakpointObserver`, `CdkTrapFocus`) paired with custom SCSS/CSS design tokens; zero Angular Material or PrimeNG packages.
+- **Layered Stylesheet Architecture:** `src/styles.scss` orders `@layer reset, base, theme, components, utilities;` via `_layers.scss`, `_reset.scss`, and `_tokens.scss`.
+- **Adaptive Light / Dark / Forced-Colors System:** Uses `<meta name="color-scheme" content="light dark">` + blocking FOUC-prevention inline script + `:root` `light-dark()` tokens with `@media (prefers-color-scheme: dark)` and `@media (forced-colors: active)` fallbacks, driven by `ThemeService` (`System` / `Light` / `Dark`).
+- **Accessibility Foundation:** Single `<main id="main-content" tabindex="-1">`, skip link (`a.skip-link`), `<nav aria-label="Primary">` with `aria-current="page"`, 44px minimum target sizing (`2.75rem`), `3px` `:focus-visible` outlines, geometric + text status pills (`StatusBadgeComponent`), and ARIA live regions in `ConnectivityBannerComponent`.
+- **Scope Boundary:** Phase 1 implements only diagnostic shell routes (`/system/status`, `/system/preferences`); business ERP screens begin in Phase 2+.
