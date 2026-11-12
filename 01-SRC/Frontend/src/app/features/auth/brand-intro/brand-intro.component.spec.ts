@@ -22,33 +22,30 @@ describe('BrandIntroComponent', () => {
     vi.useRealTimers();
   });
 
-  it('renders official SVG emblem components and calligraphy stroke masks', () => {
+  it('renders official emblem components and MAGIC wordmark glyphs', () => {
     const fixture = TestBed.createComponent(BrandIntroComponent);
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const svg = compiled.querySelector('.magic-intro-svg');
-    const darkM = compiled.querySelector('.img-dark-m') as SVGImageElement;
-    const goldWing = compiled.querySelector('.img-gold-wing') as SVGImageElement;
-    const wordmark = compiled.querySelector('.img-wordmark') as SVGImageElement;
+    const darkM = compiled.querySelector('.emblem-dark') as HTMLImageElement;
+    const goldWing = compiled.querySelector('.emblem-gold') as HTMLImageElement;
+    const letterM = compiled.querySelector('.letter-m') as HTMLImageElement;
+    const letterA = compiled.querySelector('.letter-a') as HTMLImageElement;
+    const letterG = compiled.querySelector('.letter-g') as HTMLImageElement;
+    const letterI = compiled.querySelector('.letter-i') as HTMLImageElement;
+    const letterC = compiled.querySelector('.letter-c') as HTMLImageElement;
 
-    expect(svg).toBeTruthy();
     expect(darkM).toBeTruthy();
-    expect(darkM.getAttribute('href')).toBe('/branding/magic-emblem-dark.png');
+    expect(darkM.getAttribute('src')).toBe('/branding/magic-emblem-dark-tight.png');
 
     expect(goldWing).toBeTruthy();
-    expect(goldWing.getAttribute('href')).toBe('/branding/magic-emblem-gold.png');
+    expect(goldWing.getAttribute('src')).toBe('/branding/magic-emblem-gold-tight.png');
 
-    expect(wordmark).toBeTruthy();
-    expect(wordmark.getAttribute('href')).toBe('/branding/magic-wordmark.png');
-
-    // Calligraphy pen strokes
-    expect(compiled.querySelector('.stroke-m')).toBeTruthy();
-    expect(compiled.querySelector('.stroke-a-apex')).toBeTruthy();
-    expect(compiled.querySelector('.stroke-a-bar')).toBeTruthy();
-    expect(compiled.querySelector('.stroke-g')).toBeTruthy();
-    expect(compiled.querySelector('.stroke-i')).toBeTruthy();
-    expect(compiled.querySelector('.stroke-c')).toBeTruthy();
+    expect(letterM).toBeTruthy();
+    expect(letterA).toBeTruthy();
+    expect(letterG).toBeTruthy();
+    expect(letterI).toBeTruthy();
+    expect(letterC).toBeTruthy();
 
     // Visual restrictions check: No skip button, no extra text, no cards
     expect(compiled.querySelector('.skip-button')).toBeNull();
@@ -76,8 +73,8 @@ describe('BrandIntroComponent', () => {
     fixture.detectChanges();
 
     // Fast-forward tick for remount
-    vi.advanceTimersByTime(25);
+    vi.advanceTimersByTime(35);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.magic-intro-svg')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.logo-stage')).toBeTruthy();
   });
 });
