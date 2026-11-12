@@ -84,3 +84,4 @@ public sealed record TerminalContextDto
     public required string Code { get; init; }
     public required string MachineName { get; init; }
 }
+

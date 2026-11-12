@@ -558,3 +558,4 @@ public sealed class AuthenticationApplicationService(
         };
     }
 }
+

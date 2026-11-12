@@ -106,3 +106,4 @@ MAGIC rejects client-supplied tenant headers if they conflict with verified iden
 * **Process Isolation:** The WebView2 runtime operates in a sandboxed process separate from the host WPF application.
 * **Origin Boundary:** All API calls are made over explicit HTTP/HTTPS loopback or local network addresses with strict CORS and CSP policies.
 * **Session Termination:** Logging out clears client tokens immediately, and calls the backend `/logout` endpoint to invalidate server-side refresh tokens.
+

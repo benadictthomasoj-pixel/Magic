@@ -127,3 +127,4 @@ public sealed class SecurityAuditEventRecord
     public string? DetailsJson { get; set; }
     public DateTime TimestampUtc { get; set; }
 }
+

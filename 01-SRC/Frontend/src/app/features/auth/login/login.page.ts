@@ -32,8 +32,8 @@ export class LoginPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   protected readonly showIntro = signal<boolean>(!this.introState.hasCompletedIntro());
-  protected readonly username = signal<string>('');
-  protected readonly password = signal<string>('');
+  protected username: string = '';
+  protected password: string = '';
   protected readonly showPassword = signal<boolean>(false);
   protected readonly isLoading = signal<boolean>(false);
   protected readonly errorMessage = signal<string | null>(null);
@@ -75,14 +75,14 @@ export class LoginPage implements OnInit {
   }
 
   protected fillCredentials(user: string, pass: string): void {
-    this.username.set(user);
-    this.password.set(pass);
+    this.username = user;
+    this.password = pass;
     this.errorMessage.set(null);
   }
 
   protected async onSubmit(): Promise<void> {
-    const userVal = this.username().trim();
-    const passVal = this.password();
+    const userVal = this.username.trim();
+    const passVal = this.password;
 
     if (!userVal || !passVal) {
       this.errorMessage.set('Please enter both username/email and password.');

@@ -113,3 +113,4 @@ MAGIC ERP enforces strict financial separation of duties:
 1. **Posting Segregation:** The `StoreManager` role can create draft vouchers (`accounting:vouchers:create`) but **cannot** post vouchers to the general ledger or lock fiscal periods. Only `Administrator` and `Accountant` possess posting authority.
 2. **Cashier Isolation:** The `Cashier` role is strictly confined to POS sales and receipt issuing. Any attempt by a cashier token to access accounting balances, chart of accounts, or administrative user lists immediately returns `HTTP 403 Forbidden` and emits a security audit violation.
 3. **Multi-Tenant Boundary:** In addition to role permissions, `AccountingBaseController` matches the token's `company_id` and `branch_id` against the resource tenant. Cross-tenant reads and writes are prevented regardless of permission grants.
+

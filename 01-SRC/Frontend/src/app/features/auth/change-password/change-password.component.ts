@@ -183,17 +183,17 @@ export class ChangePasswordComponent {
   private readonly auth = inject(AuthBoundaryService);
   private readonly router = inject(Router);
 
-  protected readonly currentPassword = signal('');
-  protected readonly newPassword = signal('');
-  protected readonly confirmPassword = signal('');
+  protected currentPassword = '';
+  protected newPassword = '';
+  protected confirmPassword = '';
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly successMessage = signal<string | null>(null);
 
   protected async onSubmit(): Promise<void> {
-    const cur = this.currentPassword();
-    const np = this.newPassword();
-    const cp = this.confirmPassword();
+    const cur = this.currentPassword;
+    const np = this.newPassword;
+    const cp = this.confirmPassword;
 
     if (!cur || !np || !cp) {
       this.errorMessage.set('All fields are required.');
@@ -231,3 +231,4 @@ export class ChangePasswordComponent {
     this.router.navigate(['/accounting/dashboard']);
   }
 }
+

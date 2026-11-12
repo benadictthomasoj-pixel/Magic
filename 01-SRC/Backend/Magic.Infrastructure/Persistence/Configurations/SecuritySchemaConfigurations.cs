@@ -161,3 +161,4 @@ public sealed class SecurityAuditEventConfiguration : IEntityTypeConfiguration<S
         builder.HasIndex(x => x.EventType);
     }
 }
+

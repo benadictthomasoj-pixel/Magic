@@ -118,3 +118,4 @@ If an attacker intercepts or steals an already-used refresh token and attempts t
   - The endpoint returns `HTTP 423 Locked`.
 - **Auto-Recovery:** Once 15 minutes have elapsed, the next login attempt automatically clears the lockout and resets `FailedLoginAttempts` to 0 upon successful password verification.
 - **Immediate Reset on Success:** Any successful login immediately resets `FailedLoginAttempts = 0`, `IsLockedOut = false`, `LockoutEndUtc = null`.
+

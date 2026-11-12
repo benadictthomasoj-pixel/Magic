@@ -169,3 +169,4 @@ The `security` schema isolates all identity, authentication, access control, ses
 **Indexes:**
 - `IX_audit_events_CompanyId_TimestampUtc`
 - `IX_audit_events_EventType`
+
