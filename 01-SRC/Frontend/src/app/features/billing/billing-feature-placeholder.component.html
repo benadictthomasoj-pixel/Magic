@@ -1,0 +1,60 @@
+<div class="feature-container">
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Billing / {{ featureCategory }}</div>
+      <h1 class="page-title">{{ featureTitle }}</h1>
+      <p class="page-subtitle">Commercial module feature specification and architecture readiness.</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/billing/dashboard" class="btn btn-secondary">
+        ← Billing Overview
+      </a>
+      <a routerLink="/accounting/dashboard" class="btn btn-outline">
+        Accounting Workspace
+      </a>
+    </div>
+  </header>
+
+  <!-- Coming Soon Card -->
+  <div class="card placeholder-card">
+    <div class="placeholder-icon-wrap">
+      <span class="placeholder-icon">{{ featureIcon }}</span>
+    </div>
+
+    <div class="status-badge-wrap">
+      <span class="status-pill">
+        <span class="dot"></span>
+        Phase 3 Architecture — Coming Soon
+      </span>
+    </div>
+
+    <h2 class="placeholder-title">{{ featureTitle }}</h2>
+    <p class="placeholder-desc">{{ featureDescription }}</p>
+
+    <!-- Scope Checklist -->
+    <div class="scope-box">
+      <h3 class="scope-heading">Planned Architectural Specifications</h3>
+      <ul class="scope-list">
+        @for (item of plannedScope; track item) {
+          <li>
+            <span class="check-icon">✓</span>
+            <span>{{ item }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+
+    <!-- Integration Indicator -->
+    <div class="integration-notice">
+      <div class="notice-col">
+        <span class="label">Accounting Core Integration:</span>
+        <span class="val font-mono">100% Phase 2 Foundation Ready</span>
+      </div>
+      <div class="notice-col">
+        <span class="label">Commercial Module Stage:</span>
+        <span class="val font-semibold">Authorized for Phase 3 Delivery</span>
+      </div>
+    </div>
+  </div>
+</div>

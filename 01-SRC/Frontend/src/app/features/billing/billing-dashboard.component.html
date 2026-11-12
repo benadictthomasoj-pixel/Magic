@@ -1,0 +1,70 @@
+<div class="billing-dashboard-container">
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Billing / Workspace Overview</div>
+      <h1 class="page-title">Billing & Operations Workspace</h1>
+      <p class="page-subtitle">Unified point of sale, sales invoicing, inventory tracking, and purchasing suite.</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/accounting/dashboard" class="btn btn-outline">
+        <span class="icon">📊</span> Switch to Accounting
+      </a>
+    </div>
+  </header>
+
+  <!-- Architectural Status Banner -->
+  <div class="phase-notice-card">
+    <div class="notice-badge">Phase 3 Implementation Scheduled</div>
+    <div class="notice-body">
+      <h2>Billing & Commercial Operations Architecture</h2>
+      <p>
+        The <strong>MAGIC Phase 2 Accounting Foundation</strong> is fully operational with double-entry ledger posting,
+        audit trail immutability, and fiscal governance. The <strong>Billing Workspace</strong> will connect directly to this
+        accounting core in Phase 3, allowing every sale, POS checkout, purchase receipt, and inventory movement to post
+        balanced journal vouchers automatically.
+      </p>
+      <div class="notice-points">
+        <div class="point-item">
+          <span class="point-icon">✓</span>
+          <span>Zero manual ledger reconciliation</span>
+        </div>
+        <div class="point-item">
+          <span class="point-icon">✓</span>
+          <span>Native GST statutory e-Invoicing ready</span>
+        </div>
+        <div class="point-item">
+          <span class="point-icon">✓</span>
+          <span>Offline LAN resilient caching for high-speed POS</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Planned Modules Grid -->
+  <div class="modules-overview">
+    <div class="section-title-row">
+      <h3 class="section-title">Planned Commercial Capabilities</h3>
+      <span class="section-badge">6 Core Functional Areas</span>
+    </div>
+
+    <div class="capabilities-grid">
+      @for (item of plannedCapabilities; track item.title) {
+        <div class="capability-card">
+          <div class="card-top">
+            <span class="cap-icon">{{ item.icon }}</span>
+            <span class="cap-tag">{{ item.tag }}</span>
+          </div>
+          <h4 class="cap-title">{{ item.title }}</h4>
+          <p class="cap-desc">{{ item.description }}</p>
+          <div class="cap-footer">
+            <span class="status-indicator">
+              <span class="dot"></span>
+              Scheduled for Phase 3
+            </span>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

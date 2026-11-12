@@ -22,10 +22,7 @@ describe('ShellComponent', () => {
     httpMock.verify();
   });
 
-  it('renders accessible landmark structure, skip link, and cycles theme preference', async () => {
-    const fixture = TestBed.createComponent(ShellComponent);
-    fixture.detectChanges();
-
+  function flushSystemRequests(): void {
     const statusReq = httpMock.expectOne(`${environment.apiBaseUrl}/v1/system/status`);
     statusReq.flush({
       success: true,
@@ -57,6 +54,13 @@ describe('ShellComponent', () => {
         openDecisions: [],
       },
     });
+  }
+
+  it('renders accessible landmark structure, skip link, and cycles theme preference', async () => {
+    const fixture = TestBed.createComponent(ShellComponent);
+    fixture.detectChanges();
+
+    flushSystemRequests();
 
     await fixture.whenStable();
     fixture.detectChanges();
@@ -71,5 +75,53 @@ describe('ShellComponent', () => {
     themeBtn.click();
     fixture.detectChanges();
     expect(themeBtn.textContent).toContain('Theme: light');
+  });
+
+  it('renders top-centre module switcher and toggles navigation between Billing and Accounting', async () => {
+    const fixture = TestBed.createComponent(ShellComponent);
+    fixture.detectChanges();
+
+    flushSystemRequests();
+
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+
+    // Check switcher exists
+    const switcher = el.querySelector('.module-switcher');
+    expect(switcher).toBeTruthy();
+
+    const billingTab = el.querySelector('#module-tab-billing') as HTMLButtonElement;
+    const accountingTab = el.querySelector('#module-tab-accounting') as HTMLButtonElement;
+    expect(billingTab).toBeTruthy();
+    expect(accountingTab).toBeTruthy();
+
+    // Default is Accounting
+    expect(accountingTab.classList.contains('active')).toBe(true);
+    expect(el.querySelector('.workspace-pill')?.textContent).toContain('Accounting Workspace');
+    expect(el.textContent).toContain('Chart of Accounts');
+    expect(el.textContent).not.toContain('POS / New Bill');
+
+    // Switch to Billing
+    billingTab.click();
+    fixture.detectChanges();
+
+    expect(billingTab.classList.contains('active')).toBe(true);
+    expect(accountingTab.classList.contains('active')).toBe(false);
+    expect(el.querySelector('.workspace-pill')?.textContent).toContain('Billing Workspace');
+    expect(el.textContent).toContain('POS / New Bill');
+    expect(el.textContent).toContain('Cash Closing');
+    expect(el.textContent).not.toContain('Chart of Accounts');
+
+    // Switch back to Accounting
+    accountingTab.click();
+    fixture.detectChanges();
+
+    expect(accountingTab.classList.contains('active')).toBe(true);
+    expect(billingTab.classList.contains('active')).toBe(false);
+    expect(el.querySelector('.workspace-pill')?.textContent).toContain('Accounting Workspace');
+    expect(el.textContent).toContain('Chart of Accounts');
+    expect(el.textContent).not.toContain('POS / New Bill');
   });
 });

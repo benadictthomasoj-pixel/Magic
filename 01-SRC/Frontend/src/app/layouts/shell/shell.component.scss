@@ -9,26 +9,28 @@
   min-block-size: 100dvb;
 }
 
+/* ==========================================================================
+   Header Architecture: 3-Column Layout (Left: Logo, Centre: Switcher, Right: Context)
+   ========================================================================== */
 .shell-header {
   grid-area: header;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: var(--magic-space-3);
-  padding: 10px 24px;
+  padding: 8px 24px;
   background-color: #0f172a;
   color: #f8fafc;
   border-block-end: 1px solid #1e293b;
+  position: relative;
+  z-index: 100;
 }
 
-.brand-group,
-.header-controls {
+.header-left {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--magic-space-3);
-  min-inline-size: 0;
+  gap: 12px;
+  justify-self: start;
 }
 
 .brand-link {
@@ -67,6 +69,86 @@
   letter-spacing: 0.02em;
 }
 
+/* ==========================================================================
+   Top-Centre Module Switcher [ Billing ] [ Accounting ]
+   ========================================================================== */
+.header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+}
+
+.module-switcher {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 3px;
+  border-radius: 9px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+  position: relative;
+
+  .switcher-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 18px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 180ms ease-in-out;
+    user-select: none;
+
+    .tab-icon {
+      font-size: 0.9375rem;
+      opacity: 0.75;
+      transition: transform 180ms ease;
+    }
+
+    .tab-label {
+      letter-spacing: 0.02em;
+    }
+
+    &:hover:not(.active) {
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &:focus-visible {
+      outline: 2px solid #f59e0b;
+      outline-offset: 1px;
+    }
+
+    &.active {
+      background: #f8fafc;
+      color: #0f172a;
+      font-weight: 700;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+
+      .tab-icon {
+        opacity: 1;
+        transform: scale(1.08);
+      }
+    }
+  }
+}
+
+/* ==========================================================================
+   Header Right: Context, Status, Theme & Sign Out
+   ========================================================================== */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-self: end;
+}
+
 .enterprise-context-badge {
   display: flex;
   align-items: center;
@@ -78,7 +160,7 @@
   font-size: 0.8125rem;
   color: #e2e8f0;
 
-  @media (max-width: 960px) {
+  @media (max-width: 1100px) {
     display: none;
   }
 
@@ -96,6 +178,12 @@
     color: #f59e0b;
     font-weight: 700;
   }
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .menu-toggle,
@@ -129,6 +217,9 @@
   }
 }
 
+/* ==========================================================================
+   Sidebar Navigation Architecture
+   ========================================================================== */
 .shell-sidebar {
   grid-area: sidebar;
   display: flex;
@@ -141,16 +232,49 @@
   overflow-y: auto;
 }
 
+.workspace-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  margin-bottom: 12px;
+
+  .pill-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+
+    &.dot-billing {
+      background: #3b82f6;
+    }
+
+    &.dot-accounting {
+      background: #10b981;
+    }
+  }
+
+  .pill-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #334155;
+  }
+}
+
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
 .nav-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 
   .section-heading {
     font-size: 0.6875rem;
@@ -165,7 +289,7 @@
 
 .nav-list {
   display: grid;
-  gap: 3px;
+  gap: 2px;
   list-style: none;
   padding: 0;
   margin: 0;
@@ -275,6 +399,43 @@
   font-weight: 600;
 }
 
+/* ==========================================================================
+   Responsive Adaptations
+   ========================================================================== */
+@media (max-width: 800px) {
+  .shell-header {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'left right'
+      'center center';
+    row-gap: 10px;
+    padding: 10px 16px;
+  }
+
+  .header-left {
+    grid-area: left;
+  }
+
+  .header-right {
+    grid-area: right;
+  }
+
+  .header-center {
+    grid-area: center;
+    width: 100%;
+  }
+
+  .module-switcher {
+    width: 100%;
+    justify-content: center;
+
+    .switcher-tab {
+      flex: 1;
+      justify-content: center;
+    }
+  }
+}
+
 @media (max-width: 47.999rem) {
   .shell-grid {
     grid-template-areas:
@@ -286,7 +447,7 @@
 
   .shell-sidebar.drawer-open {
     grid-area: main;
-    z-index: 20;
+    z-index: 200;
     border-inline-end: 0;
     border-block-end: 2px solid #cbd5e1;
   }

@@ -3,7 +3,8 @@
 <div class="shell-grid">
   <!-- Top App Header -->
   <header class="shell-header">
-    <div class="brand-group">
+    <!-- Header Left: Logo and Application Identity -->
+    <div class="header-left">
       @if (isNarrowScreen()) {
         <button
           type="button"
@@ -11,11 +12,12 @@
           [attr.aria-expanded]="mobileNavOpen()"
           aria-controls="primary-navigation"
           (click)="toggleMobileNav()"
+          aria-label="Toggle navigation menu"
         >
-          {{ mobileNavOpen() ? 'Close Menu' : 'Menu' }}
+          <span class="menu-icon">{{ mobileNavOpen() ? '✕' : '☰' }}</span>
         </button>
       }
-      <a class="brand-link" routerLink="/accounting/dashboard">
+      <a class="brand-link" [routerLink]="currentModule() === 'billing' ? '/billing/dashboard' : '/accounting/dashboard'">
         <img
           src="/branding/magic-logo.jpg"
           alt="MAGIC Logo"
@@ -30,65 +32,101 @@
       </a>
     </div>
 
-    <!-- Active Enterprise Context (Company, Branch, FY) -->
-    <div class="enterprise-context-badge">
-      <div class="context-item">
-        <span class="context-icon">🏢</span>
-        <span class="context-text font-semibold">{{ companyName() }}</span>
-      </div>
-      <span class="context-divider">/</span>
-      <div class="context-item">
-        <span class="context-icon">📍</span>
-        <span class="context-text">{{ branchName() }}</span>
-      </div>
-      <span class="context-divider">/</span>
-      <div class="context-item fy-tag">
-        <span class="context-text font-mono font-bold">{{ fiscalYear() }}</span>
-      </div>
+    <!-- Header Centre: Top-Centre Module Switcher -->
+    <div class="header-center">
+      <nav class="module-switcher" role="tablist" aria-label="Business Workspace Switcher">
+        <button
+          type="button"
+          role="tab"
+          class="switcher-tab"
+          [class.active]="currentModule() === 'billing'"
+          [attr.aria-selected]="currentModule() === 'billing'"
+          (click)="switchModule('billing')"
+          id="module-tab-billing"
+          aria-controls="primary-navigation"
+        >
+          <span class="tab-icon" aria-hidden="true">🛒</span>
+          <span class="tab-label">Billing</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          class="switcher-tab"
+          [class.active]="currentModule() === 'accounting'"
+          [attr.aria-selected]="currentModule() === 'accounting'"
+          (click)="switchModule('accounting')"
+          id="module-tab-accounting"
+          aria-controls="primary-navigation"
+        >
+          <span class="tab-icon" aria-hidden="true">📊</span>
+          <span class="tab-label">Accounting</span>
+        </button>
+      </nav>
     </div>
 
-    <div class="header-controls">
-      <magic-status-badge
-        [label]="
-          monitor.connectivityState() === 'connected'
-            ? 'Online LAN'
-            : monitor.connectivityState() === 'degraded'
-              ? 'LAN Degraded'
-              : monitor.connectivityState() === 'checking'
-                ? 'Probing LAN'
-                : 'LAN Offline'
-        "
-        [tone]="
-          monitor.connectivityState() === 'connected'
-            ? 'ok'
-            : monitor.connectivityState() === 'degraded'
-              ? 'warn'
-              : monitor.connectivityState() === 'checking'
-                ? 'neutral'
-                : 'error'
-        "
-      />
-      <button
-        type="button"
-        class="theme-cycle"
-        (click)="cycleTheme()"
-        [attr.aria-label]="'Switch color scheme. Current: ' + theme.preference()"
-      >
-        Theme: {{ theme.preference() }}
-      </button>
+    <!-- Header Right: Enterprise Context, Status & Controls -->
+    <div class="header-right">
+      <!-- Active Enterprise Context (Company, Branch, FY) -->
+      <div class="enterprise-context-badge">
+        <div class="context-item">
+          <span class="context-icon" aria-hidden="true">🏢</span>
+          <span class="context-text font-semibold">{{ companyName() }}</span>
+        </div>
+        <span class="context-divider">/</span>
+        <div class="context-item">
+          <span class="context-icon" aria-hidden="true">📍</span>
+          <span class="context-text">{{ branchName() }}</span>
+        </div>
+        <span class="context-divider">/</span>
+        <div class="context-item fy-tag">
+          <span class="context-text font-mono font-bold">{{ fiscalYear() }}</span>
+        </div>
+      </div>
 
-      <button
-        type="button"
-        class="signout-button"
-        (click)="signOut()"
-        aria-label="Sign out of current workspace"
-      >
-        Sign Out
-      </button>
+      <div class="header-controls">
+        <magic-status-badge
+          [label]="
+            monitor.connectivityState() === 'connected'
+              ? 'Online LAN'
+              : monitor.connectivityState() === 'degraded'
+                ? 'LAN Degraded'
+                : monitor.connectivityState() === 'checking'
+                  ? 'Probing LAN'
+                  : 'LAN Offline'
+          "
+          [tone]="
+            monitor.connectivityState() === 'connected'
+              ? 'ok'
+              : monitor.connectivityState() === 'degraded'
+                ? 'warn'
+                : monitor.connectivityState() === 'checking'
+                  ? 'neutral'
+                  : 'error'
+          "
+        />
+        <button
+          type="button"
+          class="theme-cycle"
+          (click)="cycleTheme()"
+          [attr.aria-label]="'Switch color scheme. Current: ' + theme.preference()"
+        >
+          Theme: {{ theme.preference() }}
+        </button>
+
+        <button
+          type="button"
+          class="signout-button"
+          (click)="signOut()"
+          aria-label="Sign out of current workspace"
+        >
+          Sign Out
+        </button>
+      </div>
     </div>
   </header>
 
-  <!-- Navigation Sidebar -->
+  <!-- Navigation Sidebar (Filtered by Selected Module) -->
   @if (!isNarrowScreen() || mobileNavOpen()) {
     <aside
       id="primary-navigation"
@@ -96,8 +134,14 @@
       [class.drawer-open]="isNarrowScreen() && mobileNavOpen()"
       [cdkTrapFocus]="isNarrowScreen() && mobileNavOpen()"
     >
+      <!-- Active Workspace Tag -->
+      <div class="workspace-pill">
+        <span class="pill-dot" [class.dot-billing]="currentModule() === 'billing'" [class.dot-accounting]="currentModule() === 'accounting'"></span>
+        <span class="pill-title">{{ currentModule() === 'billing' ? 'Billing Workspace' : 'Accounting Workspace' }}</span>
+      </div>
+
       <nav aria-label="Primary" class="sidebar-nav">
-        @for (sec of navSections; track sec.title) {
+        @for (sec of navSections(); track sec.title) {
           <div class="nav-section">
             <div class="section-heading">{{ sec.title }}</div>
             <ul class="nav-list">
@@ -105,7 +149,7 @@
                 <li>
                   @if (item.disabled) {
                     <div class="nav-link disabled-link">
-                      <span class="nav-item-icon">{{ item.icon }}</span>
+                      <span class="nav-item-icon" aria-hidden="true">{{ item.icon }}</span>
                       <span class="nav-label">{{ item.label }}</span>
                       @if (item.badge) {
                         <span class="nav-badge">{{ item.badge }}</span>
@@ -119,7 +163,7 @@
                       ariaCurrentWhenActive="page"
                       (click)="closeMobileNav()"
                     >
-                      <span class="nav-item-icon">{{ item.icon }}</span>
+                      <span class="nav-item-icon" aria-hidden="true">{{ item.icon }}</span>
                       <span class="nav-label">{{ item.label }}</span>
                     </a>
                   }
@@ -144,7 +188,7 @@
 
   <!-- App Footer -->
   <footer class="shell-footer">
-    <span>MAGIC Greenfield ERP · Phase 2 Accounting Architecture</span>
+    <span>MAGIC Greenfield ERP · {{ currentModule() === 'billing' ? 'Commercial & POS Architecture' : 'Double-Entry General Ledger' }}</span>
     <span>PostgreSQL 18.6 · ASP.NET Core 10 · Strict Online LAN (OPEN-001)</span>
   </footer>
 </div>
