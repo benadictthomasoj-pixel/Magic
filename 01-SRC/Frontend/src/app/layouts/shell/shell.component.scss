@@ -32,26 +32,41 @@
 
 .brand-link {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--magic-space-2);
+  align-items: center;
+  gap: var(--magic-space-3);
   color: var(--magic-text-primary);
   text-decoration: none;
+}
+
+.shell-header-logo {
+  display: block;
+  width: 36px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.brand-text-col {
+  display: flex;
+  flex-direction: column;
 }
 
 .brand-name {
   font-size: 1.125rem;
   font-weight: 700;
   letter-spacing: 0.04em;
+  line-height: 1.1;
 }
 
 .brand-tag {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--magic-text-muted);
 }
 
 .menu-toggle,
-.theme-cycle {
+.theme-cycle,
+.signout-button {
   min-block-size: 2.75rem;
   min-inline-size: 2.75rem;
   padding-inline: var(--magic-space-3);
@@ -61,6 +76,24 @@
   color: var(--magic-text-primary);
   font-weight: 600;
   cursor: pointer;
+  transition: all 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: #e7aa1b;
+    outline: none;
+  }
+}
+
+.signout-button {
+  font-size: 0.8125rem;
+  border-color: var(--magic-border-subtle);
+
+  &:hover {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border-color: #f87171;
+  }
 }
 
 .shell-sidebar {

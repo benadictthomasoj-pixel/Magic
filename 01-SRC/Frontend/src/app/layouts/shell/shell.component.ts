@@ -2,7 +2,7 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthBoundaryService } from '../../core/services/auth-boundary.service';
 import { ConnectivityMonitorService } from '../../core/services/connectivity-monitor.service';
 import { ThemePreference, ThemeService } from '../../core/services/theme.service';
@@ -24,6 +24,7 @@ export class ShellComponent implements OnInit {
   protected readonly monitor = inject(ConnectivityMonitorService);
   protected readonly theme = inject(ThemeService);
   protected readonly auth = inject(AuthBoundaryService);
+  private readonly router = inject(Router);
 
   protected readonly isNarrowScreen = signal(false);
   protected readonly mobileNavOpen = signal(false);
@@ -64,6 +65,11 @@ export class ShellComponent implements OnInit {
     const currentIndex = order.indexOf(this.theme.preference());
     const next = order[(currentIndex + 1) % order.length];
     this.theme.setPreference(next);
+  }
+
+  protected signOut(): void {
+    this.auth.logout();
+    this.router.navigate(['/login']);
   }
 }
 

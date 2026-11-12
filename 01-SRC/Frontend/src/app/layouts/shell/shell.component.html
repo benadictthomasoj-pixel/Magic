@@ -15,8 +15,17 @@
         </button>
       }
       <a class="brand-link" routerLink="/system/status">
-        <span class="brand-name">MAGIC</span>
-        <span class="brand-tag">Universal Business Management ERP · Phase 1</span>
+        <img
+          src="/branding/magic-logo.jpg"
+          alt="MAGIC Logo"
+          class="shell-header-logo"
+          width="40"
+          height="27"
+        />
+        <div class="brand-text-col">
+          <span class="brand-name">MAGIC</span>
+          <span class="brand-tag">Universal Business Management ERP</span>
+        </div>
       </a>
     </div>
 
@@ -48,6 +57,15 @@
         [attr.aria-label]="'Switch color scheme. Current: ' + theme.preference()"
       >
         Theme: {{ theme.preference() }}
+      </button>
+
+      <button
+        type="button"
+        class="signout-button"
+        (click)="signOut()"
+        aria-label="Sign out of current workspace"
+      >
+        Sign Out
       </button>
     </div>
   </header>
