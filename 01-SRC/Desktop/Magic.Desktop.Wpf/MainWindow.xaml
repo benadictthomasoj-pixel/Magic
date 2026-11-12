@@ -1,0 +1,14 @@
+<Window x:Class="Magic.Desktop.Wpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="MAGIC — Universal Business Management ERP"
+        Height="800"
+        Width="1280"
+        MinHeight="640"
+        MinWidth="1024">
+    <Grid>
+        <wv2:WebView2 x:Name="MagicWebView" />
+    </Grid>
+</Window>
+

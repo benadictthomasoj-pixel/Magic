@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Magic.Domain</RootNamespace>
+    <AssemblyName>Magic.Domain</AssemblyName>
+  </PropertyGroup>
+</Project>
+
