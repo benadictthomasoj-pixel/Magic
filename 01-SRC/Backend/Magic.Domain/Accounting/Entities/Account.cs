@@ -18,9 +18,11 @@ public class Account : DomainEntity, IAuditableEntity
     public AccountRootClass RootClass { get; private set; }
     public AccountNormalBalance NormalBalance { get; private set; }
     public bool IsControlAccount { get; private set; }
+    public string? ControlAccountType { get; private set; }
     public bool AllowDirectPosting { get; private set; }
     public bool IsActive { get; private set; }
     public bool IsSystemLocked { get; private set; }
+    public AccountGroup? AccountGroup { get; private set; }
 
     public DateTimeOffset CreatedAtUtc { get; private set; }
     public Guid CreatedByUserId { get; private set; }
@@ -39,6 +41,7 @@ public class Account : DomainEntity, IAuditableEntity
         AccountRootClass rootClass,
         Guid createdByUserId,
         bool isControlAccount = false,
+        string? controlAccountType = null,
         bool allowDirectPosting = true,
         bool isSystemLocked = false,
         AccountNormalBalance? customNormalBalance = null)
@@ -57,6 +60,7 @@ public class Account : DomainEntity, IAuditableEntity
         RootClass = rootClass;
         NormalBalance = customNormalBalance ?? GetDefaultNormalBalance(rootClass);
         IsControlAccount = isControlAccount;
+        ControlAccountType = isControlAccount ? controlAccountType?.Trim().ToUpperInvariant() : null;
         AllowDirectPosting = isControlAccount ? allowDirectPosting : true;
         IsActive = true;
         IsSystemLocked = isSystemLocked;

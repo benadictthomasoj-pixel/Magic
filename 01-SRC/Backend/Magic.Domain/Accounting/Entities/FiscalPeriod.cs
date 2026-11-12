@@ -17,6 +17,9 @@ public class FiscalPeriod : DomainEntity, IAuditableEntity
     public DateOnly StartDate { get; private set; }
     public DateOnly EndDate { get; private set; }
     public PeriodState State { get; private set; }
+    public DateTimeOffset? LockedAtUtc { get; private set; }
+    public Guid? LockedByUserId { get; private set; }
+    public FiscalYear? FiscalYear { get; private set; }
 
     public DateTimeOffset CreatedAtUtc { get; private set; }
     public Guid CreatedByUserId { get; private set; }
@@ -91,6 +94,8 @@ public class FiscalPeriod : DomainEntity, IAuditableEntity
         }
 
         State = PeriodState.Locked;
+        LockedAtUtc = DateTimeOffset.UtcNow;
+        LockedByUserId = userId;
         UpdatedAtUtc = DateTimeOffset.UtcNow;
         UpdatedByUserId = userId;
     }
@@ -103,6 +108,8 @@ public class FiscalPeriod : DomainEntity, IAuditableEntity
         }
 
         State = PeriodState.Open;
+        LockedAtUtc = null;
+        LockedByUserId = null;
         UpdatedAtUtc = DateTimeOffset.UtcNow;
         UpdatedByUserId = supervisorUserId;
     }

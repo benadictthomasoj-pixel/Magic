@@ -31,7 +31,17 @@ public class JournalVoucher : DomainEntity, IAggregateRoot, IAuditableEntity
     public Guid? ReversalVoucherId { get; private set; }
     public Guid IdempotencyKey { get; private set; }
     public string? SourceModule { get; private set; }
+    public string? SourceTransactionType { get; private set; }
     public Guid? SourceDocumentId { get; private set; }
+    public DateTimeOffset? PostedAtUtc { get; private set; }
+    public Guid? PostedByUserId { get; private set; }
+    public Guid? SupervisorApprovedByUserId { get; private set; }
+    public Guid TraceCorrelationId { get; private set; }
+    public long TotalDebitPaise { get; private set; }
+    public long TotalCreditPaise { get; private set; }
+
+    public FiscalPeriod? FiscalPeriod { get; private set; }
+    public JournalVoucher? ReversalVoucher { get; private set; }
 
     public DateTimeOffset CreatedAtUtc { get; private set; }
     public Guid CreatedByUserId { get; private set; }
@@ -60,7 +70,9 @@ public class JournalVoucher : DomainEntity, IAggregateRoot, IAuditableEntity
         string voucherNumber = "",
         Guid? idempotencyKey = null,
         string? sourceModule = null,
-        Guid? sourceDocumentId = null)
+        Guid? sourceDocumentId = null,
+        string? sourceTransactionType = null,
+        Guid? traceCorrelationId = null)
     {
         if (companyId == Guid.Empty) throw new DomainException("DOMAIN_EMPTY_COMPANY", "Company identity is required.");
         if (branchId == Guid.Empty) throw new DomainException("DOMAIN_EMPTY_BRANCH", "Branch identity is required.");
@@ -79,7 +91,11 @@ public class JournalVoucher : DomainEntity, IAggregateRoot, IAuditableEntity
         ReversalVoucherId = null;
         IdempotencyKey = idempotencyKey ?? Guid.NewGuid();
         SourceModule = sourceModule?.Trim();
+        SourceTransactionType = sourceTransactionType?.Trim();
         SourceDocumentId = sourceDocumentId;
+        TraceCorrelationId = traceCorrelationId ?? Guid.CreateVersion7();
+        TotalDebitPaise = 0;
+        TotalCreditPaise = 0;
 
         var now = DateTimeOffset.UtcNow;
         CreatedAtUtc = now;
@@ -107,9 +123,12 @@ public class JournalVoucher : DomainEntity, IAggregateRoot, IAuditableEntity
             lineNumber,
             narration,
             costCenterId,
-            partyId);
+            partyId,
+            branchId: BranchId);
 
         _lines.Add(line);
+        TotalDebitPaise = TotalDebit.Paise;
+        TotalCreditPaise = TotalCredit.Paise;
         UpdatedAtUtc = DateTimeOffset.UtcNow;
     }
 
@@ -123,6 +142,7 @@ public class JournalVoucher : DomainEntity, IAggregateRoot, IAuditableEntity
         }
 
         Status = VoucherStatus.Approved;
+        SupervisorApprovedByUserId = supervisorUserId;
         UpdatedAtUtc = DateTimeOffset.UtcNow;
         UpdatedByUserId = supervisorUserId;
     }
@@ -175,6 +195,10 @@ public class JournalVoucher : DomainEntity, IAggregateRoot, IAuditableEntity
         VoucherNumber = sequentialVoucherNumber.Trim().ToUpperInvariant();
         FiscalPeriodId = period.Id;
         Status = VoucherStatus.Posted;
+        TotalDebitPaise = totalDebit.Paise;
+        TotalCreditPaise = totalCredit.Paise;
+        PostedAtUtc = DateTimeOffset.UtcNow;
+        PostedByUserId = postedByUserId;
         UpdatedAtUtc = DateTimeOffset.UtcNow;
         UpdatedByUserId = postedByUserId;
 

@@ -9,13 +9,10 @@ using Xunit;
 
 namespace Magic.Api.IntegrationTests;
 
-public sealed class AuditImmutabilityTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public sealed class AuditImmutabilityTests(MagicTestFixture factory)
+    : IClassFixture<MagicTestFixture>
 {
-    private readonly WebApplicationFactory<Program> _factory = factory.WithWebHostBuilder(builder =>
-    {
-        builder.UseEnvironment("Development");
-    });
+    private readonly WebApplicationFactory<Program> _factory = factory;
 
     [Fact]
     public async Task AuditLogTableRejectsUpdateAndThrowsPostgreSqlException55000()

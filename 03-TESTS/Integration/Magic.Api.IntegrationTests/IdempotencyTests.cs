@@ -11,13 +11,10 @@ using Xunit;
 
 namespace Magic.Api.IntegrationTests;
 
-public sealed class IdempotencyTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public sealed class IdempotencyTests(MagicTestFixture factory)
+    : IClassFixture<MagicTestFixture>
 {
-    private readonly WebApplicationFactory<Program> _factory = factory.WithWebHostBuilder(builder =>
-    {
-        builder.UseEnvironment("Development");
-    });
+    private readonly WebApplicationFactory<Program> _factory = factory;
 
     [Fact]
     public async Task IdempotentPostReplaysCachedResponseOnIdenticalDuplicate()

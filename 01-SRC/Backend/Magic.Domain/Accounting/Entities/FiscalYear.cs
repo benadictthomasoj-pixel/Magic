@@ -12,6 +12,7 @@ public class FiscalYear : DomainEntity, IAuditableEntity
     public Guid CompanyId { get; private set; }
     public Guid BranchId { get; private set; }
     public string Code { get; private set; } = string.Empty;
+    public string Name { get; private set; } = string.Empty;
     public DateOnly StartDate { get; private set; }
     public DateOnly EndDate { get; private set; }
     public bool IsClosed { get; private set; }
@@ -33,7 +34,8 @@ public class FiscalYear : DomainEntity, IAuditableEntity
         string code,
         DateOnly startDate,
         DateOnly endDate,
-        Guid createdByUserId)
+        Guid createdByUserId,
+        string name = "")
     {
         if (companyId == Guid.Empty) throw new DomainException("DOMAIN_EMPTY_COMPANY", "Company identity is required.");
         if (branchId == Guid.Empty) throw new DomainException("DOMAIN_EMPTY_BRANCH", "Branch identity is required.");
@@ -49,6 +51,7 @@ public class FiscalYear : DomainEntity, IAuditableEntity
         CompanyId = companyId;
         BranchId = branchId;
         Code = code.Trim();
+        Name = string.IsNullOrWhiteSpace(name) ? Code : name.Trim();
         StartDate = startDate;
         EndDate = endDate;
         IsClosed = false;

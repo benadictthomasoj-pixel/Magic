@@ -22,6 +22,913 @@ namespace Magic.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Magic.Domain.Accounting.Entities.Account", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AccountGroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_group_id");
+
+                    b.Property<bool>("AllowDirectPosting")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("allow_direct_posting");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("account_code");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<int>("ConcurrencyVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("concurrency_version");
+
+                    b.Property<string>("ControlAccountType")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("control_account_type");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsControlAccount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_control_account");
+
+                    b.Property<bool>("IsSystemLocked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_system_locked");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("account_name");
+
+                    b.Property<string>("NormalBalance")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("normal_balance");
+
+                    b.Property<string>("RootClass")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("root_class");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_accounts");
+
+                    b.HasIndex("AccountGroupId")
+                        .HasDatabaseName("ix_accounts_group");
+
+                    b.HasIndex("CompanyId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("uq_accounts_company_code");
+
+                    b.HasIndex("CompanyId", "IsControlAccount", "ControlAccountType")
+                        .HasDatabaseName("ix_accounts_control");
+
+                    b.ToTable("accounts", "accounting", t =>
+                        {
+                            t.HasCheckConstraint("chk_accounts_normal_balance", "normal_balance IN ('Debit', 'Credit', 'DEBIT', 'CREDIT')");
+
+                            t.HasCheckConstraint("chk_accounts_root_class", "root_class IN ('Asset', 'Liability', 'Equity', 'Revenue', 'Expense', 'ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE')");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Domain.Accounting.Entities.AccountGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("group_code");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<int>("ConcurrencyVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("concurrency_version");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<int>("HierarchyDepth")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("hierarchy_depth");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsSystem")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_system");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("group_name");
+
+                    b.Property<Guid?>("ParentGroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("parent_group_id");
+
+                    b.Property<string>("RootClass")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("root_class");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("sort_order");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_account_groups");
+
+                    b.HasIndex("ParentGroupId")
+                        .HasDatabaseName("ix_account_groups_parent");
+
+                    b.HasIndex("CompanyId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("uq_account_groups_company_code");
+
+                    b.ToTable("account_groups", "accounting", t =>
+                        {
+                            t.HasCheckConstraint("chk_account_groups_hierarchy", "id <> parent_group_id");
+
+                            t.HasCheckConstraint("chk_account_groups_root_class", "root_class IN ('Asset', 'Liability', 'Equity', 'Revenue', 'Expense', 'ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE')");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Domain.Accounting.Entities.FiscalPeriod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("code");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<int>("ConcurrencyVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("concurrency_version");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<Guid>("FiscalYearId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fiscal_year_id");
+
+                    b.Property<DateTimeOffset?>("LockedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("locked_at_utc");
+
+                    b.Property<Guid?>("LockedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("locked_by_user_id");
+
+                    b.Property<int>("PeriodNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("period_number");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("state");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_fiscal_periods");
+
+                    b.HasIndex("FiscalYearId", "PeriodNumber")
+                        .IsUnique()
+                        .HasDatabaseName("uq_fiscal_periods_year_period");
+
+                    b.HasIndex("StartDate", "EndDate")
+                        .HasDatabaseName("ix_fiscal_periods_dates");
+
+                    b.ToTable("fiscal_periods", "accounting", t =>
+                        {
+                            t.HasCheckConstraint("chk_fiscal_periods_dates", "end_date >= start_date");
+
+                            t.HasCheckConstraint("chk_fiscal_periods_state", "state IN ('Open', 'Closing', 'Locked', 'OPEN', 'CLOSING', 'LOCKED')");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Domain.Accounting.Entities.FiscalYear", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTimeOffset?>("ClosedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("closed_at_utc");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("code");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<int>("ConcurrencyVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("concurrency_version");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<bool>("IsClosed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_closed");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("name");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_fiscal_years");
+
+                    b.HasIndex("CompanyId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("uq_fiscal_years_company_code");
+
+                    b.HasIndex("CompanyId", "StartDate", "EndDate")
+                        .HasDatabaseName("ix_fiscal_years_company_dates");
+
+                    b.ToTable("fiscal_years", "accounting", t =>
+                        {
+                            t.HasCheckConstraint("chk_fiscal_years_dates", "end_date > start_date");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Domain.Accounting.Entities.JournalLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid?>("CostCenterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cost_center_id");
+
+                    b.Property<long>("Credit")
+                        .HasColumnType("bigint")
+                        .HasColumnName("credit_paise");
+
+                    b.Property<long>("Debit")
+                        .HasColumnType("bigint")
+                        .HasColumnName("debit_paise");
+
+                    b.Property<int>("LineNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("line_number");
+
+                    b.Property<string>("Narration")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid?>("PartyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("party_id");
+
+                    b.Property<string>("PartyType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("party_type");
+
+                    b.Property<Guid>("VoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("voucher_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_journal_lines");
+
+                    b.HasIndex("VoucherId")
+                        .HasDatabaseName("ix_journal_lines_voucher");
+
+                    b.HasIndex("AccountId", "BranchId")
+                        .HasDatabaseName("ix_journal_lines_account_branch");
+
+                    b.HasIndex("PartyType", "PartyId")
+                        .HasDatabaseName("ix_journal_lines_party")
+                        .HasFilter("party_id IS NOT NULL");
+
+                    b.HasIndex("VoucherId", "LineNumber")
+                        .IsUnique()
+                        .HasDatabaseName("uq_journal_lines_voucher_line");
+
+                    b.ToTable("journal_lines", "accounting", t =>
+                        {
+                            t.HasCheckConstraint("chk_journal_lines_credit_non_negative", "credit_paise >= 0");
+
+                            t.HasCheckConstraint("chk_journal_lines_debit_non_negative", "debit_paise >= 0");
+
+                            t.HasCheckConstraint("chk_journal_lines_exclusive_side", "(debit_paise > 0 AND credit_paise = 0) OR (credit_paise > 0 AND debit_paise = 0)");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Domain.Accounting.Entities.JournalVoucher", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<int>("ConcurrencyVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("concurrency_version");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<Guid>("FiscalPeriodId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fiscal_period_id");
+
+                    b.Property<Guid>("IdempotencyKey")
+                        .HasColumnType("uuid")
+                        .HasColumnName("idempotency_key");
+
+                    b.Property<bool>("IsReversed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_reversed");
+
+                    b.Property<string>("Narration")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("narration");
+
+                    b.Property<DateTimeOffset?>("PostedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("posted_at_utc");
+
+                    b.Property<Guid?>("PostedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("posted_by_user_id");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("reference_number");
+
+                    b.Property<Guid?>("ReversalVoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reversal_voucher_id");
+
+                    b.Property<Guid?>("SourceDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_document_id");
+
+                    b.Property<string>("SourceModule")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("source_module");
+
+                    b.Property<string>("SourceTransactionType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("source_transaction_type");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid?>("SupervisorApprovedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supervisor_approved_by_user_id");
+
+                    b.Property<long>("TotalCreditPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_credit_paise");
+
+                    b.Property<long>("TotalDebitPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_debit_paise");
+
+                    b.Property<Guid>("TraceCorrelationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trace_correlation_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<DateOnly>("VoucherDate")
+                        .HasColumnType("date")
+                        .HasColumnName("posting_date");
+
+                    b.Property<string>("VoucherNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("voucher_number");
+
+                    b.Property<string>("VoucherType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("voucher_type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_vouchers");
+
+                    b.HasIndex("ReversalVoucherId")
+                        .HasDatabaseName("ix_vouchers_reversal")
+                        .HasFilter("reversal_voucher_id IS NOT NULL");
+
+                    b.HasIndex("BranchId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("uq_vouchers_branch_idempotency");
+
+                    b.HasIndex("BranchId", "VoucherNumber")
+                        .IsUnique()
+                        .HasDatabaseName("uq_vouchers_branch_number");
+
+                    b.HasIndex("FiscalPeriodId", "VoucherDate")
+                        .HasDatabaseName("ix_vouchers_period_date");
+
+                    b.HasIndex("SourceModule", "SourceDocumentId")
+                        .HasDatabaseName("ix_vouchers_source_document")
+                        .HasFilter("source_module IS NOT NULL AND source_document_id IS NOT NULL");
+
+                    b.ToTable("vouchers", "accounting", t =>
+                        {
+                            t.HasCheckConstraint("chk_vouchers_balance", "total_debit_paise = total_credit_paise");
+
+                            t.HasCheckConstraint("chk_vouchers_positive_totals", "total_debit_paise > 0 AND total_credit_paise > 0");
+
+                            t.HasCheckConstraint("chk_vouchers_status", "status IN ('Draft', 'Approved', 'Posted', 'Reversed', 'Cancelled', 'DRAFT', 'APPROVED', 'POSTED', 'REVERSED', 'CANCELLED')");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.AccountPeriodBalanceRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<long>("ClosingCreditPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("closing_credit_paise");
+
+                    b.Property<long>("ClosingDebitPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("closing_debit_paise");
+
+                    b.Property<Guid>("FiscalPeriodId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fiscal_period_id");
+
+                    b.Property<DateTimeOffset>("LastUpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_updated_at_utc");
+
+                    b.Property<long>("MovementCreditPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("movement_credit_paise");
+
+                    b.Property<long>("MovementDebitPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("movement_debit_paise");
+
+                    b.Property<long>("OpeningCreditPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("opening_credit_paise");
+
+                    b.Property<long>("OpeningDebitPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("opening_debit_paise");
+
+                    b.HasKey("Id")
+                        .HasName("pk_account_period_balances");
+
+                    b.HasIndex("AccountId", "FiscalPeriodId", "BranchId")
+                        .IsUnique()
+                        .HasDatabaseName("uq_account_period_balances_account_period_branch");
+
+                    b.ToTable("account_period_balances", "accounting");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ApAllocationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AllocatedAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("allocated_amount_paise");
+
+                    b.Property<DateOnly>("AllocationDate")
+                        .HasColumnType("date")
+                        .HasColumnName("allocation_date");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreditItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_item_id");
+
+                    b.Property<Guid>("DebitVoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("debit_voucher_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ap_allocations");
+
+                    b.ToTable("ap_allocations", "accounting", t =>
+                        {
+                            t.HasCheckConstraint("chk_ap_alloc_positive", "allocated_amount_paise > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ApSubledgerItemRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("BillId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bill_id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("due_date");
+
+                    b.Property<DateOnly>("ItemDate")
+                        .HasColumnType("date")
+                        .HasColumnName("item_date");
+
+                    b.Property<long>("OriginalAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("original_amount_paise");
+
+                    b.Property<long>("OutstandingAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("outstanding_amount_paise");
+
+                    b.Property<long>("SettledAmountPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("settled_amount_paise");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("OPEN")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_id");
+
+                    b.Property<Guid>("VoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("voucher_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ap_subledger_items");
+
+                    b.HasIndex("SupplierId", "DueDate")
+                        .HasDatabaseName("ix_ap_aging")
+                        .HasFilter("status <> 'PAID'");
+
+                    b.HasIndex("SupplierId", "Status")
+                        .HasDatabaseName("ix_ap_supplier_status");
+
+                    b.ToTable("ap_subledger_items", "accounting", t =>
+                        {
+                            t.HasCheckConstraint("chk_ap_amounts", "settled_amount_paise + outstanding_amount_paise = original_amount_paise");
+
+                            t.HasCheckConstraint("chk_ap_status", "status IN ('OPEN', 'PARTIALLY_PAID', 'PAID')");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ArAllocationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AllocatedAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("allocated_amount_paise");
+
+                    b.Property<DateOnly>("AllocationDate")
+                        .HasColumnType("date")
+                        .HasColumnName("allocation_date");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreditVoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_voucher_id");
+
+                    b.Property<Guid>("DebitItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("debit_item_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ar_allocations");
+
+                    b.ToTable("ar_allocations", "accounting", t =>
+                        {
+                            t.HasCheckConstraint("chk_ar_alloc_positive", "allocated_amount_paise > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ArSubledgerItemRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("due_date");
+
+                    b.Property<Guid?>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<DateOnly>("ItemDate")
+                        .HasColumnType("date")
+                        .HasColumnName("item_date");
+
+                    b.Property<long>("OriginalAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("original_amount_paise");
+
+                    b.Property<long>("OutstandingAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("outstanding_amount_paise");
+
+                    b.Property<long>("SettledAmountPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("settled_amount_paise");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("OPEN")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("VoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("voucher_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ar_subledger_items");
+
+                    b.HasIndex("CustomerId", "DueDate")
+                        .HasDatabaseName("ix_ar_aging")
+                        .HasFilter("status <> 'PAID'");
+
+                    b.HasIndex("CustomerId", "Status")
+                        .HasDatabaseName("ix_ar_customer_status");
+
+                    b.ToTable("ar_subledger_items", "accounting", t =>
+                        {
+                            t.HasCheckConstraint("chk_ar_amounts", "settled_amount_paise + outstanding_amount_paise = original_amount_paise");
+
+                            t.HasCheckConstraint("chk_ar_status", "status IN ('OPEN', 'PARTIALLY_PAID', 'PAID')");
+                        });
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.IdempotencyRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -220,6 +1127,133 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_system_audit_logs_entity");
 
                     b.ToTable("system_audit_logs", "audit");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.VoucherSequenceRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<long>("CurrentSequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("current_sequence");
+
+                    b.Property<Guid>("FiscalYearId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fiscal_year_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<string>("VoucherType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("voucher_type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_voucher_sequences");
+
+                    b.HasIndex("BranchId", "FiscalYearId", "VoucherType")
+                        .IsUnique()
+                        .HasDatabaseName("uq_voucher_sequences_branch_fy_type");
+
+                    b.ToTable("voucher_sequences", "accounting", t =>
+                        {
+                            t.HasCheckConstraint("chk_voucher_sequences_positive", "current_sequence >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Domain.Accounting.Entities.Account", b =>
+                {
+                    b.HasOne("Magic.Domain.Accounting.Entities.AccountGroup", "AccountGroup")
+                        .WithMany()
+                        .HasForeignKey("AccountGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AccountGroup");
+                });
+
+            modelBuilder.Entity("Magic.Domain.Accounting.Entities.AccountGroup", b =>
+                {
+                    b.HasOne("Magic.Domain.Accounting.Entities.AccountGroup", "ParentGroup")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentGroupId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ParentGroup");
+                });
+
+            modelBuilder.Entity("Magic.Domain.Accounting.Entities.FiscalPeriod", b =>
+                {
+                    b.HasOne("Magic.Domain.Accounting.Entities.FiscalYear", "FiscalYear")
+                        .WithMany("Periods")
+                        .HasForeignKey("FiscalYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("FiscalYear");
+                });
+
+            modelBuilder.Entity("Magic.Domain.Accounting.Entities.JournalLine", b =>
+                {
+                    b.HasOne("Magic.Domain.Accounting.Entities.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Domain.Accounting.Entities.JournalVoucher", "Voucher")
+                        .WithMany("Lines")
+                        .HasForeignKey("VoucherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Voucher");
+                });
+
+            modelBuilder.Entity("Magic.Domain.Accounting.Entities.JournalVoucher", b =>
+                {
+                    b.HasOne("Magic.Domain.Accounting.Entities.FiscalPeriod", "FiscalPeriod")
+                        .WithMany()
+                        .HasForeignKey("FiscalPeriodId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Domain.Accounting.Entities.JournalVoucher", "ReversalVoucher")
+                        .WithMany()
+                        .HasForeignKey("ReversalVoucherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("FiscalPeriod");
+
+                    b.Navigation("ReversalVoucher");
+                });
+
+            modelBuilder.Entity("Magic.Domain.Accounting.Entities.AccountGroup", b =>
+                {
+                    b.Navigation("Children");
+                });
+
+            modelBuilder.Entity("Magic.Domain.Accounting.Entities.FiscalYear", b =>
+                {
+                    b.Navigation("Periods");
+                });
+
+            modelBuilder.Entity("Magic.Domain.Accounting.Entities.JournalVoucher", b =>
+                {
+                    b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618
         }

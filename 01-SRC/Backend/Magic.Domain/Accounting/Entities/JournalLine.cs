@@ -11,12 +11,16 @@ public class JournalLine : DomainEntity
 {
     public Guid VoucherId { get; private set; }
     public Guid AccountId { get; private set; }
+    public Guid BranchId { get; private set; }
     public Money Debit { get; private set; }
     public Money Credit { get; private set; }
     public int LineNumber { get; private set; }
     public string Narration { get; private set; } = string.Empty;
     public Guid? CostCenterId { get; private set; }
     public Guid? PartyId { get; private set; }
+    public string? PartyType { get; private set; }
+    public JournalVoucher? Voucher { get; private set; }
+    public Account? Account { get; private set; }
 
     private JournalLine() { } // EF Core
 
@@ -28,7 +32,9 @@ public class JournalLine : DomainEntity
         int lineNumber,
         string narration = "",
         Guid? costCenterId = null,
-        Guid? partyId = null)
+        Guid? partyId = null,
+        string? partyType = null,
+        Guid? branchId = null)
     {
         if (voucherId == Guid.Empty) throw new DomainException("DOMAIN_EMPTY_VOUCHER_ID", "Voucher identity is required.");
         if (accountId == Guid.Empty) throw new DomainException("DOMAIN_EMPTY_ACCOUNT_ID", "Account identity is required.");
@@ -47,12 +53,14 @@ public class JournalLine : DomainEntity
 
         VoucherId = voucherId;
         AccountId = accountId;
+        BranchId = branchId ?? Guid.Empty;
         Debit = debit;
         Credit = credit;
         LineNumber = lineNumber;
         Narration = narration.Trim();
         CostCenterId = costCenterId;
         PartyId = partyId;
+        PartyType = partyType?.Trim().ToUpperInvariant();
     }
 
     /// <summary>
@@ -72,7 +80,9 @@ public class JournalLine : DomainEntity
             lineNumber: newLineNumber,
             narration: lineNarration,
             costCenterId: CostCenterId,
-            partyId: PartyId);
+            partyId: PartyId,
+            partyType: PartyType,
+            branchId: BranchId);
     }
 }
 

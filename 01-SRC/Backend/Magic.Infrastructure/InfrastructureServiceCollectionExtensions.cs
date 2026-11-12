@@ -49,6 +49,13 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IAuditLogger, PostgresAuditLogger>();
         services.AddScoped<IOutboxEventDispatcher, OutboxEventDispatcher>();
 
+        // Accounting Persistence & Posting Infrastructure
+        services.AddScoped<Magic.Application.Accounting.Persistence.IVoucherNumberGenerator, Magic.Infrastructure.Persistence.Repositories.PostgresVoucherNumberGenerator>();
+        services.AddScoped<Magic.Application.Accounting.Persistence.IChartOfAccountsRepository, Magic.Infrastructure.Persistence.Repositories.PostgresChartOfAccountsRepository>();
+        services.AddScoped<Magic.Application.Accounting.Persistence.IFiscalGovernanceRepository, Magic.Infrastructure.Persistence.Repositories.PostgresFiscalGovernanceRepository>();
+        services.AddScoped<Magic.Application.Accounting.Persistence.IGeneralLedgerRepository, Magic.Infrastructure.Persistence.Repositories.PostgresGeneralLedgerRepository>();
+        services.AddScoped<Magic.Application.Accounting.Services.IPostingService, Magic.Infrastructure.Accounting.PostingService>();
+
         // Scoped request security/branch/terminal context & deferred OPEN-003 boundaries
         services.AddScoped<MutableRequestContext>();
         services.AddScoped<IRequestContextSetter>(sp => sp.GetRequiredService<MutableRequestContext>());

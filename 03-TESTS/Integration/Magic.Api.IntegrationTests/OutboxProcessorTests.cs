@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Magic.Api.IntegrationTests;
 
-public sealed class OutboxProcessorTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class OutboxProcessorTests : IClassFixture<MagicTestFixture>
 {
     private sealed class TrackingConsumer : IIntegrationEventConsumer
     {
@@ -38,11 +38,10 @@ public sealed class OutboxProcessorTests : IClassFixture<WebApplicationFactory<P
     private readonly WebApplicationFactory<Program> _factory;
     private readonly TrackingConsumer _consumer = new();
 
-    public OutboxProcessorTests(WebApplicationFactory<Program> factory)
+    public OutboxProcessorTests(MagicTestFixture factory)
     {
         _factory = factory.WithWebHostBuilder(builder =>
         {
-            builder.UseEnvironment("Development");
             builder.ConfigureServices(services =>
             {
                 services.AddSingleton<IIntegrationEventConsumer>(_consumer);

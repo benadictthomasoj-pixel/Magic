@@ -15,8 +15,13 @@ public class AccountGroup : DomainEntity, IAuditableEntity
     public string Code { get; private set; } = string.Empty;
     public string Name { get; private set; } = string.Empty;
     public AccountRootClass RootClass { get; private set; }
+    public int HierarchyDepth { get; private set; }
+    public bool IsSystem { get; private set; }
     public int SortOrder { get; private set; }
     public bool IsActive { get; private set; }
+    public AccountGroup? ParentGroup { get; private set; }
+    public IReadOnlyCollection<AccountGroup> Children => _children.AsReadOnly();
+    private readonly List<AccountGroup> _children = [];
 
     public DateTimeOffset CreatedAtUtc { get; private set; }
     public Guid CreatedByUserId { get; private set; }
@@ -34,7 +39,9 @@ public class AccountGroup : DomainEntity, IAuditableEntity
         AccountRootClass rootClass,
         Guid createdByUserId,
         Guid? parentGroupId = null,
-        int sortOrder = 0)
+        int sortOrder = 0,
+        int hierarchyDepth = 1,
+        bool isSystem = false)
     {
         if (companyId == Guid.Empty) throw new DomainException("DOMAIN_EMPTY_COMPANY", "Company identity is required.");
         if (branchId == Guid.Empty) throw new DomainException("DOMAIN_EMPTY_BRANCH", "Branch identity is required.");
@@ -48,6 +55,8 @@ public class AccountGroup : DomainEntity, IAuditableEntity
         RootClass = rootClass;
         ParentGroupId = parentGroupId;
         SortOrder = sortOrder;
+        HierarchyDepth = Math.Max(1, hierarchyDepth);
+        IsSystem = isSystem;
         IsActive = true;
 
         var now = DateTimeOffset.UtcNow;
@@ -79,6 +88,8 @@ public class AccountGroup : DomainEntity, IAuditableEntity
         }
 
         ParentGroupId = parentGroup.Id;
+        ParentGroup = parentGroup;
+        HierarchyDepth = parentGroup.HierarchyDepth + 1;
         UpdatedAtUtc = DateTimeOffset.UtcNow;
         UpdatedByUserId = updatedByUserId;
     }
