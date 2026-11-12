@@ -20,32 +20,35 @@ describe('BrandIntroComponent', () => {
     vi.useRealTimers();
   });
 
-  it('renders official emblem components and MAGIC wordmark glyphs', () => {
+  it('renders official SVG emblem components and calligraphy stroke masks', () => {
     const fixture = TestBed.createComponent(BrandIntroComponent);
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const darkM = compiled.querySelector('.dark-m') as HTMLImageElement;
-    const goldWing = compiled.querySelector('.gold-img') as HTMLImageElement;
-    const letterM = compiled.querySelector('.letter-m') as HTMLImageElement;
-    const letterA = compiled.querySelector('.letter-a') as HTMLImageElement;
-    const letterG = compiled.querySelector('.letter-g') as HTMLImageElement;
-    const letterI = compiled.querySelector('.letter-i') as HTMLImageElement;
-    const letterC = compiled.querySelector('.letter-c') as HTMLImageElement;
+    const svg = compiled.querySelector('.magic-intro-svg');
+    const darkM = compiled.querySelector('.img-dark-m') as SVGImageElement;
+    const goldWing = compiled.querySelector('.img-gold-wing') as SVGImageElement;
+    const wordmark = compiled.querySelector('.img-wordmark') as SVGImageElement;
 
+    expect(svg).toBeTruthy();
     expect(darkM).toBeTruthy();
-    expect(darkM.getAttribute('src')).toBe('/branding/magic-emblem-dark-tight.png');
+    expect(darkM.getAttribute('href')).toBe('/branding/magic-emblem-dark.png');
 
     expect(goldWing).toBeTruthy();
-    expect(goldWing.getAttribute('src')).toBe('/branding/magic-emblem-gold-tight.png');
+    expect(goldWing.getAttribute('href')).toBe('/branding/magic-emblem-gold.png');
 
-    expect(letterM).toBeTruthy();
-    expect(letterA).toBeTruthy();
-    expect(letterG).toBeTruthy();
-    expect(letterI).toBeTruthy();
-    expect(letterC).toBeTruthy();
+    expect(wordmark).toBeTruthy();
+    expect(wordmark.getAttribute('href')).toBe('/branding/magic-wordmark.png');
 
-    // Visual restrictions check: No skip button, no extra text
+    // Calligraphy pen strokes
+    expect(compiled.querySelector('.stroke-m')).toBeTruthy();
+    expect(compiled.querySelector('.stroke-a-apex')).toBeTruthy();
+    expect(compiled.querySelector('.stroke-a-bar')).toBeTruthy();
+    expect(compiled.querySelector('.stroke-g')).toBeTruthy();
+    expect(compiled.querySelector('.stroke-i')).toBeTruthy();
+    expect(compiled.querySelector('.stroke-c')).toBeTruthy();
+
+    // Visual restrictions check: No skip button, no extra text, no cards
     expect(compiled.querySelector('.skip-button')).toBeNull();
     expect(compiled.querySelector('.intro-skip-btn')).toBeNull();
   });
