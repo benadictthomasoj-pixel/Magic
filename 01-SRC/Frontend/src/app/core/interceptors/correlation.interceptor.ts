@@ -31,3 +31,4 @@ export const correlationInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req.clone({ setHeaders: headersToSet }));
 };
+

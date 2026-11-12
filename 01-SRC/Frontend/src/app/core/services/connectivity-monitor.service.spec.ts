@@ -72,3 +72,4 @@ describe('ConnectivityMonitorService', () => {
     expect(service.lastError()).toContain('Magic.Api');
   });
 });
+

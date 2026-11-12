@@ -73,3 +73,4 @@ export interface DesktopHostCapabilitiesDto {
   readonly thermalPrintingSupported: boolean;
   readonly cashDrawerSupported: boolean;
 }
+

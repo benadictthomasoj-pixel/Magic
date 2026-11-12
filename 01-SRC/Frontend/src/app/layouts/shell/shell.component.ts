@@ -66,3 +66,4 @@ export class ShellComponent implements OnInit {
     this.theme.setPreference(next);
   }
 }
+

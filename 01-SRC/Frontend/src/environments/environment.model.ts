@@ -3,3 +3,4 @@ export interface MagicEnvironmentConfig {
   readonly apiBaseUrl: string;
   readonly connectivityPollIntervalMs: number;
 }
+

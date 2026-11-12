@@ -31,3 +31,4 @@ export class EmptyStateComponent {
   readonly heading = input.required<string>();
   readonly description = input.required<string>();
 }
+

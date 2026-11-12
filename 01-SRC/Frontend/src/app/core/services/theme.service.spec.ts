@@ -35,3 +35,4 @@ describe('ThemeService', () => {
     expect(doc.querySelector('meta[name="color-scheme"]')?.getAttribute('content')).toBe('light');
   });
 });
+

@@ -140,3 +140,4 @@ export class ConnectivityMonitorService {
     return nav ? nav.onLine : true;
   }
 }
+

@@ -233,3 +233,4 @@ export class PlatformSettingsPage {
     this.monitor.refresh();
   }
 }
+

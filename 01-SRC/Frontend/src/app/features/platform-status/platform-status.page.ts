@@ -185,3 +185,4 @@ export class PlatformStatusPage {
   protected readonly desktop = inject(DesktopBridgeService);
   protected readonly workspace = inject(WorkspaceContextService);
 }
+

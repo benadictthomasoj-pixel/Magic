@@ -80,3 +80,4 @@ export class DesktopBridgeService {
     return win?.chrome?.webview ?? null;
   }
 }
+

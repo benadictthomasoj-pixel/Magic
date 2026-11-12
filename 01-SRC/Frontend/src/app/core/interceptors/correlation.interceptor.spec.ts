@@ -45,3 +45,4 @@ describe('correlationInterceptor', () => {
     expect(workspace.context().branchId).toBeNull();
   });
 });
+

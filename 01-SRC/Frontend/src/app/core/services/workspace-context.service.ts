@@ -39,3 +39,4 @@ export class WorkspaceContextService {
     this.contextSignal.set({ branchId: null, terminalId: null });
   }
 }
+

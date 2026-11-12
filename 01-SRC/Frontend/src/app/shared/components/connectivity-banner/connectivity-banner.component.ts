@@ -125,3 +125,4 @@ export class ConnectivityBannerComponent {
     } · Zero Offline Buffering (OPEN-001)`;
   });
 }
+

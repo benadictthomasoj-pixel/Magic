@@ -10,3 +10,4 @@ describe('AuthBoundaryService', () => {
     expect(service.hasPermission('system.admin')).toBe(false);
   });
 });
+
