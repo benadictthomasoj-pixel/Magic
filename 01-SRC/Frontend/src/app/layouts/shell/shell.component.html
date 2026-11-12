@@ -1,0 +1,91 @@
+<a class="skip-link visually-hidden" href="#main-content">Skip to main content</a>
+
+<div class="shell-grid">
+  <header class="shell-header">
+    <div class="brand-group">
+      @if (isNarrowScreen()) {
+        <button
+          type="button"
+          class="menu-toggle"
+          [attr.aria-expanded]="mobileNavOpen()"
+          aria-controls="primary-navigation"
+          (click)="toggleMobileNav()"
+        >
+          {{ mobileNavOpen() ? 'Close Menu' : 'Menu' }}
+        </button>
+      }
+      <a class="brand-link" routerLink="/system/status">
+        <span class="brand-name">MAGIC</span>
+        <span class="brand-tag">Universal Business Management ERP · Phase 1</span>
+      </a>
+    </div>
+
+    <div class="header-controls">
+      <magic-status-badge
+        [label]="
+          monitor.connectivityState() === 'connected'
+            ? 'Online LAN'
+            : monitor.connectivityState() === 'checking'
+              ? 'Probing LAN'
+              : 'LAN Offline'
+        "
+        [tone]="
+          monitor.connectivityState() === 'connected'
+            ? 'ok'
+            : monitor.connectivityState() === 'checking'
+              ? 'neutral'
+              : 'error'
+        "
+      />
+      <button
+        type="button"
+        class="theme-cycle"
+        (click)="cycleTheme()"
+        [attr.aria-label]="'Switch color scheme. Current: ' + theme.preference()"
+      >
+        Theme: {{ theme.preference() }}
+      </button>
+    </div>
+  </header>
+
+  @if (!isNarrowScreen() || mobileNavOpen()) {
+    <aside
+      id="primary-navigation"
+      class="shell-sidebar"
+      [class.drawer-open]="isNarrowScreen() && mobileNavOpen()"
+      [cdkTrapFocus]="isNarrowScreen() && mobileNavOpen()"
+    >
+      <nav aria-label="Primary">
+        <ul class="nav-list">
+          @for (item of navItems; track item.path) {
+            <li>
+              <a
+                class="nav-link"
+                [routerLink]="item.path"
+                routerLinkActive="is-active"
+                ariaCurrentWhenActive="page"
+                (click)="closeMobileNav()"
+              >
+                {{ item.label }}
+              </a>
+            </li>
+          }
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <p class="boundary-label">Security Boundary</p>
+        <p class="boundary-value">{{ auth.state().status }}</p>
+      </div>
+    </aside>
+  }
+
+  <main id="main-content" class="shell-main" tabindex="-1">
+    <router-outlet />
+  </main>
+
+  <footer class="shell-footer">
+    <span>MAGIC Greenfield Foundation</span>
+    <span>Strict Online LAN (OPEN-001) · Pure Angular CDK (OPEN-002)</span>
+  </footer>
+</div>

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MAGIC — Universal Business Management ERP</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('magic-color-scheme');
+        if (stored === 'light' || stored === 'dark' || stored === 'light dark') {
+          var meta = document.querySelector('meta[name="color-scheme"]');
+          if (meta) {
+            meta.setAttribute('content', stored);
+          }
+        }
+      } catch (_) {
+        // Storage unavailable (private/restricted WebView); fall back to OS preference.
+      }
+    })();
+  </script>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+</head>
+<body>
+  <magic-root></magic-root>
+</body>
+</html>

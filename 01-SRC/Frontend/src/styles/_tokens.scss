@@ -1,0 +1,148 @@
+@layer theme {
+  :root {
+    color-scheme: light dark;
+
+    /* Fallback tokens (browsers without light-dark()) — Light default */
+    --magic-surface-canvas: #f4f6f9;
+    --magic-surface-elevated: #ffffff;
+    --magic-surface-subtle: #e9eef5;
+    --magic-text-primary: #0f172a;
+    --magic-text-secondary: #334155;
+    --magic-text-muted: #475569;
+    --magic-border-subtle: #cbd5e1;
+    --magic-border-strong: #64748b;
+
+    --magic-accent: #1d4ed8;
+    --magic-accent-contrast: #ffffff;
+    --magic-accent-soft: #dbeafe;
+    --magic-focus-ring: #1d4ed8;
+
+    --magic-status-ok-bg: #dcfce7;
+    --magic-status-ok-fg: #14532d;
+    --magic-status-ok-border: #15803d;
+
+    --magic-status-warn-bg: #fef3c7;
+    --magic-status-warn-fg: #78350f;
+    --magic-status-warn-border: #b45309;
+
+    --magic-status-error-bg: #fee2e2;
+    --magic-status-error-fg: #7f1d1d;
+    --magic-status-error-border: #b91c1c;
+
+    --magic-status-neutral-bg: #e2e8f0;
+    --magic-status-neutral-fg: #1e293b;
+    --magic-status-neutral-border: #64748b;
+
+    --magic-font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --magic-font-mono: ui-monospace, 'Cascadia Code', 'SFMono-Regular', Menlo, monospace;
+
+    --magic-space-1: 0.25rem;
+    --magic-space-2: 0.5rem;
+    --magic-space-3: 0.75rem;
+    --magic-space-4: 1rem;
+    --magic-space-5: 1.5rem;
+    --magic-space-6: 2rem;
+
+    --magic-radius-sm: 0.375rem;
+    --magic-radius-md: 0.5rem;
+    --magic-radius-lg: 0.75rem;
+    --magic-shadow-sm: 0 1px 2px rgb(15 23 42 / 0.08);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --magic-surface-canvas: #0b1120;
+      --magic-surface-elevated: #111827;
+      --magic-surface-subtle: #1e293b;
+      --magic-text-primary: #f1f5f9;
+      --magic-text-secondary: #cbd5e1;
+      --magic-text-muted: #94a3b8;
+      --magic-border-subtle: #334155;
+      --magic-border-strong: #64748b;
+
+      --magic-accent: #93c5fd;
+      --magic-accent-contrast: #0f172a;
+      --magic-accent-soft: #1e3a8a;
+      --magic-focus-ring: #93c5fd;
+
+      --magic-status-ok-bg: #052e16;
+      --magic-status-ok-fg: #bbf7d0;
+      --magic-status-ok-border: #22c55e;
+
+      --magic-status-warn-bg: #451a03;
+      --magic-status-warn-fg: #fde68a;
+      --magic-status-warn-border: #f59e0b;
+
+      --magic-status-error-bg: #450a0a;
+      --magic-status-error-fg: #fecaca;
+      --magic-status-error-border: #f87171;
+
+      --magic-status-neutral-bg: #1e293b;
+      --magic-status-neutral-fg: #e2e8f0;
+      --magic-status-neutral-border: #64748b;
+
+      --magic-shadow-sm: 0 1px 3px rgb(0 0 0 / 0.4);
+    }
+  }
+
+  @supports (color: light-dark(white, black)) {
+    :root {
+      --magic-surface-canvas: light-dark(#f4f6f9, #0b1120);
+      --magic-surface-elevated: light-dark(#ffffff, #111827);
+      --magic-surface-subtle: light-dark(#e9eef5, #1e293b);
+      --magic-text-primary: light-dark(#0f172a, #f1f5f9);
+      --magic-text-secondary: light-dark(#334155, #cbd5e1);
+      --magic-text-muted: light-dark(#475569, #94a3b8);
+      --magic-border-subtle: light-dark(#cbd5e1, #334155);
+      --magic-border-strong: light-dark(#64748b, #64748b);
+
+      --magic-accent: light-dark(#1d4ed8, #93c5fd);
+      --magic-accent-contrast: light-dark(#ffffff, #0f172a);
+      --magic-accent-soft: light-dark(
+        color-mix(in oklab, #1d4ed8 14%, #ffffff),
+        color-mix(in oklab, #93c5fd 22%, #111827)
+      );
+      --magic-focus-ring: light-dark(#1d4ed8, #93c5fd);
+
+      --magic-status-ok-bg: light-dark(#dcfce7, #052e16);
+      --magic-status-ok-fg: light-dark(#14532d, #bbf7d0);
+      --magic-status-ok-border: light-dark(#15803d, #22c55e);
+
+      --magic-status-warn-bg: light-dark(#fef3c7, #451a03);
+      --magic-status-warn-fg: light-dark(#78350f, #fde68a);
+      --magic-status-warn-border: light-dark(#b45309, #f59e0b);
+
+      --magic-status-error-bg: light-dark(#fee2e2, #450a0a);
+      --magic-status-error-fg: light-dark(#7f1d1d, #fecaca);
+      --magic-status-error-border: light-dark(#b91c1c, #f87171);
+
+      --magic-status-neutral-bg: light-dark(#e2e8f0, #1e293b);
+      --magic-status-neutral-fg: light-dark(#1e293b, #e2e8f0);
+      --magic-status-neutral-border: light-dark(#64748b, #94a3b8);
+
+      &:has(> head > meta[name="color-scheme"][content="dark"]) {
+        color-scheme: dark;
+      }
+
+      &:has(> head > meta[name="color-scheme"][content="light"]) {
+        color-scheme: light;
+      }
+    }
+  }
+
+  @media (forced-colors: active) {
+    :root {
+      --magic-surface-canvas: Canvas;
+      --magic-surface-elevated: Canvas;
+      --magic-surface-subtle: Canvas;
+      --magic-text-primary: CanvasText;
+      --magic-text-secondary: CanvasText;
+      --magic-text-muted: CanvasText;
+      --magic-border-subtle: CanvasText;
+      --magic-border-strong: CanvasText;
+      --magic-accent: Highlight;
+      --magic-accent-contrast: HighlightText;
+      --magic-focus-ring: Highlight;
+    }
+  }
+}

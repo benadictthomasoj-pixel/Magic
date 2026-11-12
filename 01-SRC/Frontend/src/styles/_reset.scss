@@ -1,0 +1,45 @@
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  :where(html) {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  :where(body) {
+    margin: 0;
+    min-block-size: 100dvb;
+  }
+
+  :where(h1, h2, h3, h4, p, ul, ol, dl, dd, figure, blockquote) {
+    margin: 0;
+  }
+
+  :where(ul[class], ol[class]) {
+    list-style: none;
+    padding-inline-start: 0;
+  }
+
+  :where(img, svg) {
+    display: block;
+    max-inline-size: 100%;
+  }
+
+  :where(button, input, select, textarea) {
+    font: inherit;
+    color: inherit;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(*, *::before, *::after) {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
