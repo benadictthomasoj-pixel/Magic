@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IntroStateService } from '../../../core/services/intro-state.service';
 import { BrandIntroComponent } from './brand-intro.component';
@@ -10,6 +11,7 @@ describe('BrandIntroComponent', () => {
     vi.useFakeTimers();
     await TestBed.configureTestingModule({
       imports: [BrandIntroComponent],
+      providers: [provideRouter([])],
     }).compileComponents();
 
     introState = TestBed.inject(IntroStateService);
@@ -51,43 +53,31 @@ describe('BrandIntroComponent', () => {
     // Visual restrictions check: No skip button, no extra text, no cards
     expect(compiled.querySelector('.skip-button')).toBeNull();
     expect(compiled.querySelector('.intro-skip-btn')).toBeNull();
+    expect(compiled.querySelector('.login-card-container')).toBeNull();
   });
 
-  it('completes the 5-second animation lifecycle and transitions to exit', () => {
+  it('displays action controls after animation completes at 3.8s and supports replay', () => {
     const fixture = TestBed.createComponent(BrandIntroComponent);
-    const component = fixture.componentInstance;
-    let completedEmitted = false;
-    component.completed.subscribe(() => {
-      completedEmitted = true;
-    });
-
     fixture.detectChanges();
-    expect(completedEmitted).toBe(false);
 
-    // Fast-forward to 4500ms: exit fade starts
-    vi.advanceTimersByTime(4500);
+    expect(fixture.nativeElement.querySelector('.intro-actions')).toBeNull();
+
+    // Fast-forward to 3800ms
+    vi.advanceTimersByTime(3800);
     fixture.detectChanges();
-    const backdrop = fixture.nativeElement.querySelector('.intro-backdrop') as HTMLElement;
-    expect(backdrop.classList.contains('phase-exit')).toBe(true);
-    expect(completedEmitted).toBe(false);
 
-    // Fast-forward to 5000ms: finishes exactly at 5.0 seconds
-    vi.advanceTimersByTime(500);
-    expect(completedEmitted).toBe(true);
-    expect(introState.hasCompletedIntro()).toBe(true);
-  });
+    const actions = fixture.nativeElement.querySelector('.intro-actions');
+    expect(actions).toBeTruthy();
+    const replayBtn = fixture.nativeElement.querySelector('.replay-btn') as HTMLButtonElement;
+    expect(replayBtn).toBeTruthy();
 
-  it('finishes immediately if intro was already completed in the session', () => {
-    introState.markCompleted();
-
-    const fixture = TestBed.createComponent(BrandIntroComponent);
-    const component = fixture.componentInstance;
-    let completedEmitted = false;
-    component.completed.subscribe(() => {
-      completedEmitted = true;
-    });
-
+    // Test replay click
+    replayBtn.click();
     fixture.detectChanges();
-    expect(completedEmitted).toBe(true);
+
+    // Fast-forward tick for remount
+    vi.advanceTimersByTime(25);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.magic-intro-svg')).toBeTruthy();
   });
 });
