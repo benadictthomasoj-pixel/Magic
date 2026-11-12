@@ -5,181 +5,254 @@
 .intro-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 9999;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: #ebe6e3;
-  background-image: radial-gradient(ellipse at 50% 45%, #f6f3f0 0%, #ebe6e3 65%, #dfdad6 100%);
-  overflow: hidden;
+  background: #ebe6e3 radial-gradient(ellipse at 50% 45%, #f6f3f0 0%, #ebe6e3 65%, #dfdad6 100%);
   user-select: none;
   opacity: 1;
-  transform: scale(1);
-  will-change: opacity, transform;
+  transition: opacity 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity;
 
   &.phase-exit {
     opacity: 0;
-    transform: scale(1.03);
     pointer-events: none;
-    transition:
-      opacity 420ms cubic-bezier(0.4, 0, 0.2, 1),
-      transform 450ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
-.ambient-glow {
+.logo-stage {
+  position: relative;
+  width: min(84vw, 540px);
+  aspect-ratio: 1024 / 512;
+}
+
+.stage-layer {
   position: absolute;
-  width: 600px;
-  height: 600px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(231, 170, 27, 0.08) 0%, rgba(231, 170, 27, 0) 70%);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 800ms ease-out;
-
-  .phase-revealing & {
-    opacity: 1;
-  }
-}
-
-.intro-content {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.logo-viewport {
-  position: relative;
-  width: min(88vw, 360px);
-  aspect-ratio: 1024 / 683;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow:
-    0 12px 32px -8px rgba(8, 25, 35, 0.08),
-    0 2px 6px rgba(8, 25, 35, 0.04);
-}
-
-.brand-logo {
   display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  opacity: 0;
-  transform: scale(0.95);
-  transition:
-    opacity 650ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 750ms cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
-
-  .phase-revealing & {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.gold-sweep-overlay {
-  position: absolute;
-  inset: 0;
   pointer-events: none;
-  background: linear-gradient(
-    115deg,
-    transparent 32%,
-    rgba(231, 170, 27, 0.25) 45%,
-    rgba(255, 255, 255, 0.65) 50%,
-    rgba(231, 170, 27, 0.3) 54%,
-    transparent 68%
-  );
-  transform: translateX(-150%);
-  will-change: transform;
-
-  .phase-sweep & {
-    transform: translateX(150%);
-    transition: transform 900ms cubic-bezier(0.25, 1, 0.5, 1);
-  }
 }
 
-.tagline-block {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
+/* 0.0 - 1.8s: Dark M Entrance (0.2s - 1.0s) */
+.dark-m {
+  left: 27.148%;
+  top: 21.875%;
+  width: 44.629%;
+  height: 47.266%;
   opacity: 0;
-  transform: translateY(8px);
-  transition:
-    opacity 600ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  clip-path: inset(100% 0 0 0);
+  transform: translateY(6px);
+  animation: revealDarkM 800ms cubic-bezier(0.22, 1, 0.36, 1) 200ms forwards;
+}
 
-  &.visible {
+@keyframes revealDarkM {
+  0% {
+    opacity: 0;
+    clip-path: inset(100% 0 0 0);
+    transform: translateY(6px);
+  }
+  20% {
     opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
     transform: translateY(0);
   }
 }
 
-.tagline-text {
-  font-family: var(--magic-font-sans, system-ui, sans-serif);
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #081923;
-}
-
-.system-edition {
-  font-family: var(--magic-font-sans, system-ui, sans-serif);
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  color: #64748b;
-  text-transform: uppercase;
-}
-
-.skip-button {
+/* 0.8 - 1.6s: Gold Lightning Wing Entrance */
+.gold-wrapper {
   position: absolute;
-  bottom: 2rem;
-  right: 2rem;
-  z-index: 10;
-  padding: 0.4rem 0.85rem;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(8, 25, 35, 0.15);
-  border-radius: 4px;
-  font-family: var(--magic-font-sans, system-ui, sans-serif);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: #334155;
-  cursor: pointer;
-  backdrop-filter: blur(4px);
-  transition: all 150ms ease;
+  left: 47.949%;
+  top: 6.25%;
+  width: 27.539%;
+  height: 66.797%;
+  overflow: hidden;
+  opacity: 0;
+  clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
+  transform: translate(-4px, 10px) scale(0.97);
+  animation: revealGoldWing 800ms cubic-bezier(0.16, 1, 0.3, 1) 800ms forwards;
+}
 
-  &:hover,
-  &:focus-visible {
-    background: #ffffff;
-    color: #081923;
-    border-color: #e7aa1b;
-    outline: 2px solid #e7aa1b;
+.gold-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+@keyframes revealGoldWing {
+  0% {
+    opacity: 0;
+    clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
+    transform: translate(-4px, 10px) scale(0.97);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    transform: translate(0, 0) scale(1);
   }
 }
 
+/* 1.2 - 1.8s: Subtle Golden Light Sweep */
+.gold-sweep {
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.8) 48%,
+    rgba(231, 170, 27, 0.9) 54%,
+    transparent 70%
+  );
+  transform: translateX(-150%) skewX(-20deg);
+  opacity: 0;
+  animation: sweepGoldLight 600ms cubic-bezier(0.4, 0, 0.2, 1) 1200ms forwards;
+}
+
+@keyframes sweepGoldLight {
+  0% {
+    transform: translateX(-150%) skewX(-20deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.9;
+  }
+  70% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(250%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
+/* 1.8 - 3.8s: MAGIC Text Writing Animation */
+.letter-glyph {
+  opacity: 0;
+  clip-path: inset(0 100% 0 0);
+  will-change: clip-path, opacity;
+}
+
+.letter-m {
+  left: 11.328%;
+  top: 74.219%;
+  width: 18.555%;
+  height: 22.656%;
+  animation: writeLetter 400ms cubic-bezier(0.25, 1, 0.5, 1) 1800ms forwards;
+}
+
+.letter-a {
+  left: 31.641%;
+  top: 73.047%;
+  width: 16.699%;
+  height: 23.828%;
+  animation: writeLetter 400ms cubic-bezier(0.25, 1, 0.5, 1) 2150ms forwards;
+}
+
+.letter-g {
+  left: 49.219%;
+  top: 73.047%;
+  width: 14.941%;
+  height: 24.805%;
+  animation: writeLetter 400ms cubic-bezier(0.25, 1, 0.5, 1) 2500ms forwards;
+}
+
+.letter-i {
+  left: 67.383%;
+  top: 74.023%;
+  width: 3.418%;
+  height: 22.852%;
+  animation: writeLetter 300ms cubic-bezier(0.25, 1, 0.5, 1) 2850ms forwards;
+}
+
+.letter-c {
+  left: 74.219%;
+  top: 73.047%;
+  width: 14.453%;
+  height: 24.805%;
+  animation: writeLetter 450ms cubic-bezier(0.25, 1, 0.5, 1) 3100ms forwards;
+}
+
+@keyframes writeLetter {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0% 0 0);
+  }
+}
+
+/* 3.8 - 4.5s: Complete Logo Presentation & Subtle Gold Reflection */
+.emblem-reflection {
+  position: absolute;
+  left: 27.148%;
+  top: 6.25%;
+  width: 48.34%;
+  height: 66.797%;
+  overflow: hidden;
+  pointer-events: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -30%;
+    background: linear-gradient(
+      115deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.5) 48%,
+      rgba(231, 170, 27, 0.6) 54%,
+      transparent 68%
+    );
+    transform: translateX(-160%) rotate(25deg);
+    opacity: 0;
+    animation: subtleReflection 650ms cubic-bezier(0.4, 0, 0.2, 1) 3850ms forwards;
+  }
+}
+
+@keyframes subtleReflection {
+  0% {
+    transform: translateX(-160%) rotate(25deg);
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.65;
+  }
+  70% {
+    opacity: 0.65;
+  }
+  100% {
+    transform: translateX(250%) rotate(25deg);
+    opacity: 0;
+  }
+}
+
+/* Accessibility: Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
-  .intro-backdrop,
-  .brand-logo,
-  .gold-sweep-overlay,
-  .tagline-block {
-    transition: none !important;
-    animation: none !important;
-    transform: none !important;
-  }
-
-  .gold-sweep-overlay {
-    display: none;
-  }
-
-  .brand-logo,
-  .tagline-block {
+  .dark-m,
+  .gold-wrapper,
+  .letter-glyph {
     opacity: 1 !important;
+    clip-path: none !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  .gold-sweep,
+  .emblem-reflection {
+    display: none !important;
+  }
+
+  .intro-backdrop {
+    transition: none !important;
   }
 }

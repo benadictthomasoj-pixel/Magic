@@ -29,7 +29,7 @@ describe('LoginPage', () => {
 
     const logo = element.querySelector('.login-logo') as HTMLImageElement;
     expect(logo).toBeTruthy();
-    expect(logo.getAttribute('src')).toBe('/branding/magic-logo.jpg');
+    expect(logo.getAttribute('src')).toBe('/branding/magic-logo.png');
 
     const heading = element.querySelector('.welcome-heading');
     expect(heading?.textContent).toContain('Welcome back');
@@ -92,3 +92,4 @@ describe('LoginPage', () => {
     expect(navigateSpy).toHaveBeenCalledWith(['/system/status']);
   });
 });
+

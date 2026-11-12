@@ -10,12 +10,12 @@ import {
 import { IntroStateService } from '../../../core/services/intro-state.service';
 
 /**
- * Cinematic startup brand introduction for MAGIC ERP.
- * Executes a 2.5s restrained, GPU-accelerated 4-stage reveal sequence:
- * 1. Gallery off-white background with radial ambient lighting.
- * 2. Smooth scale/fade emblem emergence with golden diagonal light sweep.
- * 3. Brand name and tagline presentation.
- * 4. Seamless fade-and-scale transition directly into the enterprise login screen.
+ * 5-Second Animated Logo Introduction for MAGIC ERP.
+ * Sequence:
+ * 0.0 - 1.8s: Emblem entrance (Dark M, then Gold lightning element with golden light sweep)
+ * 1.8 - 3.8s: MAGIC text writing animation (letter by letter, left to right)
+ * 3.8 - 4.5s: Complete logo presentation with subtle gold reflection
+ * 4.5 - 5.0s: Seamless fade transition into the login screen
  */
 @Component({
   selector: 'magic-brand-intro',
@@ -23,57 +23,76 @@ import { IntroStateService } from '../../../core/services/intro-state.service';
   template: `
     <div
       class="intro-backdrop"
-      [class.phase-revealing]="phase() >= 1"
-      [class.phase-sweep]="phase() >= 2"
-      [class.phase-settled]="phase() >= 3"
-      [class.phase-exit]="phase() === 4"
+      [class.phase-exit]="isExiting()"
       role="region"
       aria-label="MAGIC Brand Introduction"
     >
-      <div class="ambient-glow" aria-hidden="true"></div>
+      <div class="logo-stage">
+        <!-- Dark M Element (Reveals 0.2s - 1.0s) -->
+        <img
+          src="/branding/magic-emblem-dark-tight.png"
+          alt=""
+          class="stage-layer dark-m"
+          aria-hidden="true"
+        />
 
-      <div class="intro-content">
-        <div class="logo-viewport">
+        <!-- Gold Lightning Wing with Light Sweep (Reveals 0.8s - 1.6s, Sweep 1.2s - 1.8s) -->
+        <div class="gold-wrapper">
           <img
-            src="/branding/magic-logo.jpg"
-            alt="MAGIC Universal Business Management ERP"
-            class="brand-logo"
-            width="320"
-            height="213"
+            src="/branding/magic-emblem-gold-tight.png"
+            alt=""
+            class="gold-img"
+            aria-hidden="true"
           />
-          <div class="gold-sweep-overlay" aria-hidden="true"></div>
+          <div class="gold-sweep" aria-hidden="true"></div>
         </div>
 
-        <div class="tagline-block" [class.visible]="phase() >= 3">
-          <span class="tagline-text">Universal Business Management ERP</span>
-          <span class="system-edition">Enterprise Platform Edition</span>
-        </div>
+        <!-- Upper Emblem Subtle Reflection (3.85s - 4.5s) -->
+        <div class="emblem-reflection" aria-hidden="true"></div>
+
+        <!-- MAGIC Wordmark Glyphs (Writing animation letter-by-letter 1.8s - 3.8s) -->
+        <img
+          src="/branding/magic-letter-m-tight.png"
+          alt="M"
+          class="stage-layer letter-glyph letter-m"
+          aria-hidden="true"
+        />
+        <img
+          src="/branding/magic-letter-a-tight.png"
+          alt="A"
+          class="stage-layer letter-glyph letter-a"
+          aria-hidden="true"
+        />
+        <img
+          src="/branding/magic-letter-g-tight.png"
+          alt="G"
+          class="stage-layer letter-glyph letter-g"
+          aria-hidden="true"
+        />
+        <img
+          src="/branding/magic-letter-i-tight.png"
+          alt="I"
+          class="stage-layer letter-glyph letter-i"
+          aria-hidden="true"
+        />
+        <img
+          src="/branding/magic-letter-c-tight.png"
+          alt="C"
+          class="stage-layer letter-glyph letter-c"
+          aria-hidden="true"
+        />
       </div>
-
-      <button
-        type="button"
-        class="skip-button"
-        (click)="skipIntro()"
-        aria-label="Skip brand introduction"
-      >
-        Skip
-      </button>
     </div>
   `,
   styleUrl: './brand-intro.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    '(document:keydown.escape)': 'skipIntro()',
-    '(document:keydown.space)': 'skipIntro()',
-  },
 })
 export class BrandIntroComponent implements OnInit {
   private readonly introState = inject(IntroStateService);
 
   @Output() readonly completed = new EventEmitter<void>();
 
-  // Phases: 0 = Init, 1 = Background & Initial Emblem Fade, 2 = Gold Sweep, 3 = Tagline Hold, 4 = Exit Transition
-  protected readonly phase = signal<number>(0);
+  protected readonly isExiting = signal(false);
 
   ngOnInit(): void {
     if (this.introState.hasCompletedIntro()) {
@@ -81,36 +100,15 @@ export class BrandIntroComponent implements OnInit {
       return;
     }
 
-    this.runAnimationSequence();
-  }
-
-  private runAnimationSequence(): void {
-    // Stage 1: Immediate background appearance with soft radial glow
-    this.phase.set(1);
-
-    // Stage 2 (t = 400ms): Gold light sweep across symbol
+    // Stage 4 transition: start exit fade at 4500ms
     setTimeout(() => {
-      this.phase.set(2);
-    }, 450);
+      this.isExiting.set(true);
+    }, 4500);
 
-    // Stage 3 (t = 1200ms): Wordmark & Tagline presence hold
-    setTimeout(() => {
-      this.phase.set(3);
-    }, 1250);
-
-    // Stage 4 (t = 2200ms): Smooth fade-and-scale transition to login
-    setTimeout(() => {
-      this.phase.set(4);
-    }, 2250);
-
-    // Final completion (t = 2650ms)
+    // Exact 5.0 seconds completion: finish at 5000ms
     setTimeout(() => {
       this.finish();
-    }, 2650);
-  }
-
-  protected skipIntro(): void {
-    this.finish();
+    }, 5000);
   }
 
   private finish(): void {
