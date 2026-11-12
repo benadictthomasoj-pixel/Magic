@@ -36,8 +36,8 @@ public sealed class AuthenticationAndSecurityTests : IClassFixture<MagicTestFixt
     {
         var request = new LoginRequest
         {
-            UsernameOrEmail = "admin",
-            Password = "AdminPassword123!"
+            UsernameOrEmail = "ben",
+            Password = "123123"
         };
 
         var response = await _client.PostAsJsonAsync("/api/v1/auth/login", request);
@@ -50,7 +50,7 @@ public sealed class AuthenticationAndSecurityTests : IClassFixture<MagicTestFixt
         Assert.NotNull(result.Data);
         Assert.False(string.IsNullOrWhiteSpace(result.Data.AccessToken));
         Assert.False(string.IsNullOrWhiteSpace(result.Data.RefreshToken));
-        Assert.Equal("admin", result.Data.User.Username);
+        Assert.Equal("ben", result.Data.User.Username);
         Assert.Contains("Administrator", result.Data.User.Roles);
         Assert.Contains("accounting:vouchers:create", result.Data.User.Permissions);
     }
@@ -89,8 +89,8 @@ public sealed class AuthenticationAndSecurityTests : IClassFixture<MagicTestFixt
         // 1. Initial Login
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest
         {
-            UsernameOrEmail = "admin",
-            Password = "AdminPassword123!"
+            UsernameOrEmail = "ben",
+            Password = "123123"
         });
         var loginResult = await loginResponse.Content.ReadFromJsonAsync<ApiResponse<LoginResponse>>();
         var firstRefreshToken = loginResult!.Data!.RefreshToken;
@@ -118,7 +118,7 @@ public sealed class AuthenticationAndSecurityTests : IClassFixture<MagicTestFixt
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest
         {
             UsernameOrEmail = "accountant1",
-            Password = "AccountantPassword123!"
+            Password = "123123"
         });
         var loginResult = await loginResponse.Content.ReadFromJsonAsync<ApiResponse<LoginResponse>>();
         var originalRefreshToken = loginResult!.Data!.RefreshToken;
@@ -152,8 +152,8 @@ public sealed class AuthenticationAndSecurityTests : IClassFixture<MagicTestFixt
     {
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest
         {
-            UsernameOrEmail = "admin",
-            Password = "AdminPassword123!"
+            UsernameOrEmail = "ben",
+            Password = "123123"
         });
         var loginResult = await loginResponse.Content.ReadFromJsonAsync<ApiResponse<LoginResponse>>();
         var refreshToken = loginResult!.Data!.RefreshToken;
@@ -197,7 +197,7 @@ public sealed class AuthenticationAndSecurityTests : IClassFixture<MagicTestFixt
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest
         {
             UsernameOrEmail = "cashier1",
-            Password = "CashierPassword123!"
+            Password = "123123"
         });
         var loginResult = await loginResponse.Content.ReadFromJsonAsync<ApiResponse<LoginResponse>>();
         var token = loginResult!.Data!.AccessToken;
@@ -225,7 +225,7 @@ public sealed class AuthenticationAndSecurityTests : IClassFixture<MagicTestFixt
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest
         {
             UsernameOrEmail = "accountant1",
-            Password = "AccountantPassword123!"
+            Password = "123123"
         });
         var loginResult = await loginResponse.Content.ReadFromJsonAsync<ApiResponse<LoginResponse>>();
         var token = loginResult!.Data!.AccessToken;

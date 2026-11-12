@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../contracts/api.models';
 
 export interface UserSummary {
@@ -65,6 +66,7 @@ const STORAGE_KEYS = {
 export class AuthBoundaryService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly baseUrl = environment.apiBaseUrl;
 
   private readonly stateSignal = signal<AuthState>(this.loadInitialState());
 
@@ -92,7 +94,7 @@ export class AuthBoundaryService {
 
     try {
       const response = await firstValueFrom(
-        this.http.post<ApiResponse<LoginResponseData>>('/api/v1/auth/login', {
+        this.http.post<ApiResponse<LoginResponseData>>(`${this.baseUrl}/v1/auth/login`, {
           usernameOrEmail: trimmedUser,
           password,
           branchId,
@@ -127,7 +129,7 @@ export class AuthBoundaryService {
 
     try {
       const response = await firstValueFrom(
-        this.http.post<ApiResponse<LoginResponseData>>('/api/v1/auth/refresh', {
+        this.http.post<ApiResponse<LoginResponseData>>(`${this.baseUrl}/v1/auth/refresh`, {
           refreshToken: currentRefresh,
         })
       );
@@ -150,7 +152,7 @@ export class AuthBoundaryService {
     if (currentRefresh) {
       try {
         await firstValueFrom(
-          this.http.post<ApiResponse<string>>('/api/v1/auth/logout', {
+          this.http.post<ApiResponse<string>>(`${this.baseUrl}/v1/auth/logout`, {
             refreshToken: currentRefresh,
           })
         );
@@ -170,7 +172,7 @@ export class AuthBoundaryService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await firstValueFrom(
-        this.http.post<ApiResponse<string>>('/api/v1/auth/change-password', {
+        this.http.post<ApiResponse<string>>(`${this.baseUrl}/v1/auth/change-password`, {
           currentPassword,
           newPassword,
           confirmPassword,

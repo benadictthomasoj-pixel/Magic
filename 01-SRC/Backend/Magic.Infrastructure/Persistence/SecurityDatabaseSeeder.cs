@@ -157,21 +157,23 @@ public sealed class SecurityDatabaseSeeder(
         // 4. Seed Users
         var usersDef = new (string Username, string Email, string DisplayName, string Password, string RoleCode)[]
         {
-            ("admin", "admin@magic.local", "System Administrator", "AdminPassword123!", "Administrator"),
-            ("accountant1", "accountant@magic.local", "Senior Accountant", "AccountantPassword123!", "Accountant"),
-            ("cashier1", "cashier1@magic.local", "Front Desk Cashier", "CashierPassword123!", "Cashier")
+            ("ben", "ben@magic.local", "Benadict (Administrator)", "123123", "Administrator"),
+            ("admin", "admin@magic.local", "System Administrator", "123123", "Administrator"),
+            ("accountant1", "accountant@magic.local", "Senior Accountant", "123123", "Accountant"),
+            ("cashier1", "cashier1@magic.local", "Front Desk Cashier", "123123", "Cashier")
         };
 
         foreach (var (username, email, displayName, password, roleCode) in usersDef)
         {
             var normalizedUser = username.ToUpperInvariant();
-            var exists = await dbContext.Users.AnyAsync(
+            var existingUser = await dbContext.Users.FirstOrDefaultAsync(
                 u => u.CompanyId == DefaultCompanyId && u.NormalizedUsername == normalizedUser,
                 cancellationToken);
 
-            if (!exists)
+            var (hash, salt) = passwordHasher.HashPassword(password);
+
+            if (existingUser is null)
             {
-                var (hash, salt) = passwordHasher.HashPassword(password);
                 var user = new UserRecord
                 {
                     Id = Guid.NewGuid(),
@@ -212,6 +214,17 @@ public sealed class SecurityDatabaseSeeder(
 
                 await dbContext.SaveChangesAsync(cancellationToken);
                 logger.LogInformation("Seeded default user {Username} with role {RoleCode}.", username, roleCode);
+            }
+            else
+            {
+                existingUser.PasswordHash = hash;
+                existingUser.PasswordSalt = salt;
+                existingUser.IsActive = true;
+                existingUser.IsLockedOut = false;
+                existingUser.FailedLoginAttempts = 0;
+                existingUser.LockoutEndUtc = null;
+                await dbContext.SaveChangesAsync(cancellationToken);
+                logger.LogInformation("Updated credentials for user {Username}.", username);
             }
         }
 

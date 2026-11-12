@@ -32,8 +32,8 @@ export class LoginPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   protected readonly showIntro = signal<boolean>(!this.introState.hasCompletedIntro());
-  protected username: string = '';
-  protected password: string = '';
+  protected username: string = 'ben';
+  protected password: string = '123123';
   protected readonly showPassword = signal<boolean>(false);
   protected readonly isLoading = signal<boolean>(false);
   protected readonly errorMessage = signal<string | null>(null);
