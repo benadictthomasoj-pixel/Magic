@@ -1,0 +1,188 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="header-titles">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <span class="bc-item">Accounting</span>
+        <span class="bc-sep">/</span>
+        <span class="bc-current">Overview</span>
+      </nav>
+      <h1 class="page-title">Financial Accounting Overview</h1>
+      <p class="page-subtitle">Real-time double-entry ledger status, active fiscal governance, and transaction feed.</p>
+    </div>
+
+    <div class="header-actions">
+      <a routerLink="/accounting/journal-entry" class="btn btn-primary">
+        <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+        </svg>
+        New Journal Entry
+      </a>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="state-card loading-state">
+      <div class="spinner"></div>
+      <p>Synchronizing general ledger statistics...</p>
+    </div>
+  } @else if (error()) {
+    <div class="state-card error-state">
+      <h3>Error Loading Accounting Data</h3>
+      <p>{{ error() }}</p>
+      <button type="button" class="btn btn-secondary" (click)="loadDashboard()">Retry</button>
+    </div>
+  } @else if (data(); as d) {
+    <!-- Financial Metric Cards -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <span class="metric-label">Total Debit Movements</span>
+        <span class="metric-value">{{ formatPaise(d.totalDebitPaise) }}</span>
+        <span class="metric-footnote">Exact Integer Paise Balance</span>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-label">Total Credit Movements</span>
+        <span class="metric-value">{{ formatPaise(d.totalCreditPaise) }}</span>
+        <span class="metric-footnote">Double-Entry Ledger Aggregate</span>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-label">Posted Vouchers</span>
+        <div class="metric-count-row">
+          <span class="metric-value">{{ d.postedVouchersCount }}</span>
+          <span class="metric-badge-status">
+            <magic-status-badge
+              [label]="d.systemValidationStatus === 'BALANCED' ? 'Ledger Balanced' : d.systemValidationStatus === 'EMPTY' ? 'No Postings' : 'Discrepancy'"
+              [tone]="d.systemValidationStatus === 'BALANCED' ? 'ok' : d.systemValidationStatus === 'EMPTY' ? 'neutral' : 'error'"
+            />
+          </span>
+        </div>
+        <span class="metric-footnote">{{ d.draftVouchersCount }} Draft Pending</span>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-label">Active Period</span>
+        <span class="metric-value">{{ d.activeFiscalPeriodCode || 'N/A' }}</span>
+        <span class="metric-footnote">{{ d.activeFiscalYearName || 'Fiscal Year' }} · {{ d.isActivePeriodLocked ? 'Locked' : 'Open' }}</span>
+      </div>
+    </div>
+
+    <!-- Quick Navigation Actions -->
+    <section class="quick-nav-section">
+      <h2 class="section-title">Accounting Operations</h2>
+      <div class="quick-nav-grid">
+        <a routerLink="/accounting/chart-of-accounts" class="quick-card">
+          <div class="quick-icon navy-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+          </div>
+          <div class="quick-info">
+            <span class="quick-title">Chart of Accounts</span>
+            <span class="quick-desc">Manage account groups, leaf detail accounts, and control account rules.</span>
+          </div>
+        </a>
+
+        <a routerLink="/accounting/general-ledger" class="quick-card">
+          <div class="quick-icon gold-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <div class="quick-info">
+            <span class="quick-title">General Ledger</span>
+            <span class="quick-desc">Inspect chronological debit and credit movements by account with running balances.</span>
+          </div>
+        </a>
+
+        <a routerLink="/accounting/trial-balance" class="quick-card">
+          <div class="quick-icon teal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+          </div>
+          <div class="quick-info">
+            <span class="quick-title">Trial Balance</span>
+            <span class="quick-desc">Verify periodic debit-credit equality across all open accounts.</span>
+          </div>
+        </a>
+
+        <a routerLink="/accounting/periods" class="quick-card">
+          <div class="quick-icon slate-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <div class="quick-info">
+            <span class="quick-title">Fiscal Periods</span>
+            <span class="quick-desc">Manage accounting period lifecycles, month-end lock, and supervisor elevation.</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Recent Vouchers Feed -->
+    <section class="recent-vouchers-section">
+      <div class="section-header-row">
+        <h2 class="section-title">Recent Journal Entries</h2>
+        <a routerLink="/accounting/vouchers" class="section-link">View All Vouchers →</a>
+      </div>
+
+      @if (d.recentVouchers.length === 0) {
+        <div class="empty-state-panel">
+          <div class="empty-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </div>
+          <h3>No Accounting Activity Recorded Yet</h3>
+          <p>This business workspace is currently in greenfield initial status. You can record your first balanced transaction using the Journal Entry workspace.</p>
+          <a routerLink="/accounting/journal-entry" class="btn btn-primary">Create First Journal Entry</a>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table class="data-table" aria-label="Recent Journal Entries">
+            <thead>
+              <tr>
+                <th scope="col">Voucher #</th>
+                <th scope="col">Type</th>
+                <th scope="col">Date</th>
+                <th scope="col">Description</th>
+                <th scope="col" class="num-col">Total Amount</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (v of d.recentVouchers; track v.id) {
+                <tr>
+                  <td class="font-mono font-bold">{{ v.voucherNumber }}</td>
+                  <td><span class="type-pill">{{ v.voucherType }}</span></td>
+                  <td>{{ v.voucherDate }}</td>
+                  <td class="truncate-cell">{{ v.narration }}</td>
+                  <td class="num-col font-mono">{{ formatPaise(v.totalDebitPaise) }}</td>
+                  <td>
+                    <magic-status-badge
+                      [label]="v.status"
+                      [tone]="v.status === 'Posted' ? 'ok' : v.status === 'Draft' ? 'neutral' : 'warn'"
+                    />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+</div>

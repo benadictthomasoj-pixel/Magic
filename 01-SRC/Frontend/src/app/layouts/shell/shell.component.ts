@@ -8,6 +8,19 @@ import { ConnectivityMonitorService } from '../../core/services/connectivity-mon
 import { ThemePreference, ThemeService } from '../../core/services/theme.service';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 
+export interface NavItem {
+  readonly path: string;
+  readonly label: string;
+  readonly icon?: string;
+  readonly badge?: string;
+  readonly disabled?: boolean;
+}
+
+export interface NavSection {
+  readonly title: string;
+  readonly items: readonly NavItem[];
+}
+
 @Component({
   selector: 'magic-shell',
   standalone: true,
@@ -29,10 +42,42 @@ export class ShellComponent implements OnInit {
   protected readonly isNarrowScreen = signal(false);
   protected readonly mobileNavOpen = signal(false);
 
-  protected readonly navItems = [
-    { path: '/system/status', label: 'Platform Status' },
-    { path: '/system/preferences', label: 'Display & Context' },
-  ] as const;
+  // Enterprise Organizational Context
+  protected readonly companyName = signal('Universal Enterprises Ltd');
+  protected readonly branchName = signal('Headquarters (MAIN)');
+  protected readonly fiscalYear = signal('FY 2026-27');
+
+  protected readonly navSections: readonly NavSection[] = [
+    {
+      title: 'Financial Accounting',
+      items: [
+        { path: '/accounting/dashboard', label: 'Overview / KPI', icon: '📊' },
+        { path: '/accounting/chart-of-accounts', label: 'Chart of Accounts', icon: '📑' },
+        { path: '/accounting/journal-entry', label: 'Journal Entry', icon: '✍️' },
+        { path: '/accounting/vouchers', label: 'Voucher Registry', icon: '📋' },
+        { path: '/accounting/general-ledger', label: 'General Ledger', icon: '📖' },
+        { path: '/accounting/trial-balance', label: 'Trial Balance', icon: '⚖️' },
+        { path: '/accounting/periods', label: 'Accounting Periods', icon: '📅' },
+        { path: '/accounting/subledgers', label: 'AR / AP Subledgers', icon: '👥' },
+      ],
+    },
+    {
+      title: 'Upcoming Modules',
+      items: [
+        { path: '', label: 'Financial Statements', icon: '📈', badge: 'Soon', disabled: true },
+        { path: '', label: 'Sales & Invoicing', icon: '🛒', badge: 'Phase 3', disabled: true },
+        { path: '', label: 'Purchases & AP', icon: '📦', badge: 'Phase 3', disabled: true },
+        { path: '', label: 'Point of Sale (POS)', icon: '💳', badge: 'Soon', disabled: true },
+      ],
+    },
+    {
+      title: 'System & Governance',
+      items: [
+        { path: '/system/status', label: 'Platform Status', icon: '🛡️' },
+        { path: '/system/preferences', label: 'Display & Context', icon: '⚙️' },
+      ],
+    },
+  ];
 
   constructor() {
     this.breakpointObserver
@@ -72,4 +117,3 @@ export class ShellComponent implements OnInit {
     this.router.navigate(['/login']);
   }
 }
-

@@ -1,6 +1,7 @@
 <a class="skip-link visually-hidden" href="#main-content">Skip to main content</a>
 
 <div class="shell-grid">
+  <!-- Top App Header -->
   <header class="shell-header">
     <div class="brand-group">
       @if (isNarrowScreen()) {
@@ -14,7 +15,7 @@
           {{ mobileNavOpen() ? 'Close Menu' : 'Menu' }}
         </button>
       }
-      <a class="brand-link" routerLink="/system/status">
+      <a class="brand-link" routerLink="/accounting/dashboard">
         <img
           src="/branding/magic-logo.jpg"
           alt="MAGIC Logo"
@@ -27,6 +28,23 @@
           <span class="brand-tag">Universal Business Management ERP</span>
         </div>
       </a>
+    </div>
+
+    <!-- Active Enterprise Context (Company, Branch, FY) -->
+    <div class="enterprise-context-badge">
+      <div class="context-item">
+        <span class="context-icon">🏢</span>
+        <span class="context-text font-semibold">{{ companyName() }}</span>
+      </div>
+      <span class="context-divider">/</span>
+      <div class="context-item">
+        <span class="context-icon">📍</span>
+        <span class="context-text">{{ branchName() }}</span>
+      </div>
+      <span class="context-divider">/</span>
+      <div class="context-item fy-tag">
+        <span class="context-text font-mono font-bold">{{ fiscalYear() }}</span>
+      </div>
     </div>
 
     <div class="header-controls">
@@ -70,6 +88,7 @@
     </div>
   </header>
 
+  <!-- Navigation Sidebar -->
   @if (!isNarrowScreen() || mobileNavOpen()) {
     <aside
       id="primary-navigation"
@@ -77,38 +96,55 @@
       [class.drawer-open]="isNarrowScreen() && mobileNavOpen()"
       [cdkTrapFocus]="isNarrowScreen() && mobileNavOpen()"
     >
-      <nav aria-label="Primary">
-        <ul class="nav-list">
-          @for (item of navItems; track item.path) {
-            <li>
-              <a
-                class="nav-link"
-                [routerLink]="item.path"
-                routerLinkActive="is-active"
-                ariaCurrentWhenActive="page"
-                (click)="closeMobileNav()"
-              >
-                {{ item.label }}
-              </a>
-            </li>
-          }
-        </ul>
+      <nav aria-label="Primary" class="sidebar-nav">
+        @for (sec of navSections; track sec.title) {
+          <div class="nav-section">
+            <div class="section-heading">{{ sec.title }}</div>
+            <ul class="nav-list">
+              @for (item of sec.items; track item.label) {
+                <li>
+                  @if (item.disabled) {
+                    <div class="nav-link disabled-link">
+                      <span class="nav-item-icon">{{ item.icon }}</span>
+                      <span class="nav-label">{{ item.label }}</span>
+                      @if (item.badge) {
+                        <span class="nav-badge">{{ item.badge }}</span>
+                      }
+                    </div>
+                  } @else {
+                    <a
+                      class="nav-link"
+                      [routerLink]="item.path"
+                      routerLinkActive="is-active"
+                      ariaCurrentWhenActive="page"
+                      (click)="closeMobileNav()"
+                    >
+                      <span class="nav-item-icon">{{ item.icon }}</span>
+                      <span class="nav-label">{{ item.label }}</span>
+                    </a>
+                  }
+                </li>
+              }
+            </ul>
+          </div>
+        }
       </nav>
 
       <div class="sidebar-footer">
-        <p class="boundary-label">Security Boundary</p>
-        <p class="boundary-value">{{ auth.state().status }}</p>
+        <p class="boundary-label">Security Protocol</p>
+        <p class="boundary-value">OPEN-003 Fail-Closed</p>
       </div>
     </aside>
   }
 
+  <!-- Main Work Area -->
   <main id="main-content" class="shell-main" tabindex="-1">
     <router-outlet />
   </main>
 
+  <!-- App Footer -->
   <footer class="shell-footer">
-    <span>MAGIC Greenfield Foundation</span>
-    <span>Strict Online LAN (OPEN-001) · Pure Angular CDK (OPEN-002)</span>
+    <span>MAGIC Greenfield ERP · Phase 2 Accounting Architecture</span>
+    <span>PostgreSQL 18.6 · ASP.NET Core 10 · Strict Online LAN (OPEN-001)</span>
   </footer>
 </div>
-

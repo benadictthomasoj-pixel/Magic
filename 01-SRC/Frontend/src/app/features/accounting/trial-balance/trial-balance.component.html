@@ -1,0 +1,134 @@
+<div class="tb-container">
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Accounting / Trial Balance</div>
+      <h1 class="page-title">Trial Balance Report</h1>
+      <p class="page-subtitle">Verify overall ledger equilibrium and double-entry mathematical integrity.</p>
+    </div>
+  </header>
+
+  <!-- Filter Card -->
+  <div class="card filter-card">
+    <div class="filter-flex">
+      <div class="form-group">
+        <label for="asOfDate">As of Date</label>
+        <input type="date" id="asOfDate" [(ngModel)]="asOfDate" class="form-control" />
+      </div>
+
+      <div class="form-group flex-1">
+        <label for="search">Filter Accounts</label>
+        <input
+          type="text"
+          id="search"
+          [(ngModel)]="searchFilter"
+          placeholder="Filter by code, name, group..."
+          class="form-control"
+        />
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-primary" (click)="fetchTrialBalance()" [disabled]="loading()">
+          {{ loading() ? 'Generating...' : 'Run Report' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (errorMessage(); as err) {
+    <div class="alert-banner alert-error">
+      <span class="alert-icon">✕</span>
+      <div class="alert-text">{{ err }}</div>
+    </div>
+  }
+
+  @if (report(); as rep) {
+    <!-- Balance Verification Banner -->
+    <div class="balance-banner" [class.balanced]="rep.isBalanced" [class.unbalanced]="!rep.isBalanced">
+      <div class="banner-status">
+        <magic-status-badge
+          [label]="rep.isBalanced ? 'Trial Balance in Exact Equilibrium' : 'Trial Balance Out of Equilibrium'"
+          [tone]="rep.isBalanced ? 'ok' : 'error'"
+        />
+        <div>
+          <div class="banner-title font-bold">
+            {{ rep.isBalanced ? 'Total debits strictly equal total credits.' : 'Audit discrepancy detected. Invariants breached.' }}
+          </div>
+          <div class="banner-subtitle">
+            Fundamental double-entry accounting invariant satisfied for PostgreSQL General Ledger.
+          </div>
+        </div>
+      </div>
+      <div class="banner-totals">
+        <div class="total-col">
+          <span class="label">Total Debit</span>
+          <span class="val font-mono">{{ formatCurrency(rep.totalClosingDebitPaise) }}</span>
+        </div>
+        <div class="total-col">
+          <span class="label">Total Credit</span>
+          <span class="val font-mono">{{ formatCurrency(rep.totalClosingCreditPaise) }}</span>
+        </div>
+        @if (!rep.isBalanced) {
+          <div class="total-col text-danger">
+            <span class="label">Difference</span>
+            <span class="val font-mono">{{ formatCurrency(rep.differencePaise) }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Trial Balance Table -->
+    <div class="card table-card">
+      <div class="card-header space-between">
+        <h2 class="card-title">Ledger Accounts Trial Balance</h2>
+        <span class="badge badge-normal">As of {{ rep.asOfDate }} ({{ filteredAccounts().length }} Accounts)</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 110px;">Code</th>
+              <th>Account Name</th>
+              <th>Group</th>
+              <th>Class</th>
+              <th class="text-right">Period Debit</th>
+              <th class="text-right">Period Credit</th>
+              <th class="text-right">Closing Debit (₹)</th>
+              <th class="text-right">Closing Credit (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of filteredAccounts(); track l.accountId) {
+              <tr>
+                <td class="font-mono font-bold">{{ l.accountCode }}</td>
+                <td class="font-semibold">{{ l.accountName }}</td>
+                <td class="text-muted">{{ l.groupName }}</td>
+                <td><span class="class-pill" [ngClass]="'class-' + l.rootClass.toLowerCase()">{{ l.rootClass }}</span></td>
+                <td class="text-right font-mono">{{ l.periodDebitPaise > 0 ? formatCurrency(l.periodDebitPaise) : '—' }}</td>
+                <td class="text-right font-mono">{{ l.periodCreditPaise > 0 ? formatCurrency(l.periodCreditPaise) : '—' }}</td>
+                <td class="text-right font-mono font-semibold">{{ l.closingDebitPaise > 0 ? formatCurrency(l.closingDebitPaise) : '—' }}</td>
+                <td class="text-right font-mono font-semibold">{{ l.closingCreditPaise > 0 ? formatCurrency(l.closingCreditPaise) : '—' }}</td>
+              </tr>
+            }
+
+            @if (filteredAccounts().length === 0) {
+              <tr>
+                <td colspan="8" class="empty-cell">No accounts found matching filter.</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="totals-row">
+              <td colspan="4" class="text-right font-bold">Grand Total:</td>
+              <td class="text-right font-mono font-bold">—</td>
+              <td class="text-right font-mono font-bold">—</td>
+              <td class="text-right font-mono font-bold text-accent">{{ formatCurrency(rep.totalClosingDebitPaise) }}</td>
+              <td class="text-right font-mono font-bold text-accent">{{ formatCurrency(rep.totalClosingCreditPaise) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  }
+</div>

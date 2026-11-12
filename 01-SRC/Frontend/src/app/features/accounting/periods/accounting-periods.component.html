@@ -1,0 +1,140 @@
+<div class="periods-container">
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Accounting / Governance</div>
+      <h1 class="page-title">Fiscal Years & Accounting Periods</h1>
+      <p class="page-subtitle">Govern calendar boundaries, lock accounting periods, and enforce chronological posting integrity.</p>
+    </div>
+  </header>
+
+  <!-- Notification Banner -->
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type">
+      <span class="alert-icon">{{ msg.type === 'ok' ? '✓' : '✕' }}</span>
+      <div class="alert-text">{{ msg.text }}</div>
+    </div>
+  }
+
+  <div class="layout-grid">
+    <!-- Left Column: Fiscal Years -->
+    <div class="card years-card">
+      <div class="card-header">
+        <h2>Fiscal Years</h2>
+      </div>
+      <div class="years-list">
+        @for (fy of fiscalYears(); track fy.id) {
+          <div
+            class="year-item"
+            [class.active]="selectedYear()?.id === fy.id"
+            (click)="selectYear(fy)"
+          >
+            <div class="year-name-row">
+              <span class="font-bold">{{ fy.name }}</span>
+              <magic-status-badge
+                [label]="fy.isClosed ? 'Closed' : 'Active'"
+                [tone]="fy.isClosed ? 'neutral' : 'ok'"
+              />
+            </div>
+            <div class="year-code font-mono text-muted">{{ fy.code }}</div>
+            <div class="year-dates text-muted">{{ fy.startDate }} to {{ fy.endDate }}</div>
+            <div class="year-period-count font-semibold">{{ fy.periods.length }} Periods</div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Right Column: Period Governance Table -->
+    <div class="card periods-card">
+      @if (selectedYear(); as y) {
+        <div class="card-header space-between">
+          <div>
+            <h2>{{ y.name }} – Accounting Periods</h2>
+            <span class="card-sub">{{ y.startDate }} to {{ y.endDate }}</span>
+          </div>
+          <magic-status-badge
+            [label]="y.isClosed ? 'Year Closed' : 'Year Active'"
+            [tone]="y.isClosed ? 'neutral' : 'ok'"
+          />
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">#</th>
+                <th>Period Code</th>
+                <th>Date Window</th>
+                <th class="text-center">State</th>
+                <th class="text-right">Governance Controls</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of y.periods; track p.id) {
+                <tr>
+                  <td class="font-mono text-muted">{{ p.periodNumber }}</td>
+                  <td class="font-mono font-bold">{{ p.periodCode }}</td>
+                  <td class="font-mono text-muted">{{ p.startDate }} → {{ p.endDate }}</td>
+                  <td class="text-center">
+                    <magic-status-badge
+                      [label]="p.isLocked ? 'Locked' : (p.isClosed ? 'Closing' : 'Open')"
+                      [tone]="p.isLocked ? 'error' : (p.isClosed ? 'warn' : 'ok')"
+                    />
+                  </td>
+                  <td class="text-right">
+                    <div class="controls-group">
+                      @if (!p.isLocked && !p.isClosed) {
+                        <button
+                          type="button"
+                          class="btn-control btn-closing"
+                          title="Begin period closing procedures"
+                          (click)="closePeriod(p.id, p.periodCode)"
+                        >
+                          Close
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-control btn-lock"
+                          title="Lock period to freeze postings"
+                          (click)="lockPeriod(p.id, p.periodCode)"
+                        >
+                          Lock
+                        </button>
+                      } @else if (!p.isLocked && p.isClosed) {
+                        <button
+                          type="button"
+                          class="btn-control btn-lock"
+                          title="Finalize lock on period"
+                          (click)="lockPeriod(p.id, p.periodCode)"
+                        >
+                          Lock
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-control btn-reopen"
+                          title="Return period to active status"
+                          (click)="reopenPeriod(p.id, p.periodCode)"
+                        >
+                          Reopen
+                        </button>
+                      } @else {
+                        <button
+                          type="button"
+                          class="btn-control btn-reopen"
+                          title="Emergency reopen period"
+                          (click)="reopenPeriod(p.id, p.periodCode)"
+                        >
+                          Reopen
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+</div>

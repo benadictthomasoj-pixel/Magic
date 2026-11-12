@@ -20,6 +20,7 @@ public class MagicTestFixture : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Development");
         builder.UseSetting("ConnectionStrings:MagicDatabase", TestConnectionString);
+        builder.UseSetting("Seeding:AutoSeedDevelopmentData", "false");
 
         builder.ConfigureServices(services =>
         {

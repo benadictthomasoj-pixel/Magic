@@ -1,0 +1,138 @@
+<div class="gl-container">
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Accounting / General Ledger</div>
+      <h1 class="page-title">General Ledger Statement</h1>
+      <p class="page-subtitle">Detailed transactional history and running balances per ledger account.</p>
+    </div>
+  </header>
+
+  <!-- Filter Card -->
+  <div class="card filter-card">
+    <div class="filter-grid">
+      <div class="form-group flex-2">
+        <label for="accSelect">Select Account *</label>
+        <select id="accSelect" [(ngModel)]="selectedAccountId" (change)="fetchLedger()" class="form-control">
+          @for (acc of accounts(); track acc.id) {
+            <option [value]="acc.id">
+              {{ acc.code }} – {{ acc.name }} ({{ acc.groupName }})
+            </option>
+          }
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="fromDate">From Date</label>
+        <input type="date" id="fromDate" [(ngModel)]="fromDate" class="form-control" />
+      </div>
+
+      <div class="form-group">
+        <label for="toDate">To Date</label>
+        <input type="date" id="toDate" [(ngModel)]="toDate" class="form-control" />
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-primary" (click)="fetchLedger()" [disabled]="loading()">
+          {{ loading() ? 'Generating...' : 'View Statement' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (errorMessage(); as err) {
+    <div class="alert-banner alert-error">
+      <span class="alert-icon">✕</span>
+      <div class="alert-text">{{ err }}</div>
+    </div>
+  }
+
+  @if (report(); as rep) {
+    <!-- Statement Summary Banner -->
+    <div class="summary-cards-grid">
+      <div class="card summary-card">
+        <div class="summary-label">Opening Balance</div>
+        <div class="summary-value font-mono">{{ formatCurrency(rep.openingBalancePaise) }}</div>
+        <div class="summary-subtext">As of {{ rep.dateFrom }}</div>
+      </div>
+      <div class="card summary-card">
+        <div class="summary-label">Total Debits</div>
+        <div class="summary-value font-mono text-primary">{{ formatCurrency(rep.totalDebitPaise) }}</div>
+        <div class="summary-subtext">{{ rep.entries.length }} Transactions</div>
+      </div>
+      <div class="card summary-card">
+        <div class="summary-label">Total Credits</div>
+        <div class="summary-value font-mono text-warning">{{ formatCurrency(rep.totalCreditPaise) }}</div>
+        <div class="summary-subtext">During Period</div>
+      </div>
+      <div class="card summary-card highlight">
+        <div class="summary-label">Closing Balance</div>
+        <div class="summary-value font-mono font-bold">{{ formatCurrency(rep.closingBalancePaise) }}</div>
+        <div class="summary-subtext">As of {{ rep.dateTo }}</div>
+      </div>
+    </div>
+
+    <!-- Ledger Entries Table -->
+    <div class="card table-card">
+      <div class="card-header space-between">
+        <div>
+          <h2 class="card-title font-mono">{{ rep.accountCode }} – {{ rep.accountName }}</h2>
+          <span class="card-sub">{{ rep.rootClass }}</span>
+        </div>
+        <span class="badge badge-normal">Statement: {{ rep.dateFrom }} to {{ rep.dateTo }}</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Voucher #</th>
+              <th>Type</th>
+              <th>Narration</th>
+              <th class="text-right">Debit (₹)</th>
+              <th class="text-right">Credit (₹)</th>
+              <th class="text-right">Running Balance (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Opening Balance Row -->
+            <tr class="opening-row">
+              <td class="font-semibold">{{ rep.dateFrom }}</td>
+              <td colspan="3" class="font-semibold italic">Opening Balance Brought Forward</td>
+              <td class="text-right font-mono">—</td>
+              <td class="text-right font-mono">—</td>
+              <td class="text-right font-mono font-semibold">{{ formatCurrency(rep.openingBalancePaise) }}</td>
+            </tr>
+
+            @for (e of rep.entries; track $index) {
+              <tr>
+                <td>{{ e.voucherDate }}</td>
+                <td class="font-mono font-bold">{{ e.voucherNumber }}</td>
+                <td><span class="type-pill">{{ e.voucherType }}</span></td>
+                <td>{{ e.narration }}</td>
+                <td class="text-right font-mono">{{ e.debitPaise > 0 ? formatCurrency(e.debitPaise) : '—' }}</td>
+                <td class="text-right font-mono">{{ e.creditPaise > 0 ? formatCurrency(e.creditPaise) : '—' }}</td>
+                <td class="text-right font-mono font-semibold">{{ formatCurrency(e.runningBalancePaise) }}</td>
+              </tr>
+            }
+
+            @if (rep.entries.length === 0) {
+              <tr>
+                <td colspan="7" class="empty-cell">No transactional entries recorded during this date range.</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="totals-row">
+              <td colspan="4" class="text-right font-bold">Closing Balance:</td>
+              <td class="text-right font-mono font-bold">{{ formatCurrency(rep.totalDebitPaise) }}</td>
+              <td class="text-right font-mono font-bold">{{ formatCurrency(rep.totalCreditPaise) }}</td>
+              <td class="text-right font-mono font-bold text-accent">{{ formatCurrency(rep.closingBalancePaise) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  }
+</div>

@@ -55,6 +55,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<Magic.Application.Accounting.Persistence.IFiscalGovernanceRepository, Magic.Infrastructure.Persistence.Repositories.PostgresFiscalGovernanceRepository>();
         services.AddScoped<Magic.Application.Accounting.Persistence.IGeneralLedgerRepository, Magic.Infrastructure.Persistence.Repositories.PostgresGeneralLedgerRepository>();
         services.AddScoped<Magic.Application.Accounting.Services.IPostingService, Magic.Infrastructure.Accounting.PostingService>();
+        services.AddScoped<Magic.Application.Accounting.Services.IAccountingApplicationService, Magic.Infrastructure.Accounting.AccountingApplicationService>();
 
         // Scoped request security/branch/terminal context & deferred OPEN-003 boundaries
         services.AddScoped<MutableRequestContext>();

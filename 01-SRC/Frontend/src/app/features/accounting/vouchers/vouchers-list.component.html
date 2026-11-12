@@ -1,0 +1,192 @@
+<div class="vouchers-container">
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Accounting / Vouchers</div>
+      <h1 class="page-title">Voucher Registry</h1>
+      <p class="page-subtitle">Track, audit and reverse posted accounting vouchers and journals.</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/accounting/journal-entry" class="btn btn-primary">
+        <span class="icon">+</span> New Journal Entry
+      </a>
+    </div>
+  </header>
+
+  <!-- Notification Banner -->
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type">
+      <span class="alert-icon">{{ msg.type === 'ok' ? '✓' : '✕' }}</span>
+      <div class="alert-text">{{ msg.text }}</div>
+    </div>
+  }
+
+  <!-- Filter Toolbar -->
+  <div class="filter-toolbar card">
+    <div class="search-box">
+      <input
+        type="text"
+        [(ngModel)]="filterSearch"
+        placeholder="Filter by voucher #, reference or narration..."
+        class="form-control"
+      />
+    </div>
+    <div class="filter-controls">
+      <select [(ngModel)]="filterStatus" (change)="loadVouchers()" class="form-control">
+        <option value="">All Statuses</option>
+        <option value="Posted">Posted</option>
+        <option value="Draft">Draft</option>
+        <option value="Reversed">Reversed</option>
+      </select>
+      <button type="button" class="btn btn-secondary" (click)="loadVouchers()">Refresh</button>
+    </div>
+  </div>
+
+  <!-- Vouchers Table -->
+  <div class="card table-card">
+    @if (loading()) {
+      <div class="loading-state">Loading vouchers from PostgreSQL...</div>
+    } @else if (filteredVouchers().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon">📑</div>
+        <h3>No Vouchers Found</h3>
+        <p>No vouchers match your current filters. Post a new journal entry to record transactions.</p>
+        <a routerLink="/accounting/journal-entry" class="btn btn-primary mt-2">Create First Journal Entry</a>
+      </div>
+    } @else {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Voucher #</th>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Narration</th>
+              <th>Ref / Doc #</th>
+              <th class="text-right">Total Debit</th>
+              <th class="text-right">Total Credit</th>
+              <th class="text-center">Status</th>
+              <th class="text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (v of filteredVouchers(); track v.id) {
+              <tr (click)="selectVoucher(v)" class="table-row-clickable">
+                <td class="font-mono font-bold">{{ v.voucherNumber || 'DRAFT' }}</td>
+                <td>{{ v.voucherDate }}</td>
+                <td><span class="type-pill">{{ v.voucherType }}</span></td>
+                <td class="col-narration" [title]="v.narration">{{ v.narration }}</td>
+                <td class="text-muted">{{ v.referenceNumber || '—' }}</td>
+                <td class="text-right font-mono">{{ formatCurrency(v.totalDebitPaise) }}</td>
+                <td class="text-right font-mono">{{ formatCurrency(v.totalCreditPaise) }}</td>
+                <td class="text-center">
+                  <magic-status-badge
+                    [label]="v.status"
+                    [tone]="v.status === 'Posted' ? 'ok' : v.status === 'Draft' ? 'warn' : 'neutral'"
+                  />
+                </td>
+                <td class="text-center" (click)="$event.stopPropagation()">
+                  <button type="button" class="btn btn-sm btn-outline" (click)="selectVoucher(v)">
+                    View Lines
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- Voucher Detail Drawer -->
+  @if (selectedVoucher(); as v) {
+    <div class="drawer-overlay" (click)="closeDrawer()">
+      <div class="drawer" (click)="$event.stopPropagation()">
+        <div class="drawer-header">
+          <div>
+            <div class="drawer-pretitle">Voucher Details</div>
+            <h2 class="drawer-title font-mono">{{ v.voucherNumber || 'DRAFT VOUCHER' }}</h2>
+          </div>
+          <button type="button" class="btn-close" (click)="closeDrawer()">✕</button>
+        </div>
+
+        <div class="drawer-body">
+          <div class="meta-section">
+            <div class="meta-item">
+              <span class="label">Date:</span>
+              <span class="value">{{ v.voucherDate }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="label">Status:</span>
+              <magic-status-badge
+                [label]="v.status"
+                [tone]="v.status === 'Posted' ? 'ok' : v.status === 'Draft' ? 'warn' : 'neutral'"
+              />
+            </div>
+            <div class="meta-item">
+              <span class="label">Type:</span>
+              <span class="value">{{ v.voucherType }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="label">Reference:</span>
+              <span class="value">{{ v.referenceNumber || 'None' }}</span>
+            </div>
+            <div class="meta-item full-width">
+              <span class="label">Master Narration:</span>
+              <p class="value narration-box">{{ v.narration }}</p>
+            </div>
+          </div>
+
+          <h3 class="section-title">Accounting Distribution Lines</h3>
+          <table class="detail-lines-table">
+            <thead>
+              <tr>
+                <th>Account</th>
+                <th>Narration</th>
+                <th class="text-right">Debit</th>
+                <th class="text-right">Credit</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of v.lines; track l.id) {
+                <tr>
+                  <td>
+                    <div class="account-name font-semibold">{{ l.accountName }}</div>
+                    <div class="account-code font-mono text-muted">{{ l.accountCode }}</div>
+                  </td>
+                  <td class="text-muted">{{ l.narration || '—' }}</td>
+                  <td class="text-right font-mono">{{ formatCurrency(l.debitPaise) }}</td>
+                  <td class="text-right font-mono">{{ formatCurrency(l.creditPaise) }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2" class="text-right font-semibold">Total:</td>
+                <td class="text-right font-mono font-bold">{{ formatCurrency(v.totalDebitPaise) }}</td>
+                <td class="text-right font-mono font-bold">{{ formatCurrency(v.totalCreditPaise) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          @if (v.status === 'Posted') {
+            <div class="reversal-section">
+              <div class="reversal-info">
+                <h4>Reversible Accounting Entry</h4>
+                <p>Per ERP financial invariants, posted vouchers are immutable. Reversing creates an opposite compensating journal voucher.</p>
+              </div>
+              <button
+                type="button"
+                class="btn btn-danger"
+                (click)="reverseSelectedVoucher()"
+                [disabled]="isReversing()"
+              >
+                {{ isReversing() ? 'Reversing...' : 'Reverse This Voucher' }}
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

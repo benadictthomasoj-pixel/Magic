@@ -5,6 +5,7 @@ namespace Magic.Contracts.Headers;
 /// </summary>
 public static class MagicHttpHeaders
 {
+    public const string CompanyId = "X-Company-Id";
     public const string BranchId = "X-Branch-Id";
     public const string TerminalId = "X-Terminal-Id";
     public const string IdempotencyKey = "Idempotency-Key";

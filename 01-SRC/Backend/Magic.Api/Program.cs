@@ -100,6 +100,12 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     Predicate = registration => registration.Tags.Contains("ready")
 });
 
+var autoSeed = builder.Configuration.GetValue<bool>("Seeding:AutoSeedDevelopmentData", defaultValue: true);
+if (app.Environment.IsDevelopment() && autoSeed)
+{
+    await Magic.Infrastructure.Persistence.AccountingDatabaseSeeder.SeedDevelopmentAccountingAsync(app.Services);
+}
+
 app.Run();
 
 /// <summary>

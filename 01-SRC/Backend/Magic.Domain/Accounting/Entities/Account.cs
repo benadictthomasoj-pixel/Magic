@@ -95,6 +95,14 @@ public class Account : DomainEntity, IAuditableEntity
         }
     }
 
+    public void UpdateName(string name, Guid userId)
+    {
+        DomainGuard.NotNullOrWhiteSpace(name, nameof(name));
+        Name = name.Trim();
+        UpdatedAtUtc = DateTimeOffset.UtcNow;
+        UpdatedByUserId = userId;
+    }
+
     public void Deactivate(Guid userId)
     {
         if (IsSystemLocked)

@@ -76,7 +76,7 @@ import { IntroStateService } from '../../../core/services/intro-state.service';
             <span>Replay Animation</span>
           </button>
 
-          <a routerLink="/system/status" class="action-btn enter-btn">
+          <a routerLink="/accounting/dashboard" class="action-btn enter-btn">
             <span>Enter ERP Workspace</span>
             <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path

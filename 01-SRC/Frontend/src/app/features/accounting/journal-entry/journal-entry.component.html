@@ -1,0 +1,208 @@
+<div class="journal-entry-container">
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Accounting / Vouchers / New Voucher</div>
+      <h1 class="page-title">Journal Voucher Entry</h1>
+      <p class="page-subtitle">Record balanced double-entry transactions directly to the General Ledger.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-secondary" (click)="validateJournal()" [disabled]="isSubmitting()">
+        <span class="icon">🔍</span> Validate Invariants
+      </button>
+      <button type="button" class="btn btn-outline" (click)="saveDraft()" [disabled]="isSubmitting()">
+        <span class="icon">💾</span> Save Draft
+      </button>
+      <button type="button" class="btn btn-primary" (click)="postVoucher()" [disabled]="isSubmitting() || !isBalanced()">
+        <span class="icon">⚡</span> Post to GL
+      </button>
+    </div>
+  </header>
+
+  <!-- Notification Banner -->
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type">
+      <span class="alert-icon">
+        @if (msg.type === 'ok') { ✓ }
+        @else if (msg.type === 'warn') { ⚠ }
+        @else { ✕ }
+      </span>
+      <div class="alert-text">{{ msg.text }}</div>
+    </div>
+  }
+
+  <!-- Validation Result Breakdown -->
+  @if (validationResult(); as val) {
+    <div class="validation-summary-card" [class.valid-card]="val.isValid" [class.invalid-card]="!val.isValid">
+      <div class="summary-status">
+        <magic-status-badge [label]="val.isValid ? 'Invariants Satisfied' : 'Pre-check Errors'" [tone]="val.isValid ? 'ok' : 'error'" />
+        <span class="summary-title">{{ val.isValid ? 'Domain Invariants Satisfied' : 'Posting Pre-check Errors' }}</span>
+      </div>
+      @if (!val.isValid && val.errors.length > 0) {
+        <ul class="validation-errors-list">
+          @for (err of val.errors; track err) {
+            <li>{{ err }}</li>
+          }
+        </ul>
+      }
+    </div>
+  }
+
+  <!-- Journal Entry Form -->
+  <form [formGroup]="journalForm" class="journal-form">
+    <!-- Voucher Metadata Card -->
+    <div class="card meta-card">
+      <div class="card-header">
+        <h2>Voucher Header</h2>
+      </div>
+      <div class="grid-form">
+        <div class="form-group">
+          <label for="voucherType">Voucher Type *</label>
+          <select id="voucherType" formControlName="voucherType" class="form-control">
+            <option value="Journal">Journal Voucher (JV)</option>
+            <option value="Contra">Contra Voucher (CV)</option>
+            <option value="Payment">Payment Voucher (PV)</option>
+            <option value="Receipt">Receipt Voucher (RV)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="voucherDate">Voucher Date *</label>
+          <input type="date" id="voucherDate" formControlName="voucherDate" class="form-control" />
+        </div>
+
+        <div class="form-group">
+          <label for="fiscalPeriodId">Accounting Period *</label>
+          <select id="fiscalPeriodId" formControlName="fiscalPeriodId" class="form-control">
+            @for (fy of fiscalYears(); track fy.id) {
+              <optgroup [label]="fy.name + ' (' + fy.code + ')'">
+                @for (period of fy.periods; track period.id) {
+                  <option [value]="period.id" [disabled]="period.isLocked">
+                    {{ period.periodCode }} ({{ period.startDate }} to {{ period.endDate }}) - {{ period.isLocked ? 'Locked' : (period.isClosed ? 'Closing' : 'Open') }}
+                  </option>
+                }
+              </optgroup>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="referenceNumber">Reference / Document #</label>
+          <input type="text" id="referenceNumber" formControlName="referenceNumber" placeholder="e.g. INV-2026-0042, CHQ-9912" class="form-control" />
+        </div>
+
+        <div class="form-group full-width">
+          <label for="narration">Master Narration / Business Reason *</label>
+          <textarea id="narration" formControlName="narration" rows="2" placeholder="Explain the business rationale for this entry..." class="form-control"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lines Table Card -->
+    <div class="card lines-card">
+      <div class="card-header space-between">
+        <div class="card-header-titles">
+          <h2>Journal Distribution Lines</h2>
+          <span class="badge badge-lines">{{ linesArray.length }} Line Items</span>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline" (click)="addLine()">+ Add Line</button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="lines-table" formArrayName="lines">
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th style="width: 35%;">Account Name & Code *</th>
+              <th>Line Narration</th>
+              <th style="width: 15%; text-align: right;">Debit (₹)</th>
+              <th style="width: 15%; text-align: right;">Credit (₹)</th>
+              <th style="width: 60px; text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (lineCtrl of linesArray.controls; track $index) {
+              <tr [formGroupName]="$index">
+                <td class="col-index">{{ $index + 1 }}</td>
+                <td>
+                  <select formControlName="accountId" class="form-control form-control-sm">
+                    <option value="" disabled>Select Ledger Account...</option>
+                    @for (acc of accounts(); track acc.id) {
+                      <option [value]="acc.id" [disabled]="!acc.isActive">
+                        {{ acc.code }} – {{ acc.name }} ({{ acc.groupName }})
+                      </option>
+                    }
+                  </select>
+                </td>
+                <td>
+                  <input type="text" formControlName="narration" placeholder="Line description (optional)" class="form-control form-control-sm" />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    formControlName="debit"
+                    (input)="onDebitChanged($index)"
+                    class="form-control form-control-sm text-right font-mono"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    formControlName="credit"
+                    (input)="onCreditChanged($index)"
+                    class="form-control form-control-sm text-right font-mono"
+                  />
+                </td>
+                <td class="text-center">
+                  <button
+                    type="button"
+                    class="btn-icon text-danger"
+                    title="Remove Line"
+                    (click)="removeLine($index)"
+                    [disabled]="linesArray.length <= 2"
+                  >
+                    🗑
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="totals-row">
+              <td colspan="3" class="text-right font-semibold">Total:</td>
+              <td class="text-right font-mono font-bold">{{ formatCurrency(calculateDebitTotal()) }}</td>
+              <td class="text-right font-mono font-bold">{{ formatCurrency(calculateCreditTotal()) }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- Balance Status Bar -->
+      <div class="balance-bar" [class.balanced]="isBalanced()" [class.unbalanced]="!isBalanced()">
+        <div class="balance-state">
+          @if (isBalanced()) {
+            <span class="balance-icon">✓</span>
+            <span class="balance-msg font-semibold">Entry is in Balance. Meets double-entry invariants.</span>
+          } @else {
+            <span class="balance-icon">✕</span>
+            <span class="balance-msg font-semibold">
+              Unbalanced Voucher. Difference: <strong class="font-mono">{{ formatCurrency(calculateDifference()) }}</strong>
+            </span>
+          }
+        </div>
+        <div class="balance-metrics">
+          <span>Dr: <strong class="font-mono">{{ formatCurrency(calculateDebitTotal()) }}</strong></span>
+          <span class="divider">|</span>
+          <span>Cr: <strong class="font-mono">{{ formatCurrency(calculateCreditTotal()) }}</strong></span>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>

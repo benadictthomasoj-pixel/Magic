@@ -1,0 +1,227 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="header-titles">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <span class="bc-item">Accounting</span>
+        <span class="bc-sep">/</span>
+        <span class="bc-current">Chart of Accounts</span>
+      </nav>
+      <h1 class="page-title">Chart of Accounts</h1>
+      <p class="page-subtitle">Master ledger taxonomy classifying Assets, Liabilities, Equity, Revenues, and Expenses.</p>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="openCreateModal()">
+        <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+        </svg>
+        New Account
+      </button>
+    </div>
+  </header>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="toolbar-card">
+    <div class="filter-tabs" role="tablist" aria-label="Account Classes">
+      @for (rc of ['All', 'Asset', 'Liability', 'Equity', 'Revenue', 'Expense']; track rc) {
+        <button
+          type="button"
+          class="tab-btn"
+          [class.active]="selectedRootClass() === rc"
+          (click)="setFilter(rc)"
+        >
+          {{ rc }}
+        </button>
+      }
+    </div>
+
+    <div class="toolbar-controls">
+      <div class="search-input-wrap">
+        <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+        </svg>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Filter by code or account name..."
+          [ngModel]="searchQuery()"
+          (ngModelChange)="onSearchChange($event)"
+          aria-label="Search accounts"
+        />
+      </div>
+
+      <label class="toggle-control">
+        <input
+          type="checkbox"
+          [checked]="activeOnly()"
+          (change)="toggleActiveOnly()"
+        />
+        <span>Active Accounts Only</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Accounts Table -->
+  @if (loading()) {
+    <div class="state-card loading-state">
+      <div class="spinner"></div>
+      <p>Loading Chart of Accounts...</p>
+    </div>
+  } @else if (error()) {
+    <div class="state-card error-state">
+      <p>{{ error() }}</p>
+      <button type="button" class="btn btn-secondary" (click)="loadData()">Retry</button>
+    </div>
+  } @else if (accounts().length === 0) {
+    <div class="empty-state-panel">
+      <h3>No Accounts Found</h3>
+      <p>No detail accounts match the selected classification or filter criteria.</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table class="data-table" aria-label="Chart of Accounts Listing">
+        <thead>
+          <tr>
+            <th scope="col" style="width: 140px;">Account Code</th>
+            <th scope="col">Account Name</th>
+            <th scope="col">Group</th>
+            <th scope="col">Root Class</th>
+            <th scope="col">Control Account Type</th>
+            <th scope="col" class="num-col">Current Balance</th>
+            <th scope="col" style="width: 100px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (acc of accounts(); track acc.id) {
+            <tr>
+              <td class="font-mono font-bold">{{ acc.code }}</td>
+              <td>
+                <span class="account-name-cell">{{ acc.name }}</span>
+              </td>
+              <td class="text-secondary">{{ acc.groupName }}</td>
+              <td>
+                <span class="class-pill" [attr.data-class]="acc.rootClass">
+                  {{ acc.rootClass }}
+                </span>
+              </td>
+              <td>
+                @if (acc.controlAccountType) {
+                  <span class="control-tag">{{ acc.controlAccountType }}</span>
+                } @else {
+                  <span class="text-muted">—</span>
+                }
+              </td>
+              <td class="num-col font-mono" [class.negative-bal]="acc.currentBalancePaise < 0">
+                {{ formatPaise(acc.currentBalancePaise) }}
+              </td>
+              <td>
+                <magic-status-badge
+                  [label]="acc.isActive ? 'Active' : 'Inactive'"
+                  [tone]="acc.isActive ? 'ok' : 'neutral'"
+                />
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Create Account Dialog Modal -->
+  @if (isCreateModalOpen()) {
+    <div class="modal-backdrop" (click)="closeCreateModal()" role="presentation">
+      <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <header class="modal-header">
+          <h2 id="modal-title" class="modal-title">Create General Ledger Account</h2>
+          <button type="button" class="close-btn" (click)="closeCreateModal()" aria-label="Close dialog">✕</button>
+        </header>
+
+        <form [formGroup]="createForm" (ngSubmit)="submitCreateAccount()" class="modal-form">
+          @if (formError()) {
+            <div class="form-alert error-alert">
+              {{ formError() }}
+            </div>
+          }
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="acc-code">Account Code *</label>
+              <input
+                id="acc-code"
+                type="text"
+                class="form-input font-mono"
+                formControlName="code"
+                placeholder="e.g. 1115, 5210"
+              />
+              @if (createForm.get('code')?.invalid && createForm.get('code')?.touched) {
+                <span class="field-error">Alphanumeric code is required (max 30 chars).</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="acc-class">Root Class *</label>
+              <select
+                id="acc-class"
+                class="form-select"
+                formControlName="rootClass"
+                (change)="onRootClassChanged(createForm.get('rootClass')?.value || 'Asset')"
+              >
+                <option value="Asset">Asset</option>
+                <option value="Liability">Liability</option>
+                <option value="Equity">Equity</option>
+                <option value="Revenue">Revenue</option>
+                <option value="Expense">Expense</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="acc-name">Account Name *</label>
+            <input
+              id="acc-name"
+              type="text"
+              class="form-input"
+              formControlName="name"
+              placeholder="e.g. Petty Cash Chennai, Office Electricity Expense"
+            />
+            @if (createForm.get('name')?.invalid && createForm.get('name')?.touched) {
+              <span class="field-error">Account name is required (max 150 chars).</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="acc-group">Account Classification Group *</label>
+            <select id="acc-group" class="form-select" formControlName="groupId">
+              @for (g of groups(); track g.id) {
+                @if (g.rootClass === createForm.get('rootClass')?.value) {
+                  <option [value]="g.id">{{ g.code }} - {{ g.name }}</option>
+                }
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="acc-control">Subledger Control Classification (Optional)</label>
+            <select id="acc-control" class="form-select" formControlName="controlAccountType">
+              <option value="">None (Standard General Ledger Account)</option>
+              <option value="CustomerControl">Customer Control (Accounts Receivable)</option>
+              <option value="VendorControl">Vendor Control (Accounts Payable)</option>
+              <option value="GstControl">GST Statutory Tax Control</option>
+              <option value="BankControl">Bank Account Control</option>
+              <option value="CashControl">Cash Account Control</option>
+            </select>
+            <span class="field-hint">Control accounts restrict direct manual postings to enforce subledger reconciliation.</span>
+          </div>
+
+          <footer class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="closeCreateModal()" [disabled]="isSubmitting()">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+              {{ isSubmitting() ? 'Creating...' : 'Create Account' }}
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+  }
+</div>
