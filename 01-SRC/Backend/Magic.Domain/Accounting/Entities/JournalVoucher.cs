@@ -29,6 +29,9 @@ public class JournalVoucher : DomainEntity, IAggregateRoot, IAuditableEntity
     public string Narration { get; private set; } = string.Empty;
     public bool IsReversed { get; private set; }
     public Guid? ReversalVoucherId { get; private set; }
+    public Guid IdempotencyKey { get; private set; }
+    public string? SourceModule { get; private set; }
+    public Guid? SourceDocumentId { get; private set; }
 
     public DateTimeOffset CreatedAtUtc { get; private set; }
     public Guid CreatedByUserId { get; private set; }
@@ -54,7 +57,10 @@ public class JournalVoucher : DomainEntity, IAggregateRoot, IAuditableEntity
         Guid createdByUserId,
         string narration = "",
         string? referenceNumber = null,
-        string voucherNumber = "")
+        string voucherNumber = "",
+        Guid? idempotencyKey = null,
+        string? sourceModule = null,
+        Guid? sourceDocumentId = null)
     {
         if (companyId == Guid.Empty) throw new DomainException("DOMAIN_EMPTY_COMPANY", "Company identity is required.");
         if (branchId == Guid.Empty) throw new DomainException("DOMAIN_EMPTY_BRANCH", "Branch identity is required.");
@@ -71,6 +77,9 @@ public class JournalVoucher : DomainEntity, IAggregateRoot, IAuditableEntity
         ReferenceNumber = referenceNumber?.Trim();
         IsReversed = false;
         ReversalVoucherId = null;
+        IdempotencyKey = idempotencyKey ?? Guid.NewGuid();
+        SourceModule = sourceModule?.Trim();
+        SourceDocumentId = sourceDocumentId;
 
         var now = DateTimeOffset.UtcNow;
         CreatedAtUtc = now;
@@ -194,18 +203,18 @@ public class JournalVoucher : DomainEntity, IAggregateRoot, IAuditableEntity
         DomainGuard.NotNullOrWhiteSpace(reversalVoucherNumber, nameof(reversalVoucherNumber));
         DomainGuard.NotNullOrWhiteSpace(reason, nameof(reason));
 
-        if (Status != VoucherStatus.Posted)
-        {
-            throw new DomainException(
-                "DOMAIN_REVERSAL_INVALID_STATUS",
-                $"Only POSTED vouchers can be reversed. Current status: {Status}.");
-        }
-
         if (IsReversed)
         {
             throw new DomainException(
                 "DOMAIN_VOUCHER_ALREADY_REVERSED",
                 $"Voucher '{VoucherNumber}' has already been reversed by voucher ID '{ReversalVoucherId}'.");
+        }
+
+        if (Status != VoucherStatus.Posted)
+        {
+            throw new DomainException(
+                "DOMAIN_REVERSAL_INVALID_STATUS",
+                $"Only POSTED vouchers can be reversed. Current status: {Status}.");
         }
 
         reversalPeriod.AssertCanPost(reversalDate);
@@ -218,7 +227,10 @@ public class JournalVoucher : DomainEntity, IAggregateRoot, IAuditableEntity
             reversalDate,
             supervisorUserId,
             narration: $"Reversal of {VoucherNumber}: {reason.Trim()}",
-            referenceNumber: VoucherNumber);
+            referenceNumber: VoucherNumber,
+            idempotencyKey: Guid.NewGuid(),
+            sourceModule: "ACCOUNTING",
+            sourceDocumentId: Id);
 
         // Mirror legs with inverted positions (Debit becomes Credit, Credit becomes Debit)
         var lineNumber = 1;
@@ -254,3 +266,4 @@ public class JournalVoucher : DomainEntity, IAggregateRoot, IAuditableEntity
         }
     }
 }
+
