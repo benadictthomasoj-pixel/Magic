@@ -1,5 +1,8 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './core/guards/auth.guard';
 import { LoginPage } from './features/auth/login/login.page';
+import { AccessDeniedComponent } from './features/auth/access-denied/access-denied.component';
+import { ChangePasswordComponent } from './features/auth/change-password/change-password.component';
 import { PlatformSettingsPage } from './features/platform-settings/platform-settings.page';
 import { PlatformStatusPage } from './features/platform-status/platform-status.page';
 import { AccountingDashboardComponent } from './features/accounting/dashboard/accounting-dashboard.component';
@@ -27,8 +30,14 @@ export const routes: Routes = [
     title: 'MAGIC · Universal Business Management ERP',
   },
   {
+    path: 'access-denied',
+    component: AccessDeniedComponent,
+    title: 'MAGIC · Access Denied',
+  },
+  {
     path: '',
     component: ShellComponent,
+    canActivate: [authGuard],
     children: [
       // Accounting Module
       {
@@ -327,6 +336,11 @@ export const routes: Routes = [
         path: 'system/preferences',
         component: PlatformSettingsPage,
         title: 'MAGIC · Display & Context',
+      },
+      {
+        path: 'system/change-password',
+        component: ChangePasswordComponent,
+        title: 'MAGIC · Change Password',
       },
     ],
   },

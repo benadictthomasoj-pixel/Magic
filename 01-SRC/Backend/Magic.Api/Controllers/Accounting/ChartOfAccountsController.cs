@@ -53,6 +53,7 @@ public sealed class ChartOfAccountsController(
         CancellationToken cancellationToken)
     {
         var userId = ResolveAuthorizedUserId();
+        EnsurePermission("accounting:accounts:manage");
         var companyId = ResolveCompanyId();
         var branchId = ResolveBranchId();
 
@@ -71,6 +72,7 @@ public sealed class ChartOfAccountsController(
         CancellationToken cancellationToken)
     {
         var userId = ResolveAuthorizedUserId();
+        EnsurePermission("accounting:accounts:manage");
         var updated = await accountingService.UpdateAccountAsync(id, request, userId, cancellationToken);
         return Ok(Wrap(updated));
     }

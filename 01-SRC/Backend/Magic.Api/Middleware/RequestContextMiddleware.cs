@@ -42,13 +42,19 @@ public sealed class RequestContextMiddleware(RequestDelegate next)
                 terminalId = claimTerminal;
             }
 
-            var userIdClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userIdClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? context.User.FindFirst("sub")?.Value;
             var userId = Guid.TryParse(userIdClaim, out var parsedUid) ? parsedUid : Guid.Empty;
-            var username = context.User.Identity.Name ?? "authenticated_user";
+            var username = context.User.Identity.Name
+                ?? context.User.FindFirst("unique_name")?.Value
+                ?? "authenticated_user";
             var roles = context.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToArray();
             var permissions = context.User.FindAll("permission").Select(c => c.Value).ToArray();
 
-            requestContext.SetAuthenticatedCaller(userId, username, roles, permissions);
+            if (userId != Guid.Empty)
+            {
+                requestContext.SetAuthenticatedCaller(userId, username, roles, permissions);
+            }
         }
 
         var requireTerminal = configuration.GetValue<bool>("Security:RequireApprovedTerminalHeader");

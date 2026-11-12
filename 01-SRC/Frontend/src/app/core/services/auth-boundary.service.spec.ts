@@ -1,13 +1,21 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { describe, expect, it } from 'vitest';
 import { AuthBoundaryService } from './auth-boundary.service';
 
 describe('AuthBoundaryService', () => {
-  it('stays deferred under OPEN-003 and fails closed on permissions', () => {
+  it('starts unauthenticated and fails closed on permission checks', () => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+
     const service = TestBed.inject(AuthBoundaryService);
 
-    expect(service.state().status).toBe('DEFERRED_OPEN_003');
-    expect(service.state().configured).toBe(false);
-    expect(service.hasPermission('system.admin')).toBe(false);
+    expect(service.isAuthenticated()).toBe(false);
+    expect(service.accessToken()).toBeNull();
+    expect(service.hasPermission('accounting:vouchers:create')).toBe(false);
+    expect(service.hasRole('Administrator')).toBe(false);
   });
 });
-

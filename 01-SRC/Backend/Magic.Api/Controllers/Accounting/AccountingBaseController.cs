@@ -54,8 +54,28 @@ public abstract class AccountingBaseController(
 
         throw new DomainException(
             "AUTH_REQUIRED_OPEN_003",
-            "Financial write operations require authenticated identity. Concrete authentication is deferred under OPEN-003.",
+            "Financial write operations require authenticated identity. Please sign in with valid credentials.",
             StatusCodes.Status401Unauthorized);
+    }
+
+    protected void EnsurePermission(string permissionCode)
+    {
+        if (!currentUserContext.IsAuthenticated)
+        {
+            throw new DomainException(
+                "AUTH_REQUIRED_OPEN_003",
+                "Authentication is required to perform this operation.",
+                StatusCodes.Status401Unauthorized);
+        }
+
+        if (!currentUserContext.Permissions.Contains(permissionCode, StringComparer.OrdinalIgnoreCase) &&
+            !currentUserContext.Roles.Contains("Administrator", StringComparer.OrdinalIgnoreCase))
+        {
+            throw new DomainException(
+                "FORBIDDEN_PERMISSION_REQUIRED",
+                $"Permission '{permissionCode}' is required to perform this action.",
+                StatusCodes.Status403Forbidden);
+        }
     }
 
     protected ApiResponse<T> Wrap<T>(T data, PaginationMeta? meta = null)

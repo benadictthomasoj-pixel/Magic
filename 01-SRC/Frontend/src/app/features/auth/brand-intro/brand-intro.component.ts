@@ -3,9 +3,10 @@ import {
   Component,
   OnInit,
   inject,
+  input,
+  output,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { IntroStateService } from '../../../core/services/intro-state.service';
 
 /**
@@ -16,12 +17,11 @@ import { IntroStateService } from '../../../core/services/intro-state.service';
  * 1.8 - 3.55s: MAGIC wordmark written letter-by-letter in continuous fluid calligraphy motion (M -> A -> G -> I -> C).
  * 3.55 - 3.8s: Wordmark settles into complete position.
  * 3.85 - 4.45s: Subtle gold reflection glides across the emblem.
- * 3.8s+: Completed logo remains displayed on screen with replay and workspace actions.
+ * 3.8s+: Completed logo reveals action buttons or triggers completed event.
  */
 @Component({
   selector: 'magic-brand-intro',
   standalone: true,
-  imports: [RouterLink],
   template: `
     <div
       class="intro-backdrop"
@@ -63,7 +63,7 @@ import { IntroStateService } from '../../../core/services/intro-state.service';
       }
 
       <!-- Elegant Action Controls (Fade in after animation completion at ~3.8s) -->
-      @if (isComplete()) {
+      @if (isComplete() && showActions()) {
         <div class="intro-actions" role="group" aria-label="Brand Actions">
           <button type="button" class="action-btn replay-btn" (click)="replay()">
             <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -76,8 +76,8 @@ import { IntroStateService } from '../../../core/services/intro-state.service';
             <span>Replay Animation</span>
           </button>
 
-          <a routerLink="/accounting/dashboard" class="action-btn enter-btn">
-            <span>Enter ERP Workspace</span>
+          <button type="button" class="action-btn enter-btn" (click)="proceed()">
+            <span>Sign In to ERP Workspace</span>
             <svg class="btn-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path
                 fill-rule="evenodd"
@@ -85,7 +85,7 @@ import { IntroStateService } from '../../../core/services/intro-state.service';
                 clip-rule="evenodd"
               />
             </svg>
-          </a>
+          </button>
         </div>
       }
     </div>
@@ -95,6 +95,10 @@ import { IntroStateService } from '../../../core/services/intro-state.service';
 })
 export class BrandIntroComponent implements OnInit {
   private readonly introState = inject(IntroStateService);
+
+  readonly showActions = input<boolean>(true);
+  readonly autoProceed = input<boolean>(false);
+  readonly completed = output<void>();
 
   protected readonly isMounted = signal(true);
   protected readonly isComplete = signal(false);
@@ -112,9 +116,17 @@ export class BrandIntroComponent implements OnInit {
     }, 30);
   }
 
+  protected proceed(): void {
+    this.introState.markCompleted();
+    this.completed.emit();
+  }
+
   private scheduleCompletion(): void {
     setTimeout(() => {
       this.isComplete.set(true);
+      if (this.autoProceed()) {
+        this.proceed();
+      }
     }, 3800);
   }
 }

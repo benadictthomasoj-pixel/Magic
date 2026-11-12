@@ -17,6 +17,17 @@ public sealed class MagicDbContext(DbContextOptions<MagicDbContext> options) : D
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<SystemAuditLogRecord> SystemAuditLogs => Set<SystemAuditLogRecord>();
 
+    // Security & Identity schema (Phase A)
+    public DbSet<UserRecord> Users => Set<UserRecord>();
+    public DbSet<RoleRecord> Roles => Set<RoleRecord>();
+    public DbSet<PermissionRecord> Permissions => Set<PermissionRecord>();
+    public DbSet<UserRoleRecord> UserRoles => Set<UserRoleRecord>();
+    public DbSet<RolePermissionRecord> RolePermissions => Set<RolePermissionRecord>();
+    public DbSet<UserBranchAssignmentRecord> UserBranchAssignments => Set<UserBranchAssignmentRecord>();
+    public DbSet<RefreshTokenRecord> RefreshTokens => Set<RefreshTokenRecord>();
+    public DbSet<TerminalRecord> Terminals => Set<TerminalRecord>();
+    public DbSet<SecurityAuditEventRecord> SecurityAuditEvents => Set<SecurityAuditEventRecord>();
+
     // Accounting foundation schema
     public DbSet<FiscalYear> FiscalYears => Set<FiscalYear>();
     public DbSet<FiscalPeriod> FiscalPeriods => Set<FiscalPeriod>();

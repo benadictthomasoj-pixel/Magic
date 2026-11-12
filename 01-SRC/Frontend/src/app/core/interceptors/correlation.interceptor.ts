@@ -1,6 +1,7 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { MAGIC_HTTP_HEADERS } from '../contracts/api.models';
+import { AuthBoundaryService } from '../services/auth-boundary.service';
 import { WorkspaceContextService } from '../services/workspace-context.service';
 
 function generateCorrelationId(): string {
@@ -12,9 +13,16 @@ function generateCorrelationId(): string {
 
 export const correlationInterceptor: HttpInterceptorFn = (req, next) => {
   const workspaceContext = inject(WorkspaceContextService);
+  const auth = inject(AuthBoundaryService);
   const current = workspaceContext.context();
 
   const headersToSet: Record<string, string> = {};
+
+  const token = auth.accessToken();
+  if (token && !req.headers.has('Authorization')) {
+    headersToSet['Authorization'] = `Bearer ${token}`;
+  }
+
   if (!req.headers.has(MAGIC_HTTP_HEADERS.correlationId)) {
     headersToSet[MAGIC_HTTP_HEADERS.correlationId] = generateCorrelationId();
   }

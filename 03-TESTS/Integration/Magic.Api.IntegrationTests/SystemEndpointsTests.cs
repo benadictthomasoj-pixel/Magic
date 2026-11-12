@@ -58,12 +58,12 @@ public sealed class SystemEndpointsTests(MagicTestFixture factory) : IClassFixtu
         Assert.NotNull(envelope.Data);
         Assert.True(envelope.Data.DatabaseConnected);
         Assert.Equal("StrictOnlineLan", envelope.Data.NetworkPolicy);
-        Assert.Equal("Deferred (OPEN-003)", envelope.Data.AuthenticationStatus);
+        Assert.Equal("Configured", envelope.Data.AuthenticationStatus);
         Assert.Contains(envelope.Data.Components, c => c.Name == "OfflineBuffering" && c.Status == "Disabled");
     }
 
     [Fact]
-    public async Task SystemContextBoundaryEchoesHeadersAndReportsDeferredAuth()
+    public async Task SystemContextBoundaryEchoesHeadersAndReportsConfiguredAuth()
     {
         using var client = _factory.CreateClient();
         var branchId = Guid.CreateVersion7();
@@ -79,7 +79,7 @@ public sealed class SystemEndpointsTests(MagicTestFixture factory) : IClassFixtu
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains(branchId.ToString(), body, StringComparison.Ordinal);
         Assert.Contains(terminalId.ToString(), body, StringComparison.Ordinal);
-        Assert.Contains("\"authenticationConfigured\":false", body, StringComparison.Ordinal);
+        Assert.Contains("\"authenticationConfigured\":true", body, StringComparison.Ordinal);
     }
 
     [Fact]

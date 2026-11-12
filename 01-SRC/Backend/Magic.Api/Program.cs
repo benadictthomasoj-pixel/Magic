@@ -1,10 +1,14 @@
+using System.Text;
 using Asp.Versioning;
 using Magic.Api.Middleware;
 using Magic.Application;
 using Magic.Contracts.Headers;
 using Magic.Infrastructure;
+using Magic.Infrastructure.Security;
 using Magic.Platform;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +20,29 @@ builder.Services.AddMagicInfrastructure(builder.Configuration);
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
+
+// JWT Bearer Authentication & Authorization (Phase A)
+var jwtConfig = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfig.SecretKey));
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+        options.SaveToken = true;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtConfig.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtConfig.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = signingKey,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    });
+
 builder.Services.AddAuthorization();
 
 builder.Services
@@ -85,6 +112,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseCors("MagicClientPolicy");
+app.UseAuthentication();
+app.UseMiddleware<RequestContextMiddleware>();
 app.UseAuthorization();
 app.UseMiddleware<IdempotencyMiddleware>();
 
@@ -103,6 +132,10 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 var autoSeed = builder.Configuration.GetValue<bool>("Seeding:AutoSeedDevelopmentData", defaultValue: true);
 if (app.Environment.IsDevelopment() && autoSeed)
 {
+    using var scope = app.Services.CreateScope();
+    var securitySeeder = scope.ServiceProvider.GetRequiredService<Magic.Infrastructure.Persistence.SecurityDatabaseSeeder>();
+    await securitySeeder.SeedAsync();
+
     await Magic.Infrastructure.Persistence.AccountingDatabaseSeeder.SeedDevelopmentAccountingAsync(app.Services);
 }
 

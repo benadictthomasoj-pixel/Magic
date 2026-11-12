@@ -47,9 +47,18 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
         <article class="card">
           <div class="card-head">
             <h2>Security Boundary (OPEN-003)</h2>
-            <magic-status-badge [label]="auth.state().status" tone="warn" />
+            <magic-status-badge
+              [label]="auth.isAuthenticated() ? 'Authenticated' : 'Configured (Active)'"
+              [tone]="auth.isAuthenticated() ? 'ok' : 'neutral'"
+            />
           </div>
-          <p>{{ auth.state().note }}</p>
+          <p>
+            {{
+              auth.isAuthenticated()
+                ? 'Authenticated as ' + auth.currentUsername() + ' (' + (auth.userRoles().join(', ') || 'No Role') + ')'
+                : 'JWT Bearer token engine active with role-based access control and refresh token rotation.'
+            }}
+          </p>
         </article>
 
         <article class="card">

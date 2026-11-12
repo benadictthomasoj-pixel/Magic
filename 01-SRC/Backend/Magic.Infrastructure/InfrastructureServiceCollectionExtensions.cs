@@ -57,14 +57,23 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<Magic.Application.Accounting.Services.IPostingService, Magic.Infrastructure.Accounting.PostingService>();
         services.AddScoped<Magic.Application.Accounting.Services.IAccountingApplicationService, Magic.Infrastructure.Accounting.AccountingApplicationService>();
 
-        // Scoped request security/branch/terminal context & deferred OPEN-003 boundaries
+        // Phase A: Complete Identity, JWT & Security Services (OPEN-003)
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
+        services.AddSingleton<IJwtTokenService, JwtTokenService>();
+        services.AddSingleton<ITokenService>(sp => sp.GetRequiredService<IJwtTokenService>());
+        services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+        services.AddScoped<ISecurityAuditService, SecurityAuditService>();
+        services.AddScoped<IAuthenticationApplicationService, AuthenticationApplicationService>();
+        services.AddScoped<SecurityDatabaseSeeder>();
+
+        // Scoped request security/branch/terminal context
         services.AddScoped<MutableRequestContext>();
         services.AddScoped<IRequestContextSetter>(sp => sp.GetRequiredService<MutableRequestContext>());
         services.AddScoped<ICurrentUserContext>(sp => sp.GetRequiredService<MutableRequestContext>());
         services.AddScoped<IBranchContext>(sp => sp.GetRequiredService<MutableRequestContext>());
         services.AddScoped<ITerminalContext>(sp => sp.GetRequiredService<MutableRequestContext>());
         services.AddScoped<IPermissionEvaluator, FailClosedPermissionEvaluator>();
-        services.AddSingleton<ITokenService, DeferredTokenService>();
         services.AddSingleton<ISupervisorElevationService, FailClosedSupervisorElevationService>();
 
         // OPEN-004: Approved native .NET 10 BackgroundService outbox processor

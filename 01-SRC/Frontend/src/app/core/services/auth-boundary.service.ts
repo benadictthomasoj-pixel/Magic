@@ -1,72 +1,294 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import { ApiResponse } from '../contracts/api.models';
 
-export interface AuthBoundaryState {
-  readonly status: 'DEFERRED_OPEN_003' | 'AUTHENTICATED';
-  readonly configured: boolean;
-  readonly isAuthenticated: boolean;
-  readonly username: string | null;
-  readonly note: string;
+export interface UserSummary {
+  readonly id: string;
+  readonly username: string;
+  readonly email: string;
+  readonly displayName: string;
+  readonly roles: readonly string[];
+  readonly permissions: readonly string[];
 }
 
-/**
- * Integration boundary for authentication (OPEN-003).
- * Concrete login flows and token storage remain deferred until OPEN-003 approval.
- * Always fails closed for permission checks until an approved provider is wired.
- */
+export interface CompanyContext {
+  readonly id: string;
+  readonly name: string;
+  readonly code: string;
+}
+
+export interface BranchContext {
+  readonly id: string;
+  readonly name: string;
+  readonly code: string;
+}
+
+export interface TerminalContext {
+  readonly id: string;
+  readonly code: string;
+  readonly machineName: string;
+}
+
+export interface LoginResponseData {
+  readonly accessToken: string;
+  readonly refreshToken: string;
+  readonly expiresAtUtc: string;
+  readonly user: UserSummary;
+  readonly company: CompanyContext;
+  readonly branch?: BranchContext | null;
+  readonly terminal?: TerminalContext | null;
+}
+
+export interface AuthState {
+  readonly isAuthenticated: boolean;
+  readonly accessToken: string | null;
+  readonly refreshToken: string | null;
+  readonly expiresAtUtc: string | null;
+  readonly user: UserSummary | null;
+  readonly company: CompanyContext | null;
+  readonly branch: BranchContext | null;
+  readonly terminal: TerminalContext | null;
+}
+
+const STORAGE_KEYS = {
+  ACCESS_TOKEN: 'magic_access_token',
+  REFRESH_TOKEN: 'magic_refresh_token',
+  USER_DATA: 'magic_user_data',
+  COMPANY_DATA: 'magic_company_data',
+  BRANCH_DATA: 'magic_branch_data',
+  TERMINAL_DATA: 'magic_terminal_data',
+};
+
 @Injectable({ providedIn: 'root' })
 export class AuthBoundaryService {
-  private readonly stateSignal = signal<AuthBoundaryState>({
-    status: 'DEFERRED_OPEN_003',
-    configured: false,
-    isAuthenticated: false,
-    username: null,
-    note: 'Authentication & token architecture deferred per OPEN-003. Access checks fail closed.',
-  });
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+
+  private readonly stateSignal = signal<AuthState>(this.loadInitialState());
 
   readonly state = this.stateSignal.asReadonly();
   readonly isAuthenticated = computed(() => this.state().isAuthenticated);
-  readonly currentUsername = computed(() => this.state().username);
+  readonly currentUser = computed(() => this.state().user);
+  readonly currentUsername = computed(() => this.state().user?.username ?? null);
+  readonly accessToken = computed(() => this.state().accessToken);
+  readonly userRoles = computed(() => this.state().user?.roles ?? []);
+  readonly userPermissions = computed(() => this.state().user?.permissions ?? []);
+  readonly company = computed(() => this.state().company);
+  readonly branch = computed(() => this.state().branch);
+  readonly terminal = computed(() => this.state().terminal);
 
-  async login(username: string, password: string): Promise<{ success: boolean; error?: string }> {
-    const trimmedUser = username?.trim();
+  async login(
+    usernameOrEmail: string,
+    password: string,
+    branchId?: string,
+    terminalId?: string
+  ): Promise<{ success: boolean; error?: string; lockout?: boolean }> {
+    const trimmedUser = usernameOrEmail?.trim();
     if (!trimmedUser || !password) {
-      return {
-        success: false,
-        error: 'Please enter both username and password.',
-      };
+      return { success: false, error: 'Please enter both username/email and password.' };
     }
 
-    if (password.length < 4) {
-      return {
-        success: false,
-        error: 'Invalid credentials. Password must be at least 4 characters.',
-      };
+    try {
+      const response = await firstValueFrom(
+        this.http.post<ApiResponse<LoginResponseData>>('/api/v1/auth/login', {
+          usernameOrEmail: trimmedUser,
+          password,
+          branchId,
+          terminalId,
+        })
+      );
+
+      if (response.success && response.data) {
+        this.setAuthenticatedSession(response.data);
+        return { success: true };
+      }
+
+      return { success: false, error: 'Authentication failed. Please verify credentials.' };
+    } catch (err: any) {
+      const status = err.status;
+      const errorDetail = err.error?.detail || err.error?.title || 'Invalid credentials.';
+
+      if (status === 423) {
+        return { success: false, error: errorDetail, lockout: true };
+      }
+
+      return { success: false, error: errorDetail };
+    }
+  }
+
+  async refreshSession(): Promise<boolean> {
+    const currentRefresh = this.state().refreshToken;
+    if (!currentRefresh) {
+      this.clearSession();
+      return false;
     }
 
-    // In local Phase 1 development environment, authenticate local session cleanly
-    this.stateSignal.set({
-      status: 'AUTHENTICATED',
-      configured: true,
+    try {
+      const response = await firstValueFrom(
+        this.http.post<ApiResponse<LoginResponseData>>('/api/v1/auth/refresh', {
+          refreshToken: currentRefresh,
+        })
+      );
+
+      if (response.success && response.data) {
+        this.setAuthenticatedSession(response.data);
+        return true;
+      }
+
+      this.clearSession();
+      return false;
+    } catch {
+      this.clearSession();
+      return false;
+    }
+  }
+
+  async logout(): Promise<void> {
+    const currentRefresh = this.state().refreshToken;
+    if (currentRefresh) {
+      try {
+        await firstValueFrom(
+          this.http.post<ApiResponse<string>>('/api/v1/auth/logout', {
+            refreshToken: currentRefresh,
+          })
+        );
+      } catch {
+        // Ignore network errors on logout
+      }
+    }
+
+    this.clearSession();
+    this.router.navigate(['/login']);
+  }
+
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+    confirmPassword: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await firstValueFrom(
+        this.http.post<ApiResponse<string>>('/api/v1/auth/change-password', {
+          currentPassword,
+          newPassword,
+          confirmPassword,
+        })
+      );
+
+      return { success: response.success };
+    } catch (err: any) {
+      const detail = err.error?.detail || err.error?.title || 'Password change failed.';
+      return { success: false, error: detail };
+    }
+  }
+
+  hasPermission(permissionCode: string): boolean {
+    if (!this.isAuthenticated()) {
+      return false;
+    }
+
+    const roles = this.userRoles();
+    if (roles.includes('Administrator')) {
+      return true;
+    }
+
+    return this.userPermissions().includes(permissionCode);
+  }
+
+  hasRole(roleName: string): boolean {
+    return this.userRoles().includes(roleName);
+  }
+
+  private setAuthenticatedSession(data: LoginResponseData): void {
+    const newState: AuthState = {
       isAuthenticated: true,
-      username: trimmedUser,
-      note: 'Authenticated in local business workspace session.',
-    });
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+      expiresAtUtc: data.expiresAtUtc,
+      user: data.user,
+      company: data.company,
+      branch: data.branch ?? null,
+      terminal: data.terminal ?? null,
+    };
 
-    return { success: true };
+    this.stateSignal.set(newState);
+
+    try {
+      sessionStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
+      sessionStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, data.refreshToken);
+      sessionStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(data.user));
+      sessionStorage.setItem(STORAGE_KEYS.COMPANY_DATA, JSON.stringify(data.company));
+      if (data.branch) {
+        sessionStorage.setItem(STORAGE_KEYS.BRANCH_DATA, JSON.stringify(data.branch));
+      }
+      if (data.terminal) {
+        sessionStorage.setItem(STORAGE_KEYS.TERMINAL_DATA, JSON.stringify(data.terminal));
+      }
+    } catch {
+      // Storage unavailable in private browsing
+    }
   }
 
-  logout(): void {
+  private clearSession(): void {
     this.stateSignal.set({
-      status: 'DEFERRED_OPEN_003',
-      configured: false,
       isAuthenticated: false,
-      username: null,
-      note: 'Authentication & token architecture deferred per OPEN-003. Access checks fail closed.',
+      accessToken: null,
+      refreshToken: null,
+      expiresAtUtc: null,
+      user: null,
+      company: null,
+      branch: null,
+      terminal: null,
     });
+
+    try {
+      sessionStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+      sessionStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+      sessionStorage.removeItem(STORAGE_KEYS.USER_DATA);
+      sessionStorage.removeItem(STORAGE_KEYS.COMPANY_DATA);
+      sessionStorage.removeItem(STORAGE_KEYS.BRANCH_DATA);
+      sessionStorage.removeItem(STORAGE_KEYS.TERMINAL_DATA);
+    } catch {
+      // Storage unavailable
+    }
   }
 
-  hasPermission(_permissionCode: string): boolean {
-    return false;
+  private loadInitialState(): AuthState {
+    try {
+      const accessToken = sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      const refreshToken = sessionStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+      const rawUser = sessionStorage.getItem(STORAGE_KEYS.USER_DATA);
+      const rawCompany = sessionStorage.getItem(STORAGE_KEYS.COMPANY_DATA);
+      const rawBranch = sessionStorage.getItem(STORAGE_KEYS.BRANCH_DATA);
+      const rawTerminal = sessionStorage.getItem(STORAGE_KEYS.TERMINAL_DATA);
+
+      if (accessToken && rawUser) {
+        return {
+          isAuthenticated: true,
+          accessToken,
+          refreshToken,
+          expiresAtUtc: null,
+          user: JSON.parse(rawUser),
+          company: rawCompany ? JSON.parse(rawCompany) : null,
+          branch: rawBranch ? JSON.parse(rawBranch) : null,
+          terminal: rawTerminal ? JSON.parse(rawTerminal) : null,
+        };
+      }
+    } catch {
+      // Storage unavailable
+    }
+
+    return {
+      isAuthenticated: false,
+      accessToken: null,
+      refreshToken: null,
+      expiresAtUtc: null,
+      user: null,
+      company: null,
+      branch: null,
+      terminal: null,
+    };
   }
 }
-

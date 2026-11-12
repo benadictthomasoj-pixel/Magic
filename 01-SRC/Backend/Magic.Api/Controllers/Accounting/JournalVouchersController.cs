@@ -63,6 +63,7 @@ public sealed class JournalVouchersController(
         CancellationToken cancellationToken)
     {
         var userId = ResolveAuthorizedUserId();
+        EnsurePermission("accounting:vouchers:create");
         var companyId = ResolveCompanyId();
         var branchId = ResolveBranchId();
 
@@ -94,6 +95,7 @@ public sealed class JournalVouchersController(
         CancellationToken cancellationToken)
     {
         var userId = ResolveAuthorizedUserId();
+        EnsurePermission("accounting:vouchers:post");
         var hasSupervisorElevation = Request.Headers.ContainsKey(MagicHttpHeaders.SupervisorAuthToken);
 
         var posted = await accountingService.PostVoucherAsync(id, request, userId, hasSupervisorElevation, cancellationToken);
@@ -111,6 +113,7 @@ public sealed class JournalVouchersController(
         CancellationToken cancellationToken)
     {
         var userId = ResolveAuthorizedUserId();
+        EnsurePermission("accounting:vouchers:reverse");
         var reversal = await accountingService.ReverseVoucherAsync(id, request, userId, cancellationToken);
         return Ok(Wrap(reversal));
     }

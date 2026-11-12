@@ -1,6 +1,7 @@
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { MAGIC_HTTP_HEADERS } from '../contracts/api.models';
 import { WorkspaceContextService } from '../services/workspace-context.service';
 import { correlationInterceptor } from './correlation.interceptor';
@@ -15,6 +16,7 @@ describe('correlationInterceptor', () => {
       providers: [
         provideHttpClient(withInterceptors([correlationInterceptor])),
         provideHttpClientTesting(),
+        provideRouter([]),
       ],
     });
     http = TestBed.inject(HttpClient);

@@ -29,6 +29,7 @@ public sealed class FiscalGovernanceController(
     public async Task<ActionResult<ApiResponse<FiscalPeriodDto>>> LockPeriod(Guid id, CancellationToken cancellationToken)
     {
         var userId = ResolveAuthorizedUserId();
+        EnsurePermission("accounting:periods:manage");
         var period = await accountingService.LockFiscalPeriodAsync(id, userId, cancellationToken);
         return Ok(Wrap(period));
     }
@@ -40,6 +41,7 @@ public sealed class FiscalGovernanceController(
     public async Task<ActionResult<ApiResponse<FiscalPeriodDto>>> ClosePeriod(Guid id, CancellationToken cancellationToken)
     {
         var userId = ResolveAuthorizedUserId();
+        EnsurePermission("accounting:periods:manage");
         var period = await accountingService.CloseFiscalPeriodAsync(id, userId, cancellationToken);
         return Ok(Wrap(period));
     }
@@ -51,6 +53,7 @@ public sealed class FiscalGovernanceController(
     public async Task<ActionResult<ApiResponse<FiscalPeriodDto>>> ReopenPeriod(Guid id, CancellationToken cancellationToken)
     {
         var userId = ResolveAuthorizedUserId();
+        EnsurePermission("accounting:periods:manage");
         var period = await accountingService.ReopenFiscalPeriodAsync(id, userId, cancellationToken);
         return Ok(Wrap(period));
     }

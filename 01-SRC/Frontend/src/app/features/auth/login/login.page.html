@@ -1,1 +1,144 @@
-<magic-brand-intro />
+@if (showIntro()) {
+  <magic-brand-intro (completed)="onIntroFinished()" />
+} @else {
+  <main class="login-wrapper" id="main-content">
+    <div class="login-card-container">
+      <div class="brand-header">
+        <div class="logo-box">
+          <img
+            src="/branding/magic-emblem-dark-tight.png"
+            alt="MAGIC Emblem"
+            class="emblem-dark-mini"
+          />
+          <img
+            src="/branding/magic-emblem-gold-tight.png"
+            alt=""
+            class="emblem-gold-mini"
+          />
+          <div class="wordmark-mini">
+            <span class="m-letter">M</span>
+            <span class="a-letter">A</span>
+            <span class="g-letter">G</span>
+            <span class="i-letter">I</span>
+            <span class="c-letter">C</span>
+          </div>
+        </div>
+        <h1 class="welcome-heading">Enterprise Sign In</h1>
+        <p class="welcome-subtext">Access your business management workspace.</p>
+      </div>
+
+      @if (sessionExpiredNotice()) {
+        <div class="auth-notice-banner warn" role="alert">
+          <svg class="notice-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span>Your session has expired. Please sign in with your credentials.</span>
+        </div>
+      }
+
+      @if (accessDeniedNotice()) {
+        <div class="auth-notice-banner error" role="alert">
+          <svg class="notice-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+          </svg>
+          <span>Access Denied: You do not have permission to view that module.</span>
+        </div>
+      }
+
+      @if (errorMessage()) {
+        <div class="auth-error-banner" [class.lockout]="isLockout()" role="alert" aria-live="assertive">
+          <svg class="error-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          <span class="error-text">{{ errorMessage() }}</span>
+        </div>
+      }
+
+      <form class="login-form" (ngSubmit)="onSubmit()" novalidate>
+        <div class="form-group">
+          <label for="username-input" class="form-label">Username or Email</label>
+          <div class="input-container">
+            <input
+              id="username-input"
+              name="username"
+              type="text"
+              class="form-control"
+              [(ngModel)]="username"
+              placeholder="e.g. admin or accountant1"
+              autocomplete="username"
+              required
+              [disabled]="isLoading()"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="password-label-row">
+            <label for="password-input" class="form-label">Password</label>
+          </div>
+          <div class="input-container password-input-container">
+            <input
+              id="password-input"
+              name="password"
+              [type]="showPassword() ? 'text' : 'password'"
+              class="form-control"
+              [(ngModel)]="password"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              required
+              [disabled]="isLoading()"
+            />
+            <button
+              type="button"
+              class="password-toggle-btn"
+              (click)="togglePasswordVisibility()"
+              [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+              tabindex="0"
+            >
+              @if (showPassword()) {
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              } @else {
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              }
+            </button>
+          </div>
+        </div>
+
+        <div class="quick-login-row">
+          <span class="quick-label">Quick Sign-in:</span>
+          <div class="quick-buttons">
+            <button type="button" class="quick-btn" (click)="fillCredentials('admin', 'AdminPassword123!')">Admin</button>
+            <button type="button" class="quick-btn" (click)="fillCredentials('accountant1', 'AccountantPassword123!')">Accountant</button>
+            <button type="button" class="quick-btn" (click)="fillCredentials('cashier1', 'CashierPassword123!')">Cashier</button>
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" [disabled]="isLoading()">
+          @if (isLoading()) {
+            <span class="loading-spinner" aria-hidden="true"></span>
+            <span>Signing in...</span>
+          } @else {
+            <span>Sign In to ERP Workspace</span>
+          }
+        </button>
+      </form>
+
+      <footer class="login-footer">
+        <div class="policy-note">
+          <span class="security-dot" aria-hidden="true"></span>
+          <span>Secured via Fail-Closed RBAC · PostgreSQL Single Source of Truth</span>
+        </div>
+      </footer>
+    </div>
+  </main>
+}
