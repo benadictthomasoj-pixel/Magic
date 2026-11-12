@@ -77,8 +77,8 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
               <li class="component-row">
                 <div>
                   <strong>{{ component.name }}</strong>
-                  @if (component.details) {
-                    <p class="detail">{{ component.details }}</p>
+                  @if (component.detail) {
+                    <p class="detail">{{ component.detail }}</p>
                   }
                 </div>
                 <magic-status-badge

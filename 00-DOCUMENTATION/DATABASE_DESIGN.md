@@ -235,13 +235,23 @@ CREATE INDEX ix_stock_ledger_item_wh ON inventory.stock_ledger(item_id, warehous
 
 ---
 
-## Phase 1 Implemented Migration (`InitialPlatformFoundation` — 2026-11-12)
+## Phase 1 Implemented Migrations (2026-11-12)
 
-- **Target Development Instance:** PostgreSQL `18.6` (`magic_dev` database owned by `magic_dev`, isolated from pre-existing databases).
-- **EF Core 10 Migration ID:** `20261112043621_InitialPlatformFoundation`
-- **Idempotent DDL Script:** `02-DATABASE/Migrations/0001_InitialPlatformFoundation.sql`
+- **Target Development Instance:** PostgreSQL `18.6` (`magic_dev` database, isolated from pre-existing databases).
 - **Migration History Table:** `platform.__ef_migrations_history`
-- **Implemented Phase 1 Tables (Zero Business Tables):**
-  1. `platform.idempotency_records` (`uq_idempotency_records_branch_key_endpoint`, `ix_idempotency_records_expires_at_utc`)
-  2. `platform.outbox_messages` (`ix_outbox_messages_unprocessed WHERE processed_at_utc IS NULL`, concurrency `lock_token` / `lock_expires_at_utc`)
-  3. `audit.system_audit_logs` (`bigint GENERATED ALWAYS AS IDENTITY`, `ix_system_audit_logs_correlation_id`, `ix_system_audit_logs_entity`, `ix_system_audit_logs_event_timestamp`)
+- **EF Core 10 Migrations Applied:**
+  1. `20261112043621_InitialPlatformFoundation` (SQL: `02-DATABASE/Migrations/0001_InitialPlatformFoundation.sql`)
+     - `platform.idempotency_records` (`uq_idempotency_records_branch_key_endpoint`, `ix_idempotency_records_expires_at_utc`)
+     - `platform.outbox_messages` (`ix_outbox_messages_unprocessed WHERE processed_at_utc IS NULL`, concurrency `lock_token` / `lock_expires_at_utc`)
+     - `audit.system_audit_logs` (`bigint GENERATED ALWAYS AS IDENTITY`, `ix_system_audit_logs_correlation_id`, `ix_system_audit_logs_entity`, `ix_system_audit_logs_event_timestamp`)
+  2. `20261112050133_AddAuditLogImmutabilityTrigger` (SQL: `02-DATABASE/Migrations/0002_AddAuditLogImmutabilityTrigger.sql`)
+     - Function `audit.prevent_audit_log_tampering()` raising exception `55000` (`MAGIC_AUDIT_LOGS_ARE_APPEND_ONLY`).
+     - Trigger `trg_prevent_audit_log_tampering` executing `BEFORE UPDATE OR DELETE` on `audit.system_audit_logs`.
+- **Database Security Roles & Permissions:**
+  - Owner / Migration Role: `magic_dev` (executes EF Core DDL migrations).
+  - Runtime Application Role: `magic_app` (least-privilege runtime account):
+    - `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO magic_app;`
+    - `GRANT SELECT, INSERT ON TABLE audit.system_audit_logs TO magic_app;`
+    - `REVOKE UPDATE, DELETE, TRUNCATE ON TABLE audit.system_audit_logs FROM magic_app;`
+- **EF Core Value Conversion Conventions:**
+  - `MoneyConverter`: Automatically maps all domain `Money` properties to PostgreSQL `BIGINT` (paise) across all entities via `ConfigureConventions`.

@@ -93,12 +93,19 @@ Data protection is an existential requirement for business ERPs.
 
 ---
 
-## Phase 1 Local-First Deployment Templates & Platform Status (2026-11-12)
+## Phase 1 Local-First Deployment Templates & Platform Status (Remediated — 2026-11-12)
 
 - **Added Templates & Scripts:**
   - `04-DEPLOYMENT/LocalNetwork/DEPLOYMENT_MODES.md` — Documents Mode A (Single Computer) and Mode B (Dedicated LAN Server + LAN Terminals) with strict zero PostgreSQL LAN exposure boundaries.
-  - `04-DEPLOYMENT/LocalNetwork/appsettings.Host.Template.json` — Secret-free configuration skeleton requiring externalized environment variables or Windows Secret Manager for `ConnectionStrings:MagicDatabase`.
+  - `04-DEPLOYMENT/LocalNetwork/appsettings.Host.Template.json` — Hardened configuration template: `AllowedHosts: "*"` for local LAN multi-IP access, safe connection string placeholder replacing unexpanded shell syntax, Serilog diagnostic enrichment configuration.
   - `04-DEPLOYMENT/Windows/Register-MagicWindowsService.ps1` — PowerShell sc/New-Service helper for registering `Magic.Api.exe` as a Windows Service (`MagicBackend`).
+- **Least-Privilege Database Role Configuration:**
+  - `magic_dev`: Database owner / migration runner executing EF Core migrations.
+  - `magic_app`: Production runtime application user. Granted strictly `SELECT, INSERT` on `audit.system_audit_logs`, with `UPDATE, DELETE, TRUNCATE` explicitly revoked. Granted operational permissions on `platform.*`.
+- **WPF & WebView2 Hardening Protocol:**
+  - `UserDataFolder` pinned securely to `%LOCALAPPDATA%\MAGIC\WebView2` (eliminates execution directory permission collisions in `C:\Program Files`).
+  - `CoreWebView2.NavigationStarting` intercepts and cancels navigation to unauthorized external hosts (allowlist: `localhost`, `127.0.0.1`, LAN server host/IP).
+  - Web message origin verification via `e.Source` and hardened JSON deserialization guard native WPF hardware bridge invocations.
 - **macOS ARM64 Build vs Windows Runtime Boundary:**
   - `Magic.Api` and `Magic.Frontend` built and verified natively on macOS ARM64 (`arm64`).
   - `Magic.Desktop.Wpf` (`net10.0-windows`) compiled cleanly on macOS via `EnableWindowsTargeting=true`, while live WPF desktop execution, Microsoft WebView2 Edge runtime initialization, peripheral hardware drivers, and Windows Service execution remain **Pending Windows 10/11 Verification**.

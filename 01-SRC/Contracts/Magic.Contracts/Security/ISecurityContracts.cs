@@ -50,6 +50,25 @@ public interface ITokenService
 }
 
 /// <summary>
+/// Supervisor elevation verification contract boundary for high-privilege overrides.
+/// Validates supervisor credentials or temporary authorization tokens (X-Supervisor-Auth-Token).
+/// </summary>
+public interface ISupervisorElevationService
+{
+    Task<SupervisorElevationOutcome> ValidateElevationAsync(
+        string supervisorAuthToken,
+        string requiredPermission,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed record SupervisorElevationOutcome
+{
+    public required bool IsElevated { get; init; }
+    public Guid? SupervisorUserId { get; init; }
+    public string? Reason { get; init; }
+}
+
+/// <summary>
 /// Outcome produced by a configured ITokenService implementation.
 /// </summary>
 public sealed record TokenValidationOutcome

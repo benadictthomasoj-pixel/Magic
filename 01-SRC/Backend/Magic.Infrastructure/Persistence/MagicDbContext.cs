@@ -1,3 +1,5 @@
+using Magic.Domain.ValueObjects;
+using Magic.Infrastructure.Persistence.Converters;
 using Magic.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +14,13 @@ public sealed class MagicDbContext(DbContextOptions<MagicDbContext> options) : D
     public DbSet<OutboxMessageRecord> OutboxMessages => Set<OutboxMessageRecord>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<SystemAuditLogRecord> SystemAuditLogs => Set<SystemAuditLogRecord>();
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(configurationBuilder);
+        configurationBuilder.Properties<Money>().HaveConversion<MoneyConverter>();
+        base.ConfigureConventions(configurationBuilder);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

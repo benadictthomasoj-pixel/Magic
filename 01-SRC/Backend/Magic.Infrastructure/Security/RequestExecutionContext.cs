@@ -3,9 +3,22 @@ using Magic.Contracts.Security;
 namespace Magic.Infrastructure.Security;
 
 /// <summary>
+/// Dedicated mutation interface isolating context modification to authorized middleware.
+/// </summary>
+public interface IRequestContextSetter
+{
+    void SetBranchAndTerminal(Guid? branchId, Guid? terminalId);
+    void SetAuthenticatedCaller(
+        Guid userId,
+        string username,
+        IReadOnlyCollection<string> roles,
+        IReadOnlyCollection<string> permissions);
+}
+
+/// <summary>
 /// Per-request scoped security, branch, and terminal context container populated by API middleware.
 /// </summary>
-public sealed class MutableRequestContext : ICurrentUserContext, IBranchContext, ITerminalContext
+public sealed class MutableRequestContext : ICurrentUserContext, IBranchContext, ITerminalContext, IRequestContextSetter
 {
     public Guid? UserId { get; private set; }
     public string? Username { get; private set; }
@@ -71,6 +84,24 @@ public sealed class FailClosedPermissionEvaluator(ICurrentUserContext currentUse
         }
 
         return Task.FromResult(currentUser.Permissions.Contains(permissionCode, StringComparer.OrdinalIgnoreCase));
+    }
+}
+
+/// <summary>
+/// Fail-closed default supervisor elevation service until OPEN-003 supervisor authentication is configured.
+/// </summary>
+public sealed class FailClosedSupervisorElevationService : ISupervisorElevationService
+{
+    public Task<SupervisorElevationOutcome> ValidateElevationAsync(
+        string supervisorAuthToken,
+        string requiredPermission,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new SupervisorElevationOutcome
+        {
+            IsElevated = false,
+            Reason = "Supervisor elevation authentication is deferred pending OPEN-003 resolution."
+        });
     }
 }
 

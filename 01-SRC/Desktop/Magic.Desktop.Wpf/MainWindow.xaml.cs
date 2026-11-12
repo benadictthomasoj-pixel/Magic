@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.IO;
 using System.Text.Json;
 using System.Windows;
 using Magic.Contracts.Desktop;
@@ -9,6 +11,7 @@ namespace Magic.Desktop.Wpf;
 
 /// <summary>
 /// Main WPF shell hosting WebView2 and mediating native hardware bridge messages cleanly.
+/// Enforces UserDataFolder isolation, navigation allowlists, and origin validation on all IPC messages.
 /// </summary>
 public partial class MainWindow : Window
 {
@@ -26,16 +29,35 @@ public partial class MainWindow : Window
         _hardwareBridge = hardwareBridge;
         InitializeComponent();
         Loaded += OnWindowLoadedAsync;
+        Closing += OnWindowClosing;
     }
 
     private async void OnWindowLoadedAsync(object sender, RoutedEventArgs e)
     {
         try
         {
-            await MagicWebView.EnsureCoreWebView2Async();
+            var userDataFolder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "MAGIC",
+                "WebView2");
+
+            Directory.CreateDirectory(userDataFolder);
+
+            var environment = await CoreWebView2Environment.CreateAsync(
+                browserExecutableFolder: null,
+                userDataFolder: userDataFolder);
+
+            await MagicWebView.EnsureCoreWebView2Async(environment);
 
             MagicWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
             MagicWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+
+#if !DEBUG
+            MagicWebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+            MagicWebView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
+#endif
+
+            MagicWebView.CoreWebView2.NavigationStarting += OnNavigationStarting;
             MagicWebView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
 
             MagicWebView.Source = _settings.FrontendEntryUri;
@@ -50,9 +72,33 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
+    {
+        if (!Uri.TryCreate(e.Uri, UriKind.Absolute, out var targetUri) || !IsAllowedOrigin(targetUri))
+        {
+            e.Cancel = true;
+        }
+    }
+
     private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        var envelope = JsonSerializer.Deserialize<DesktopBridgeMessage>(e.WebMessageAsJson, BridgeJsonOptions);
+        // Enforce origin validation: reject messages from arbitrary or unapproved external web contexts
+        if (!Uri.TryCreate(e.Source, UriKind.Absolute, out var sourceUri) || !IsAllowedOrigin(sourceUri))
+        {
+            return;
+        }
+
+        DesktopBridgeMessage? envelope;
+        try
+        {
+            envelope = JsonSerializer.Deserialize<DesktopBridgeMessage>(e.WebMessageAsJson, BridgeJsonOptions);
+        }
+        catch
+        {
+            // Discard malformed JSON without disrupting the UI dispatcher thread
+            return;
+        }
+
         if (envelope is null)
         {
             return;
@@ -69,8 +115,40 @@ public partial class MainWindow : Window
                 TimestampUtc = DateTimeOffset.UtcNow
             };
 
-            MagicWebView.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(response, BridgeJsonOptions));
+            MagicWebView.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(response, BridgeJsonOptions));
         }
+    }
+
+    private bool IsAllowedOrigin(Uri uri)
+    {
+        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+        {
+            return false;
+        }
+
+        if (Uri.Compare(uri, _settings.FrontendEntryUri, UriComponents.SchemeAndServer, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0)
+        {
+            return true;
+        }
+
+        if (string.Equals(uri.Host, "127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return uri.Host.EndsWith(".magic.local", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void OnWindowClosing(object? sender, CancelEventArgs e)
+    {
+        if (MagicWebView.CoreWebView2 is not null)
+        {
+            MagicWebView.CoreWebView2.NavigationStarting -= OnNavigationStarting;
+            MagicWebView.CoreWebView2.WebMessageReceived -= OnWebMessageReceived;
+        }
+
+        MagicWebView.Dispose();
     }
 }
 

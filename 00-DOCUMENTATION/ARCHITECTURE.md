@@ -108,8 +108,17 @@ To maintain strict modularity without microservice sprawl, the following archite
      5. Customer AR subledger balance update (`CustomerCrmModule`).
      6. Outbox event record persistence (`Platform` Outbox) for secondary non-critical side effects.
 4. **Asynchronous Secondary Decoupling (Domain Events & Outbox):**
-   Secondary non-transactional side effects (e.g., dashboard KPI cache refresh, loyalty points notification, scheduled report triggers, marketing campaign tracking) execute asynchronously via **Domain Events** persisted in the transactional outbox table and dispatched post-commit.
-5. **No Circular Dependencies:**
+   Secondary non-transactional side effects (e.g., dashboard KPI cache refresh, loyalty points notification, scheduled report triggers, audit logs) execute asynchronously via **Integration Events** persisted in `platform.outbox_messages` within the primary ACID transaction.
+   - **Outbox Processing Subsystem:** `OutboxProcessorBackgroundService` runs as a native .NET 10 background service.
+   - **Concurrency & Lease Claiming:** Multiple concurrent workers safely poll the table using `FOR UPDATE SKIP LOCKED`, acquiring a batch lease (`lock_token = workerId`, `lock_expires_at_utc = now + 2m`).
+   - **Consumer Dispatch:** Events are dispatched to matching `IIntegrationEventConsumer` implementations.
+   - **Failure & Retry:** On handler exception, `retry_count` is incremented and the error details logged to `error_message`, clearing the lock for subsequent retry up to 10 attempts.
+   - **Completion:** Upon successful consumer execution, `processed_at_utc` is set and locks cleared.
+5. **Runtime Idempotency Enforcement:**
+   `IdempotencyMiddleware` inspects mutating HTTP verbs (POST, PUT, PATCH, DELETE) for the standard `Idempotency-Key` header. Requests are tracked in `platform.idempotency_records` using SHA-256 payload hashes. Identical subsequent requests receive cached responses (`X-Cache-Lookup: HIT`), while requests presenting a previously used key with an altered payload are rejected with `422 Unprocessable Entity` (`IDEMPOTENCY_PAYLOAD_MISMATCH`).
+6. **Financial Primitives & Value Object Conversions:**
+   The `Money` domain value object encapsulates integer-paise arithmetic without floating-point drift. It is mapped to PostgreSQL `BIGINT` columns using EF Core `MoneyConverter` (`ValueConverter<Money, long>`) and serialized to/from JSON as scalar 64-bit integer paise (`MoneyJsonConverter`), guaranteeing zero precision loss and seamless interoperability.
+7. **No Circular Dependencies:**
    Module dependencies must form a strict Directed Acyclic Graph (DAG). If Module A depends on Module B, Module B can never depend on Module A.
 
 ---

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Magic.Domain.Common;
 using Magic.Domain.ValueObjects;
 using Xunit;
@@ -74,6 +75,38 @@ public sealed class MoneyAndGuardTests
 
         entity.ClearDomainEvents();
         Assert.Empty(entity.DomainEvents);
+    }
+
+    [Fact]
+    public void MoneySerializesAndDeserializesAsScalarInt64PaiseInJson()
+    {
+        var amount = Money.FromPaise(12550); // 125.50 INR
+        var json = JsonSerializer.Serialize(amount);
+
+        Assert.Equal("12550", json);
+
+        var deserialized = JsonSerializer.Deserialize<Money>(json);
+        Assert.Equal(amount, deserialized);
+        Assert.Equal(12550L, deserialized.Paise);
+    }
+
+    [Fact]
+    public void FromRupeesDecimalConvertsWithBankersRoundingByDefault()
+    {
+        var exact = Money.FromRupees(100.50m);
+        Assert.Equal(10050L, exact.Paise);
+        Assert.Equal(100.50m, exact.ToRupeesDecimal());
+
+        // Banker's rounding test (ToEven): 100.005 rounds to 100.00 (0 is even), 100.015 rounds to 100.02 (2 is even)
+        var roundEven0 = Money.FromRupees(100.005m, MidpointRounding.ToEven);
+        Assert.Equal(10000L, roundEven0.Paise);
+
+        var roundEven2 = Money.FromRupees(100.015m, MidpointRounding.ToEven);
+        Assert.Equal(10002L, roundEven2.Paise);
+
+        // AwayFromZero test: 100.005 rounds to 100.01
+        var roundAway = Money.FromRupees(100.005m, MidpointRounding.AwayFromZero);
+        Assert.Equal(10001L, roundAway.Paise);
     }
 }
 

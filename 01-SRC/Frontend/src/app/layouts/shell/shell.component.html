@@ -25,16 +25,20 @@
         [label]="
           monitor.connectivityState() === 'connected'
             ? 'Online LAN'
-            : monitor.connectivityState() === 'checking'
-              ? 'Probing LAN'
-              : 'LAN Offline'
+            : monitor.connectivityState() === 'degraded'
+              ? 'LAN Degraded'
+              : monitor.connectivityState() === 'checking'
+                ? 'Probing LAN'
+                : 'LAN Offline'
         "
         [tone]="
           monitor.connectivityState() === 'connected'
             ? 'ok'
-            : monitor.connectivityState() === 'checking'
-              ? 'neutral'
-              : 'error'
+            : monitor.connectivityState() === 'degraded'
+              ? 'warn'
+              : monitor.connectivityState() === 'checking'
+                ? 'neutral'
+                : 'error'
         "
       />
       <button

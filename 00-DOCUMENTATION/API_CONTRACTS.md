@@ -24,11 +24,11 @@ Every API request from the Angular frontend (or local terminal) must supply the 
 
 | Header Name | Type | Description |
 |---|---|---|
-| `Authorization` | `Bearer <token>` | Signed Ed25519 JWT carrying user claims and permissions. |
-| `X-Branch-Id` | `UUID` | Active operational branch context. |
-| `X-Terminal-Id` | `UUID` | Hardware terminal identity token. |
-| `Idempotency-Key` | `UUID` *(Optional for GET; Mandatory for critical POST/PUT)* | Unique idempotency key to prevent double-billing or duplicate posting. |
-| `X-Correlation-Id` | `UUID` | Distributed tracing correlation ID for log aggregation. |
+| `Authorization` | `Bearer <token>` | Standard JWT Bearer token (HMAC-SHA256 for local LAN / ECDSA P-256 for multi-store) carrying user, branch, terminal, and permission claims. |
+| `X-Branch-Id` | `UUID` | Active operational branch context (must match token claim when authenticated). |
+| `X-Terminal-Id` | `UUID` | Hardware terminal identity token (must match token claim when authenticated). |
+| `Idempotency-Key` | `UUID` *(Mandatory for state-mutating POST/PUT/PATCH/DELETE)* | Standard RFC UUID key ensuring at-most-once execution. Replays cached response (`X-Cache-Lookup: HIT`) for identical re-transmissions; returns 422 `IDEMPOTENCY_PAYLOAD_MISMATCH` if body/URL was altered. |
+| `X-Correlation-Id` | `UUID` | Distributed tracing correlation ID for log aggregation and diagnostic context enrichment. |
 
 ---
 

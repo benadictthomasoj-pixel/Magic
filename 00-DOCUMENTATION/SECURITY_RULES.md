@@ -17,11 +17,13 @@ MAGIC adheres to a strict **Zero-Trust Local Security Model**. Because ERP syste
 1. **Password Hashing:**
    - Enforce **Argon2id** (Memory cost: 65,536 KB, Time cost: 3 iterations, Parallelism: 4 threads).
    - Legacy MD5, SHA-1, or bare SHA-256 without salt are strictly banned.
-2. **Token & Authentication Architecture:**
-   - Implemented via **ASP.NET Core Identity** (customized with Argon2id `IPasswordHasher<TUser>`) or an equivalent audited cryptographic implementation; JWT signing strategy (standard ECDSA P-256 vs. Ed25519/EdDSA via custom crypto provider) is tracked for final confirmation before Phase 1.
-   - Access Token lifespan: 15 minutes.
-   - Refresh Token lifespan: 12 hours (with sliding expiration and single-use rotation stored in PostgreSQL).
-   - In single-workstation desktop mode, the desktop shell stores credentials securely in the Windows Credential Locker / DPAPI.
+2. **Token & Authentication Architecture (Approved OPEN-003):**
+   - Implemented via **ASP.NET Core Identity** with standard JWT Bearer tokens (`Microsoft.AspNetCore.Authentication.JwtBearer`) and claim-based RBAC.
+   - **Signing Algorithms:** HMAC-SHA256 (symmetric shared secret for single-store LAN deployments) and ECDSA P-256 (`ES256`, asymmetric key pair for multi-branch/enterprise environments). Non-standard/custom JWT signing engines (such as Ed25519 for tokens) are avoided to eliminate external crypto dependencies for HTTP authentication.
+   - **Access Token lifespan:** 15 minutes.
+   - **Refresh Token lifespan:** 7 days, stored with cryptographically secure random bytes in PostgreSQL (`security.refresh_tokens`), enforcing single-use rotation and immediate family revocation on reuse detection.
+   - **Context Claims:** Branch ID and Terminal ID claims are validated server-side on every request. Client-supplied headers are validated against authenticated token claims; if mismatched or unassigned, requests fail-closed with 403 Forbidden.
+   - In desktop mode, client credentials and tokens are stored in the Windows Credential Locker / DPAPI.
 3. **Session & Brute-Force Protection:**
    - Maximum 5 consecutive failed login attempts before a 15-minute account lockout.
    - Telemetry tracks client IP, terminal ID, and timestamp on all authentication attempts.
@@ -96,5 +98,17 @@ CREATE TABLE audit.system_audit_logs (
     correlation_id UUID NOT NULL
 );
 ```
-Audit logs are append-only. No `UPDATE` or `DELETE` grants are permitted on the `audit` schema.
+Audit logs are append-only. Immutability is enforced at both the PostgreSQL trigger level and database role permission level:
+
+1. **PostgreSQL Immutability Trigger:**
+   Trigger `trg_prevent_audit_log_tampering` executes function `audit.prevent_audit_log_tampering()` `BEFORE UPDATE OR DELETE` on `audit.system_audit_logs`. Any attempt to update or delete rows throws a PostgreSQL exception with SQLState `55000` (`MAGIC_AUDIT_LOGS_ARE_APPEND_ONLY`). This trigger halts tampering even if executed by the table owner.
+
+2. **Least-Privilege Database Role (`magic_app`):**
+   The application connects via a restricted PostgreSQL role `magic_app` separated from the migration/owner role `magic_dev`:
+   - `magic_app` possesses `SELECT, INSERT, UPDATE, DELETE` on operational business tables (`platform.*`, etc.).
+   - On `audit.system_audit_logs`, `magic_app` has strictly `SELECT, INSERT` privileges.
+   - `UPDATE`, `DELETE`, and `TRUNCATE` privileges on `audit.system_audit_logs` are explicitly revoked:
+     ```sql
+     REVOKE UPDATE, DELETE, TRUNCATE ON TABLE audit.system_audit_logs FROM magic_app;
+     ```
 

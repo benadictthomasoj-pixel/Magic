@@ -49,6 +49,13 @@ public sealed class SystemController(
         return Ok(Wrap<object>(payload));
     }
 
+    [HttpPost("echo")]
+    [ProducesResponseType<ApiResponse<System.Text.Json.JsonElement>>(StatusCodes.Status200OK)]
+    public ActionResult<ApiResponse<System.Text.Json.JsonElement>> PostEcho([FromBody] System.Text.Json.JsonElement body)
+    {
+        return Ok(Wrap(body));
+    }
+
     private ApiResponse<T> Wrap<T>(T data)
     {
         var correlationId = HttpContext.Items[MagicHttpHeaders.CorrelationId]?.ToString()

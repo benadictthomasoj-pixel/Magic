@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Magic.Api.Middleware;
 using Magic.Application;
+using Magic.Contracts.Headers;
 using Magic.Infrastructure;
 using Magic.Platform;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -50,7 +51,27 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseExceptionHandler();
-app.UseSerilogRequestLogging();
+app.UseMiddleware<RequestContextMiddleware>();
+app.UseSerilogRequestLogging(options =>
+{
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        if (httpContext.Items.TryGetValue(MagicHttpHeaders.CorrelationId, out var cid) && cid is not null)
+        {
+            diagnosticContext.Set("CorrelationId", cid);
+        }
+
+        if (httpContext.Items.TryGetValue(MagicHttpHeaders.BranchId, out var bid) && bid is not null)
+        {
+            diagnosticContext.Set("BranchId", bid);
+        }
+
+        if (httpContext.Items.TryGetValue(MagicHttpHeaders.TerminalId, out var tid) && tid is not null)
+        {
+            diagnosticContext.Set("TerminalId", tid);
+        }
+    };
+});
 
 if (app.Environment.IsDevelopment())
 {
@@ -64,8 +85,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseCors("MagicClientPolicy");
-app.UseMiddleware<RequestContextMiddleware>();
 app.UseAuthorization();
+app.UseMiddleware<IdempotencyMiddleware>();
 
 app.MapControllers();
 

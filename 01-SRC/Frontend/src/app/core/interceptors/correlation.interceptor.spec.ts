@@ -44,5 +44,9 @@ describe('correlationInterceptor', () => {
     expect(workspace.setContext('invalid-id', null)).toBe(false);
     expect(workspace.context().branchId).toBeNull();
   });
+
+  it('declares exact standard Idempotency-Key header name matching backend specification', () => {
+    expect(MAGIC_HTTP_HEADERS.idempotencyKey).toBe('Idempotency-Key');
+  });
 });
 

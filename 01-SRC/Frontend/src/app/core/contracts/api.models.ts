@@ -1,7 +1,7 @@
 export const MAGIC_HTTP_HEADERS = {
   branchId: 'X-Branch-Id',
   terminalId: 'X-Terminal-Id',
-  idempotencyKey: 'X-Idempotency-Key',
+  idempotencyKey: 'Idempotency-Key',
   correlationId: 'X-Correlation-Id',
   supervisorAuthToken: 'X-Supervisor-Auth-Token',
 } as const;
@@ -38,7 +38,7 @@ export interface ApiErrorResponse {
 export interface ComponentHealthDto {
   readonly name: string;
   readonly status: string;
-  readonly details?: string | null;
+  readonly detail?: string | null;
 }
 
 export interface SystemHealthStatusDto {
@@ -63,14 +63,16 @@ export interface SystemContextBoundaryDto {
 
 export interface DesktopBridgeMessage {
   readonly messageType: string;
-  readonly payloadJson: string;
   readonly correlationId: string;
+  readonly payloadJson?: string | null;
+  readonly timestampUtc?: string;
 }
 
 export interface DesktopHostCapabilitiesDto {
-  readonly platform: string;
-  readonly webView2Available: boolean;
-  readonly thermalPrintingSupported: boolean;
-  readonly cashDrawerSupported: boolean;
+  readonly hostPlatform: string;
+  readonly supportsEscPosRawPrinting: boolean;
+  readonly supportsCashDrawerPulse: boolean;
+  readonly supportsSerialWeighScale: boolean;
+  readonly shellVersion: string;
 }
 

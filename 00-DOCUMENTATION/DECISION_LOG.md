@@ -45,11 +45,16 @@
   - *Option C:* **Pure Custom Design System** built on Angular CDK + SCSS/CSS design tokens (zero external UI vendor lock-in, higher initial build effort).
 - **Status:** **UNRESOLVED — Recommendation: Angular CDK + Custom SCSS/CSS Tokens (or selective Angular Material primitives).**
 
-### OPEN-003: Authentication & JWT Signing Implementation
-- **Options Under Evaluation:**
-  - *Option A:* **ASP.NET Core Identity** customized with Argon2id password hashing and standard ECDSA P-256 / HMAC-SHA256 JWT Bearer authentication.
-  - *Option B:* **Custom Identity + Ed25519 (EdDSA) JWT provider** (requires third-party crypto library `NSec.Cryptography` or `BouncyCastle` for JWT validation; Ed25519 remains required separately for update package signatures).
-- **Status:** **UNRESOLVED — Pending Security Sign-Off.**
+### OPEN-003: Authentication, JWT Signing & Access Control Architecture
+- **Status:** **[Approved — 2026-11-12]**
+- **Approved Decision:** Standard ASP.NET Core Identity with Standard JWT Bearer Tokens & Claim-Based RBAC.
+  - **Token Provider:** Microsoft ASP.NET Core Authentication JWT Bearer (`Microsoft.AspNetCore.Authentication.JwtBearer`).
+  - **Signing Algorithm:** HMAC-SHA256 (symmetric shared secret for single-store LAN deployments) and ECDSA P-256 (`ES256`, asymmetric key pair for multi-store / enterprise environments). Non-standard/custom JWT signing engines (e.g. Ed25519 for tokens) are rejected to eliminate third-party crypto dependencies for HTTP authentication.
+  - **Token Lifecycle:** 15-minute short-lived access tokens; 7-day refresh tokens stored with cryptographically secure random bytes in PostgreSQL (`security.refresh_tokens`), enforcing one-time use rotation and immediate revocation of token family upon reuse detection.
+  - **Password Hashing:** ASP.NET Core Identity password hasher (PBKDF2 with HMAC-SHA512, 100,000+ iterations) or Argon2id via standard provider.
+  - **Authorization:** Fine-grained permission claims (e.g., `sales.invoice:create`, `inventory.stock:adjust`, `audit.trail:read`).
+  - **Context Enforcement:** Branch ID and Terminal ID claims are validated server-side on every request. Client-supplied headers are validated against authenticated token claims; if mismatched or unassigned, requests fail-closed with 403 Forbidden.
+  - **Supervisor Elevation:** `ISupervisorElevationService` contract provides transient time-bound authorization elevations for sensitive supervisor overrides (e.g., price override, credit override, transaction void).
 
 ### OPEN-004: Durable Background Job Infrastructure
 - **Options Under Evaluation:**
@@ -73,6 +78,6 @@
 |---|---|---|---|
 | **OPEN-001** | **Strict Online LAN Operation** | `[Approved]` | Single authoritative PostgreSQL 18 cluster (`magic_dev`); zero SQLite, offline sync, or local buffering packages/code. `ConnectivityMonitorService` enforces explicit offline warning state when LAN API is unreachable. |
 | **OPEN-002** | **Pure Angular CDK + Custom SCSS & CSS Design Tokens** | `[Approved]` | Angular 22 (`@angular/cdk ^22.2.7`) with `@layer`-ordered SCSS design tokens, CSS `color-scheme` + `light-dark()`, `BreakpointObserver`, and `CdkTrapFocus`. Zero Angular Material or PrimeNG dependencies. |
-| **OPEN-003** | **Concrete Authentication & Token Crypto Engine** | `[Deferred]` | Interfaces (`ICurrentUserContext`, `IPermissionEvaluator`, `ITokenService`, `ISupervisorElevationService`) and fail-closed `FailClosedPermissionEvaluator` / `DeferredTokenService` boundaries implemented; zero unapproved JWT crypto or Argon2id user tables added yet. |
-| **OPEN-004** | **Native `.NET 10 IHostedService` / `BackgroundService` + PostgreSQL Outbox** | `[Approved]` | Implemented `OutboxProcessorBackgroundService` polling `platform.outbox_messages` via partial index & lock tokens. Zero Quartz.NET dependencies. |
+| **OPEN-003** | **ASP.NET Core Identity + Standard JWT Bearer + RBAC** | `[Approved]` | Approved architecture: HMAC-SHA256 (LAN single-store) & ECDSA P-256 (multi-store), 15-minute access tokens, PostgreSQL refresh token rotation, PBKDF2/Argon2id, server-side validated branch/terminal claims, fail-closed `ISupervisorElevationService`. Phase 1 includes contracts and context boundaries; persistence entities planned for Phase 2 user/auth schema. |
+| **OPEN-004** | **Native `.NET 10 IHostedService` / `BackgroundService` + PostgreSQL Outbox** | `[Approved]` | Implemented `OutboxProcessorBackgroundService` with `FOR UPDATE SKIP LOCKED`, worker lease tokens, exponential retry tracking, and real `IIntegrationEventConsumer` dispatch. Zero Quartz.NET dependencies. |
 | **OPEN-005** | **Tax & Statutory Scope (NIC e-Invoicing / Valuation Policy Lock)** | `[Open — Phase 2/4]` | Deferred without blocking Phase 1 technical foundation. |

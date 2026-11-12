@@ -23,3 +23,13 @@ public interface IOutboxEventDispatcher
     Task EnqueueAsync(IntegrationEventEnvelope integrationEvent, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Consumer contract for asynchronously handling dispatched outbox integration events.
+/// Consumers must be idempotent.
+/// </summary>
+public interface IIntegrationEventConsumer
+{
+    bool CanHandle(string eventType);
+    Task HandleAsync(IntegrationEventEnvelope envelope, CancellationToken cancellationToken = default);
+}
+

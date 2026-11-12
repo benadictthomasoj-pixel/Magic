@@ -51,11 +51,13 @@ public static class InfrastructureServiceCollectionExtensions
 
         // Scoped request security/branch/terminal context & deferred OPEN-003 boundaries
         services.AddScoped<MutableRequestContext>();
+        services.AddScoped<IRequestContextSetter>(sp => sp.GetRequiredService<MutableRequestContext>());
         services.AddScoped<ICurrentUserContext>(sp => sp.GetRequiredService<MutableRequestContext>());
         services.AddScoped<IBranchContext>(sp => sp.GetRequiredService<MutableRequestContext>());
         services.AddScoped<ITerminalContext>(sp => sp.GetRequiredService<MutableRequestContext>());
         services.AddScoped<IPermissionEvaluator, FailClosedPermissionEvaluator>();
         services.AddSingleton<ITokenService, DeferredTokenService>();
+        services.AddSingleton<ISupervisorElevationService, FailClosedSupervisorElevationService>();
 
         // OPEN-004: Approved native .NET 10 BackgroundService outbox processor
         services.AddHostedService<OutboxProcessorBackgroundService>();
