@@ -1,8 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Magic.Api</RootNamespace>
     <AssemblyName>Magic.Api</AssemblyName>
+    <UserSecretsId>24187b16-a17a-4816-89c4-cdb4c153dd8c</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

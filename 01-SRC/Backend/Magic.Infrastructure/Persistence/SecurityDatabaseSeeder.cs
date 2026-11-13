@@ -1,6 +1,7 @@
 using Magic.Infrastructure.Persistence.Entities;
 using Magic.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Magic.Infrastructure.Persistence;
@@ -8,6 +9,7 @@ namespace Magic.Infrastructure.Persistence;
 public sealed class SecurityDatabaseSeeder(
     MagicDbContext dbContext,
     IPasswordHasher passwordHasher,
+    IHostEnvironment hostEnvironment,
     ILogger<SecurityDatabaseSeeder> logger)
 {
     public static readonly Guid DefaultCompanyId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -15,6 +17,10 @@ public sealed class SecurityDatabaseSeeder(
 
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
+        if (!hostEnvironment.IsDevelopment())
+        {
+            throw new InvalidOperationException("CRITICAL: SecurityDatabaseSeeder is restricted to Development environments and cannot execute in Production.");
+        }
         // 1. Seed Permissions
         var existingPermCodes = await dbContext.Permissions
             .Select(p => p.Code)

@@ -162,7 +162,7 @@ public sealed class SecurityRemediationTests : IClassFixture<MagicTestFixture>, 
     [Fact]
     public void SEC_B03_ValidKey_EncryptsAndDecryptsSuccessfully()
     {
-        var validKeyHex = "3BE52C1C5E44B692983FDD2EB74372EEB5C5BC820D737189B83A5839134F5711";
+        var validKeyHex = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("MagicTest_Regression_ValidKey_A")));
         var inMemory = new Dictionary<string, string?>
         {
             ["Security:BankEncryptionKey"] = validKeyHex
@@ -181,7 +181,7 @@ public sealed class SecurityRemediationTests : IClassFixture<MagicTestFixture>, 
     [Fact]
     public void SEC_B03_TamperedCiphertext_ThrowsCryptographicException()
     {
-        var validKeyHex = "3BE52C1C5E44B692983FDD2EB74372EEB5C5BC820D737189B83A5839134F5711";
+        var validKeyHex = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("MagicTest_Regression_ValidKey_B")));
         var inMemory = new Dictionary<string, string?>
         {
             ["Security:BankEncryptionKey"] = validKeyHex
@@ -198,5 +198,66 @@ public sealed class SecurityRemediationTests : IClassFixture<MagicTestFixture>, 
         var tampered = Convert.ToBase64String(raw);
 
         Assert.ThrowsAny<CryptographicException>(() => service.Decrypt(tampered));
+    }
+
+    [Fact]
+    public void SEC_B03_SafeKeyReencryptionAndRotation_PreservesDataIntegrity()
+    {
+        // Old Key
+        var oldKeyHex = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("MagicTest_KeyRotation_OldKey_2026")));
+        var oldConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Security:BankEncryptionKey"] = oldKeyHex
+        }).Build();
+        var oldService = new AesGcmBankDataEncryptionService(oldConfig);
+
+        // New Key
+        var newKeyHex = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("MagicTest_KeyRotation_NewKey_2027")));
+        var newConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Security:BankEncryptionKey"] = newKeyHex
+        }).Build();
+        var newService = new AesGcmBankDataEncryptionService(newConfig);
+
+        // Original Sensitive Account
+        var plaintextAccount = "5555444433332222";
+
+        // Step 1: Encrypted originally with Old Key
+        var originalCiphertext = oldService.Encrypt(plaintextAccount);
+        Assert.Equal(plaintextAccount, oldService.Decrypt(originalCiphertext));
+
+        // Step 2: Migration worker decrypts with Old Key and re-encrypts with New Key
+        var decryptedPayload = oldService.Decrypt(originalCiphertext);
+        var rotatedCiphertext = newService.Encrypt(decryptedPayload);
+
+        // Step 3: Verified that Old Key can no longer decrypt new ciphertext (integrity check)
+        Assert.ThrowsAny<CryptographicException>(() => oldService.Decrypt(rotatedCiphertext));
+
+        // Step 4: Verified that New Key decrypts rotated ciphertext with exact fidelity
+        var finalDecrypted = newService.Decrypt(rotatedCiphertext);
+        Assert.Equal(plaintextAccount, finalDecrypted);
+    }
+
+    [Fact]
+    public async Task SEC_B01_SecurityDatabaseSeeder_ThrowsIfInvokedInProduction()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MagicDbContext>();
+        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+        var logger = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<SecurityDatabaseSeeder>>();
+
+        var prodEnv = new TestHostEnvironment { EnvironmentName = "Production" };
+        var seeder = new SecurityDatabaseSeeder(db, hasher, prodEnv, logger);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => seeder.SeedAsync());
+        Assert.Contains("restricted to Development environments", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed class TestHostEnvironment : Microsoft.Extensions.Hosting.IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = "Production";
+        public string ApplicationName { get; set; } = "Magic.Api";
+        public string ContentRootPath { get; set; } = Directory.GetCurrentDirectory();
+        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = new Microsoft.Extensions.FileProviders.NullFileProvider();
     }
 }
