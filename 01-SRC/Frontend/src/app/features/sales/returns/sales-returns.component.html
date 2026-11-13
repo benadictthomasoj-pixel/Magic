@@ -1,0 +1,284 @@
+<div class="returns-container">
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb">MAGIC &gt; Commercial &gt; Sales &gt; Returns & Credit Notes</div>
+      <h1 class="page-title">Sales Returns & Customer Refunds</h1>
+      <p class="page-subtitle">Manage customer returns against tax invoices, restock resalable inventory, and issue credit notes.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary" (click)="setTab('new-return')">↩️ Issue New Return</button>
+    </div>
+  </div>
+
+  <div *ngIf="successMessage" class="alert-banner success">
+    <span>✅ {{ successMessage }}</span>
+    <button class="btn-close" (click)="successMessage = ''">✕</button>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-banner error">
+    <span>⚠️ {{ errorMessage }}</span>
+    <button class="btn-close" (click)="errorMessage = ''">✕</button>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="tabs-nav">
+    <button class="tab-link" [class.active]="activeTab === 'history'" (click)="setTab('history')">
+      Returns History ({{ returnsTotalCount }})
+    </button>
+    <button class="tab-link" [class.active]="activeTab === 'new-return'" (click)="setTab('new-return')">
+      Issue Return & Credit Note
+    </button>
+    <button class="tab-link" [class.active]="activeTab === 'credit-notes'" (click)="setTab('credit-notes')">
+      Credit Notes Register ({{ creditNotesTotalCount }})
+    </button>
+  </div>
+
+  <!-- Tab 1: Returns History -->
+  <div *ngIf="activeTab === 'history'" class="tab-pane">
+    <div class="filter-card">
+      <div class="filter-row">
+        <div class="search-wrap">
+          <input
+            type="text"
+            placeholder="Search by Return #, Invoice #, or Customer..."
+            [(ngModel)]="returnsSearch"
+            (keydown.enter)="loadReturns()"
+            class="form-input"
+          />
+        </div>
+        <button class="btn-filter" (click)="loadReturns()">Search</button>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Return #</th>
+            <th>Date</th>
+            <th>Invoice #</th>
+            <th>Customer</th>
+            <th>Reason</th>
+            <th>Refund Amount</th>
+            <th>Credit Note #</th>
+            <th>Status</th>
+            <th class="actions-col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let ret of returns">
+            <td><strong class="code-link">{{ ret.returnNumber }}</strong></td>
+            <td>{{ ret.returnDateUtc | date:'dd MMM yyyy, HH:mm' }}</td>
+            <td><span class="inv-badge">{{ ret.invoiceNumber }}</span></td>
+            <td>{{ ret.customerName || 'Cash Walk-in' }}</td>
+            <td><span class="reason-tag">{{ ret.reasonCode }}</span></td>
+            <td><strong class="refund-cell">₹{{ ret.totalRefundPaise / 100 | number:'1.2-2' }}</strong></td>
+            <td><span class="crn-badge" *ngIf="ret.creditNoteNumber">{{ ret.creditNoteNumber }}</span></td>
+            <td><span class="status-badge confirmed">{{ ret.status }}</span></td>
+            <td class="actions-col">
+              <button class="btn-action" (click)="viewReturnDetails(ret)" title="View Details">👁️</button>
+            </td>
+          </tr>
+          <tr *ngIf="!isLoadingReturns && returns.length === 0">
+            <td colspan="9" class="empty-cell">No sales returns recorded.</td>
+          </tr>
+          <tr *ngIf="isLoadingReturns">
+            <td colspan="9" class="loading-cell">Loading returns...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab 2: Issue New Return Form -->
+  <div *ngIf="activeTab === 'new-return'" class="tab-pane">
+    <div class="form-card">
+      <div class="search-invoice-box">
+        <h3>Step 1: Locate Original Sales Invoice</h3>
+        <p class="help-text">Enter the Invoice Number printed on the customer receipt (e.g., INV-20261113-ABC123).</p>
+        <div class="search-row">
+          <input
+            type="text"
+            placeholder="Enter Invoice Number..."
+            [(ngModel)]="invoiceSearchNumber"
+            (keydown.enter)="searchInvoiceForReturn()"
+            class="form-input search-inv-input"
+          />
+          <button class="btn-primary" (click)="searchInvoiceForReturn()" [disabled]="isSearchingInvoice">
+            {{ isSearchingInvoice ? 'Searching...' : 'Find Invoice' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Found Invoice Line Selector -->
+      <div *ngIf="foundInvoice" class="invoice-lines-selector">
+        <div class="invoice-banner">
+          <div>
+            <strong>Invoice Found: {{ foundInvoice.invoiceNumber }}</strong>
+            <span class="meta-item">Date: {{ foundInvoice.invoiceDateUtc | date:'dd/MM/yyyy' }}</span>
+            <span class="meta-item">Customer: {{ foundInvoice.customerName || 'Cash Walk-in' }}</span>
+          </div>
+          <div class="inv-total">Original Total: ₹{{ foundInvoice.grandTotalPaise / 100 | number:'1.2-2' }}</div>
+        </div>
+
+        <h3>Step 2: Select Items & Return Quantities</h3>
+        <table class="data-table return-lines-table">
+          <thead>
+            <tr>
+              <th width="40">Select</th>
+              <th>Product Code & Name</th>
+              <th>Sold Qty</th>
+              <th>Unit Rate</th>
+              <th>Return Qty</th>
+              <th>Restock (Resalable)</th>
+              <th>Item Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of returnLines">
+              <td>
+                <input type="checkbox" [(ngModel)]="item.selected" />
+              </td>
+              <td><strong>{{ item.productCode }}</strong> — {{ item.productName }}</td>
+              <td>{{ item.originalQuantity }}</td>
+              <td>₹{{ item.unitPricePaise / 100 | number:'1.2-2' }}</td>
+              <td>
+                <input
+                  type="number"
+                  [(ngModel)]="item.returnQuantity"
+                  min="1"
+                  [max]="item.originalQuantity"
+                  class="form-input qty-input"
+                  [disabled]="!item.selected"
+                />
+              </td>
+              <td>
+                <label class="toggle-label">
+                  <input type="checkbox" [(ngModel)]="item.isResalable" [disabled]="!item.selected" />
+                  <span>{{ item.isResalable ? 'Restock' : 'Scrap/Damaged' }}</span>
+                </label>
+              </td>
+              <td>
+                <input
+                  type="text"
+                  [(ngModel)]="item.reason"
+                  placeholder="Reason..."
+                  class="form-input"
+                  [disabled]="!item.selected"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Step 3: Return Reason & Summary -->
+        <div class="return-summary-grid">
+          <div class="form-group">
+            <label>Overall Reason Code:</label>
+            <select [(ngModel)]="reasonCode" class="form-select">
+              <option value="CustomerCancelled">Customer Changed Mind</option>
+              <option value="Defective">Defective / Manufacturing Issue</option>
+              <option value="WrongItem">Wrong Item Dispensed</option>
+              <option value="Other">Other / Policy Return</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Additional Notes:</label>
+            <input type="text" [(ngModel)]="returnNotes" placeholder="Remarks..." class="form-input" />
+          </div>
+
+          <div class="refund-preview-box">
+            <div class="refund-label">Credit Note Amount:</div>
+            <div class="refund-val">₹{{ calculatedRefundPaise / 100 | number:'1.2-2' }}</div>
+            <small>Credit note will be automatically generated and linked to this customer account.</small>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-cancel" (click)="foundInvoice = null">Reset</button>
+          <button class="btn-submit" (click)="submitSalesReturn()" [disabled]="selectedReturnLines.length === 0 || isSubmittingReturn">
+            {{ isSubmittingReturn ? 'Processing Return...' : 'Confirm Return & Issue Credit Note' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 3: Credit Notes Register -->
+  <div *ngIf="activeTab === 'credit-notes'" class="tab-pane">
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Credit Note #</th>
+            <th>Issue Date</th>
+            <th>Customer</th>
+            <th>Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let cn of creditNotes">
+            <td><strong class="crn-badge">{{ cn.creditNoteNumber }}</strong></td>
+            <td>{{ cn.issueDateUtc | date:'dd MMM yyyy, HH:mm' }}</td>
+            <td>{{ cn.customerName || 'Cash Walk-in' }}</td>
+            <td><strong class="total-cell">₹{{ cn.amountPaise / 100 | number:'1.2-2' }}</strong></td>
+            <td><span class="status-badge issued">{{ cn.status }}</span></td>
+          </tr>
+          <tr *ngIf="!isLoadingCreditNotes && creditNotes.length === 0">
+            <td colspan="5" class="empty-cell">No credit notes issued.</td>
+          </tr>
+          <tr *ngIf="isLoadingCreditNotes">
+            <td colspan="5" class="loading-cell">Loading credit notes...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Return Detail Modal -->
+  <div class="modal-overlay" *ngIf="showReturnDetailModal && selectedReturn">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Return Details — {{ selectedReturn.returnNumber }}</h3>
+        <button class="btn-close" (click)="showReturnDetailModal = false">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="return-detail-grid">
+          <div><label>Invoice Number:</label><span>{{ selectedReturn.invoiceNumber }}</span></div>
+          <div><label>Return Date:</label><span>{{ selectedReturn.returnDateUtc | date:'dd MMM yyyy' }}</span></div>
+          <div><label>Reason Code:</label><span>{{ selectedReturn.reasonCode }}</span></div>
+          <div><label>Credit Note #:</label><span>{{ selectedReturn.creditNoteNumber || 'N/A' }}</span></div>
+        </div>
+
+        <h4>Returned Line Items</h4>
+        <table class="detail-lines-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Qty Returned</th>
+              <th>Unit Rate</th>
+              <th>Tax Amount</th>
+              <th>Total Refund</th>
+              <th>Restocked</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let l of selectedReturn.lines">
+              <td><strong>{{ l.productCode }}</strong> — {{ l.productName }}</td>
+              <td>{{ l.returnQuantity }}</td>
+              <td>₹{{ l.unitPricePaise / 100 | number:'1.2-2' }}</td>
+              <td>₹{{ l.taxAmountPaise / 100 | number:'1.2-2' }}</td>
+              <td><strong>₹{{ l.totalAmountPaise / 100 | number:'1.2-2' }}</strong></td>
+              <td><span class="tag" [class.tag-green]="l.isResalable">{{ l.isResalable ? 'Yes' : 'No' }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="showReturnDetailModal = false">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

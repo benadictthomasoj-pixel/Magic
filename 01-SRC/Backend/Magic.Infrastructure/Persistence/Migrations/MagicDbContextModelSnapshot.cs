@@ -985,6 +985,134 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.ToTable("brands", "commercial");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CashMovementRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("AmountPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CashierSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CashierUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("MovementDateUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MovementType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashierSessionId");
+
+                    b.HasIndex("CompanyId", "BranchId");
+
+                    b.ToTable("cash_movements", "cashier");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CashierSessionRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long?>("ActualClosingCashPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("ApprovedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("CashDepositsPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("CashRefundsPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("CashSalesPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("CashWithdrawalsPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("CashierUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CashierUsername")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("ClosedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ClosingNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("ExpectedCashPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("OpenedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("OpeningCashPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid?>("SupervisorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TerminalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long?>("VariancePaise")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashierUserId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("CompanyId", "BranchId");
+
+                    b.ToTable("cashier_sessions", "cashier");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CategoryRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1055,6 +1183,57 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("categories", "commercial");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CreditNoteRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("AmountPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreditNoteNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("IssueDateUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SalesReturnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("SalesReturnId");
+
+                    b.HasIndex("CompanyId", "BranchId");
+
+                    b.HasIndex("CompanyId", "CreditNoteNumber")
+                        .IsUnique();
+
+                    b.ToTable("credit_notes", "sales");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CustomerAddressRecord", b =>
@@ -2477,6 +2656,375 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("roles", "security");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesInvoiceLineRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BatchNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal>("CgstPercentage")
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<long>("DiscountPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("DiscountPercentage")
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<decimal>("GstRatePercentage")
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<string>("HsnCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<decimal>("IgstPercentage")
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("LineTotalPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ProductCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("numeric(14,4)");
+
+                    b.Property<string>("SerialNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("SgstPercentage")
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<Guid?>("StorageLocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("TaxAmountPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("UnitPricePaise")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("sales_invoice_lines", "sales");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesInvoiceRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("AmountPaidPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CashierSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CashierUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("CgstPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ConcurrencyVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CustomerGstin")
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("DiscountPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("GrandTotalPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("IgstPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("InvoiceDateUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<long>("OutstandingBalancePaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PlaceOfSupplyStateCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("SellerGstin")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
+
+                    b.Property<long>("SgstPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<long>("SubtotalPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TotalTaxPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashierSessionId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("InvoiceDateUtc");
+
+                    b.HasIndex("CompanyId", "BranchId");
+
+                    b.HasIndex("CompanyId", "InvoiceNumber")
+                        .IsUnique();
+
+                    b.ToTable("sales_invoices", "sales");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesPaymentRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("AmountPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CashierSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CashierUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("PaymentDateUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashierSessionId");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("PaymentDateUtc");
+
+                    b.HasIndex("CompanyId", "BranchId");
+
+                    b.ToTable("sales_payments", "sales");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesReturnLineRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("GstRatePercentage")
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<Guid>("InvoiceLineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsResalable")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ProductCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<Guid>("ReturnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("ReturnQuantity")
+                        .HasColumnType("numeric(14,4)");
+
+                    b.Property<long>("TaxAmountPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TotalAmountPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("UnitPricePaise")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceLineId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ReturnId");
+
+                    b.ToTable("sales_return_lines", "sales");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesReturnRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CashierSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CashierUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreditNoteNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ReasonCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset>("ReturnDateUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReturnNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<long>("TotalRefundPaise")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashierSessionId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("CompanyId", "BranchId");
+
+                    b.HasIndex("CompanyId", "ReturnNumber")
+                        .IsUnique();
+
+                    b.ToTable("sales_returns", "sales");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SecurityAuditEventRecord", b =>
@@ -3916,6 +4464,17 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("ReversalVoucher");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CashMovementRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CashierSessionRecord", "CashierSession")
+                        .WithMany("Movements")
+                        .HasForeignKey("CashierSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CashierSession");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CategoryRecord", b =>
                 {
                     b.HasOne("Magic.Infrastructure.Persistence.Entities.DepartmentRecord", "Department")
@@ -3931,6 +4490,24 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("Department");
 
                     b.Navigation("ParentCategory");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CreditNoteRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CustomerRecord", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesReturnRecord", "SalesReturn")
+                        .WithMany()
+                        .HasForeignKey("SalesReturnId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("SalesReturn");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CustomerAddressRecord", b =>
@@ -4325,6 +4902,112 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesInvoiceLineRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesInvoiceRecord", "Invoice")
+                        .WithMany("Lines")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ProductRecord", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesInvoiceRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CashierSessionRecord", "CashierSession")
+                        .WithMany("Invoices")
+                        .HasForeignKey("CashierSessionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CustomerRecord", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CashierSession");
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesPaymentRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CashierSessionRecord", "CashierSession")
+                        .WithMany("Payments")
+                        .HasForeignKey("CashierSessionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesInvoiceRecord", "Invoice")
+                        .WithMany("Payments")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CashierSession");
+
+                    b.Navigation("Invoice");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesReturnLineRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesInvoiceLineRecord", "InvoiceLine")
+                        .WithMany()
+                        .HasForeignKey("InvoiceLineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ProductRecord", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesReturnRecord", "Return")
+                        .WithMany("Lines")
+                        .HasForeignKey("ReturnId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("InvoiceLine");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Return");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesReturnRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CashierSessionRecord", "CashierSession")
+                        .WithMany()
+                        .HasForeignKey("CashierSessionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CustomerRecord", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesInvoiceRecord", "Invoice")
+                        .WithMany("Returns")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CashierSession");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Invoice");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.StockAdjustmentLineRecord", b =>
                 {
                     b.HasOne("Magic.Infrastructure.Persistence.Entities.ProductRecord", "Product")
@@ -4639,6 +5322,15 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("Products");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CashierSessionRecord", b =>
+                {
+                    b.Navigation("Invoices");
+
+                    b.Navigation("Movements");
+
+                    b.Navigation("Payments");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CategoryRecord", b =>
                 {
                     b.Navigation("Children");
@@ -4699,6 +5391,20 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("RolePermissions");
 
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesInvoiceRecord", b =>
+                {
+                    b.Navigation("Lines");
+
+                    b.Navigation("Payments");
+
+                    b.Navigation("Returns");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesReturnRecord", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.StockAdjustmentRecord", b =>

@@ -290,3 +290,4 @@ export class WarehousesListComponent implements OnInit {
     };
   }
 }
+

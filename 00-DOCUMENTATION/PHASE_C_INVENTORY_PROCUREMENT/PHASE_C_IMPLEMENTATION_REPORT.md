@@ -78,3 +78,4 @@ In accordance with architectural directive `DEC-ACC-002`:
 - **Backend:** 111 / 111 tests passing (`dotnet test Magic.sln`).
 - **Frontend:** 35 / 35 tests passing (`npm test --prefix "01-SRC/Frontend"`).
 - **Production Bundle:** Angular production build succeeded (`npm run build --prefix "01-SRC/Frontend"`).
+

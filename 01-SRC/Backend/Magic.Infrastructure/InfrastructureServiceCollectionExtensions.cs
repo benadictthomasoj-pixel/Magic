@@ -85,6 +85,14 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<Magic.Application.Inventory.Services.IStockTransferService, Magic.Infrastructure.Inventory.Services.StockTransferService>();
         services.AddScoped<Magic.Application.Inventory.Services.IReorderService, Magic.Infrastructure.Inventory.Services.ReorderService>();
 
+        // Sales & POS Services (Phase D)
+        services.AddScoped<Magic.Application.Sales.Services.IGstCalculationService, Magic.Infrastructure.Sales.Services.GstCalculationService>();
+        services.AddScoped<Magic.Application.Sales.Services.IPosService, Magic.Infrastructure.Sales.Services.PosService>();
+        services.AddScoped<Magic.Application.Sales.Services.ISalesInvoiceService, Magic.Infrastructure.Sales.Services.SalesInvoiceService>();
+        services.AddScoped<Magic.Application.Sales.Services.ISalesReturnService, Magic.Infrastructure.Sales.Services.SalesReturnService>();
+        services.AddScoped<Magic.Application.Sales.Services.ICashierSessionService, Magic.Infrastructure.Sales.Services.CashierSessionService>();
+        services.AddScoped<Magic.Application.Sales.Services.ISalesReportingService, Magic.Infrastructure.Sales.Services.SalesReportingService>();
+
         // Scoped request security/branch/terminal context
         services.AddScoped<MutableRequestContext>();
         services.AddScoped<IRequestContextSetter>(sp => sp.GetRequiredService<MutableRequestContext>());

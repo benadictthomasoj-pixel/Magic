@@ -1,0 +1,157 @@
+<div class="reports-container">
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb">MAGIC &gt; Commercial &gt; Sales &gt; Analytics</div>
+      <h1 class="page-title">Sales Analytics & Revenue Reports</h1>
+      <p class="page-subtitle">Inspect business turnover, payment channel velocity, fast-moving products, and hourly customer traffic.</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/billing/pos" class="btn-primary">💳 Open POS Terminal</a>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-banner error">
+    <span>⚠️ {{ errorMessage }}</span>
+    <button class="btn-close" (click)="errorMessage = ''">✕</button>
+  </div>
+
+  <!-- Presets & Date Filters Bar -->
+  <div class="filter-card">
+    <div class="filter-row">
+      <div class="preset-buttons">
+        <button class="btn-preset" [class.active]="activePreset === 'today'" (click)="applyPreset('today')">Today</button>
+        <button class="btn-preset" [class.active]="activePreset === 'yesterday'" (click)="applyPreset('yesterday')">Yesterday</button>
+        <button class="btn-preset" [class.active]="activePreset === '7days'" (click)="applyPreset('7days')">Last 7 Days</button>
+        <button class="btn-preset" [class.active]="activePreset === '30days'" (click)="applyPreset('30days')">Last 30 Days</button>
+      </div>
+
+      <div class="custom-dates">
+        <div class="date-group">
+          <label>From:</label>
+          <input type="date" [(ngModel)]="fromDate" class="form-input" />
+        </div>
+        <div class="date-group">
+          <label>To:</label>
+          <input type="date" [(ngModel)]="toDate" class="form-input" />
+        </div>
+        <button class="btn-filter" (click)="loadAllReports()">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Cards Grid -->
+  <div class="kpi-grid" *ngIf="summary">
+    <div class="kpi-card highlight">
+      <span class="kpi-title">Gross Sales Turnover</span>
+      <span class="kpi-value">₹{{ summary.grossSalesPaise / 100 | number:'1.2-2' }}</span>
+      <span class="kpi-sub">Total billed merchandise</span>
+    </div>
+
+    <div class="kpi-card green">
+      <span class="kpi-title">Net Sales (Realized)</span>
+      <span class="kpi-value">₹{{ summary.netSalesPaise / 100 | number:'1.2-2' }}</span>
+      <span class="kpi-sub">After customer returns</span>
+    </div>
+
+    <div class="kpi-card">
+      <span class="kpi-title">GST Tax Collected</span>
+      <span class="kpi-value">₹{{ summary.totalTaxPaise / 100 | number:'1.2-2' }}</span>
+      <span class="kpi-sub">Statutory tax liability</span>
+    </div>
+
+    <div class="kpi-card amber">
+      <span class="kpi-title">Discounts Conceded</span>
+      <span class="kpi-value">₹{{ summary.totalDiscountPaise / 100 | number:'1.2-2' }}</span>
+      <span class="kpi-sub">Promotional price cuts</span>
+    </div>
+
+    <div class="kpi-card red">
+      <span class="kpi-title">Returns / Refunds</span>
+      <span class="kpi-value">₹{{ summary.totalRefundsPaise / 100 | number:'1.2-2' }}</span>
+      <span class="kpi-sub">Credit notes issued</span>
+    </div>
+
+    <div class="kpi-card">
+      <span class="kpi-title">Total Invoices</span>
+      <span class="kpi-value">{{ summary.totalInvoicesCount }}</span>
+      <span class="kpi-sub">Avg Basket: ₹{{ summary.averageBillValuePaise / 100 | number:'1.2-2' }}</span>
+    </div>
+  </div>
+
+  <!-- Split Charts & Tables Row -->
+  <div class="reports-split-row">
+    <!-- Payment Methods Breakdown -->
+    <div class="chart-card">
+      <div class="card-header">
+        <h3>Payment Tender Breakdown</h3>
+      </div>
+      <div class="card-body">
+        <div class="payment-bars-list">
+          <div *ngFor="let pm of paymentMethods" class="pm-row">
+            <div class="pm-info">
+              <span class="pm-name"><strong>{{ pm.paymentMethod }}</strong> ({{ pm.transactionCount }} txns)</span>
+              <span class="pm-amount">₹{{ pm.totalAmountPaise / 100 | number:'1.2-2' }} ({{ pm.percentageOfTotal }}%)</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" [style.width.%]="pm.percentageOfTotal"></div>
+            </div>
+          </div>
+          <div *ngIf="paymentMethods.length === 0" class="empty-state">
+            No payment transactions recorded in this period.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Selling Products -->
+    <div class="chart-card">
+      <div class="card-header">
+        <h3>Top Selling Products</h3>
+      </div>
+      <div class="card-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Product Code & Name</th>
+              <th>Qty Sold</th>
+              <th>Total Revenue</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of topProducts; let i = index">
+              <td><span class="rank-badge">{{ i + 1 }}</span></td>
+              <td><strong>{{ p.productCode }}</strong><br><small>{{ p.productName }}</small></td>
+              <td>{{ p.totalQuantitySold }}</td>
+              <td><strong>₹{{ p.totalRevenuePaise / 100 | number:'1.2-2' }}</strong></td>
+            </tr>
+            <tr *ngIf="topProducts.length === 0">
+              <td colspan="4" class="empty-state">No product sales in this period.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hourly Sales Volume Card -->
+  <div class="chart-card mt-4">
+    <div class="card-header">
+      <h3>Hourly Sales Volume Velocity (24-Hour Cycle)</h3>
+    </div>
+    <div class="card-body">
+      <div class="hourly-bars-chart">
+        <div *ngFor="let h of hourlySales" class="hourly-bar-col">
+          <div class="bar-track">
+            <div
+              class="bar-fill"
+              [style.height.%]="h.totalSalesPaise > 0 ? (h.totalSalesPaise / maxHourlySales) * 100 : 0"
+              [title]="h.hourOfDay + ':00 - ₹' + (h.totalSalesPaise / 100 | number:'1.2-2') + ' (' + h.invoiceCount + ' bills)'"
+            ></div>
+          </div>
+          <span class="hour-label">{{ h.hourOfDay }}:00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

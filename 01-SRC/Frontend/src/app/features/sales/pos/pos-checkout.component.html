@@ -1,0 +1,315 @@
+<div class="pos-container">
+  <!-- Top Navigation & Shift Status Bar -->
+  <header class="pos-header">
+    <div class="header-left">
+      <span class="brand-badge">MAGIC POS</span>
+      <div class="warehouse-select">
+        <label for="posWhSelect">Outlet / Warehouse:</label>
+        <select id="posWhSelect" [(ngModel)]="selectedWarehouseId" (change)="onWarehouseChange()" class="form-select">
+          <option *ngFor="let wh of warehouses" [value]="wh.id">{{ wh.name }} ({{ wh.code }})</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="shift-badge" [class.open]="activeSession?.status === 'Open'" [class.closed]="!activeSession || activeSession.status !== 'Open'">
+        <span class="status-dot"></span>
+        <span *ngIf="activeSession && activeSession.status === 'Open'">Shift Open: {{ activeSession.cashierUsername }} (Drawer: ₹{{ activeSession.expectedCashPaise / 100 | number:'1.2-2' }})</span>
+        <span *ngIf="!activeSession || activeSession.status !== 'Open'">Shift Closed — <a routerLink="/billing/cash-closing">Open Shift</a></span>
+      </div>
+      <a routerLink="/billing/sales" class="btn-subtle">Sales History</a>
+      <a routerLink="/billing/cash-closing" class="btn-subtle">Cash Drawer</a>
+    </div>
+  </header>
+
+  <div *ngIf="errorMessage" class="error-banner">
+    <span>⚠️ {{ errorMessage }}</span>
+    <button class="btn-close" (click)="errorMessage = ''">✕</button>
+  </div>
+
+  <!-- Main POS Split Workspace -->
+  <main class="pos-workspace">
+    <!-- Left: Product Catalog & Barcode Scanner -->
+    <section class="catalog-section">
+      <div class="search-bar-row">
+        <div class="scanner-input-wrap">
+          <span class="icon">🔍</span>
+          <input
+            type="text"
+            placeholder="Scan barcode or search product name / SKU (Press Enter)..."
+            [(ngModel)]="searchQuery"
+            (input)="onSearchInput()"
+            (keydown.enter)="onBarcodeScanned(searchQuery)"
+            class="search-input"
+            autofocus
+          />
+        </div>
+      </div>
+
+      <div class="product-grid" *ngIf="!isLoadingCatalog && catalogProducts.length > 0">
+        <div
+          *ngFor="let prod of catalogProducts"
+          class="product-card"
+          [class.out-of-stock]="prod.quantityOnHand <= 0"
+          (click)="addToCart(prod)"
+        >
+          <div class="card-header">
+            <span class="sku-tag">{{ prod.sku }}</span>
+            <span class="stock-badge" [class.low]="prod.quantityOnHand > 0 && prod.quantityOnHand < 5" [class.oos]="prod.quantityOnHand <= 0">
+              {{ prod.quantityOnHand > 0 ? (prod.quantityOnHand | number) + ' ' + prod.unitOfMeasure : 'Out of Stock' }}
+            </span>
+          </div>
+          <h4 class="product-name">{{ prod.name }}</h4>
+          <div class="card-footer">
+            <span class="price">₹{{ prod.sellingPricePaise / 100 | number:'1.2-2' }}</span>
+            <span class="tax-tag">{{ prod.gstRatePercentage }}% GST</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="!isLoadingCatalog && catalogProducts.length === 0">
+        <p>No products found in this warehouse matching "{{ searchQuery }}".</p>
+      </div>
+
+      <div class="loading-state" *ngIf="isLoadingCatalog">
+        <p>Searching inventory catalog...</p>
+      </div>
+    </section>
+
+    <!-- Right: Sales Cart & Fast Checkout -->
+    <section class="cart-section">
+      <div class="cart-header">
+        <h3>Current Cart <span class="badge">{{ totalItemsCount }} items</span></h3>
+        <button *ngIf="cart.length > 0" class="btn-clear" (click)="clearCart()">Clear Cart</button>
+      </div>
+
+      <div class="cart-items-list" *ngIf="cart.length > 0">
+        <div *ngFor="let item of cart" class="cart-item">
+          <div class="item-info">
+            <div class="name">{{ item.product.name }}</div>
+            <div class="meta">
+              <span>SKU: {{ item.product.sku }}</span>
+              <span>Rate: ₹{{ (item.unitPriceOverridePaise ?? item.product.sellingPricePaise) / 100 | number:'1.2-2' }}</span>
+            </div>
+          </div>
+
+          <div class="qty-controls">
+            <button class="btn-qty" (click)="updateQuantity(item, -1)">−</button>
+            <span class="qty">{{ item.quantity }}</span>
+            <button class="btn-qty" (click)="updateQuantity(item, 1)">+</button>
+          </div>
+
+          <div class="item-total">
+            ₹{{ ((item.unitPriceOverridePaise ?? item.product.sellingPricePaise) * item.quantity - item.discountPaise) / 100 | number:'1.2-2' }}
+          </div>
+
+          <button class="btn-remove" (click)="removeFromCart(item)" title="Remove item">✕</button>
+        </div>
+      </div>
+
+      <div class="cart-empty" *ngIf="cart.length === 0">
+        <div class="cart-empty-icon">🛒</div>
+        <p>Cart is empty</p>
+        <small>Scan a barcode or click items in the catalog to add</small>
+      </div>
+
+      <!-- Financial Totals Block -->
+      <div class="cart-totals" *ngIf="cart.length > 0">
+        <div class="row">
+          <span>Subtotal:</span>
+          <span>₹{{ subtotalPaise / 100 | number:'1.2-2' }}</span>
+        </div>
+        <div class="row" *ngIf="totalDiscountPaise > 0">
+          <span>Discount:</span>
+          <span class="discount-val">−₹{{ totalDiscountPaise / 100 | number:'1.2-2' }}</span>
+        </div>
+        <div class="row">
+          <span>Total GST:</span>
+          <span>₹{{ totalTaxPaise / 100 | number:'1.2-2' }}</span>
+        </div>
+        <div class="row grand-total">
+          <span>Grand Total:</span>
+          <span>₹{{ grandTotalPaise / 100 | number:'1.2-2' }}</span>
+        </div>
+
+        <button class="btn-checkout" (click)="openPaymentModal()">
+          <span>Pay Now (F12)</span>
+          <span class="checkout-amount">₹{{ grandTotalPaise / 100 | number:'1.2-2' }}</span>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Payment Modal -->
+  <div class="modal-overlay" *ngIf="showPaymentModal">
+    <div class="modal-content payment-modal">
+      <div class="modal-header">
+        <h3>Collect Payment</h3>
+        <button class="btn-close" (click)="showPaymentModal = false">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="payment-summary">
+          <div class="amount-due">
+            <span class="label">Amount Payable:</span>
+            <span class="value">₹{{ grandTotalPaise / 100 | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="customer-picker">
+          <label>Customer (Optional Walk-in):</label>
+          <select [(ngModel)]="selectedCustomerId" class="form-select">
+            <option value="">Cash Walk-in Customer</option>
+            <option *ngFor="let c of customers" [value]="c.id">{{ c.name }} ({{ c.phone }})</option>
+          </select>
+        </div>
+
+        <!-- Payment Method Tabs -->
+        <div class="payment-tabs">
+          <button class="tab-btn" [class.active]="paymentMethod === 'Cash'" (click)="paymentMethod = 'Cash'">💵 Cash</button>
+          <button class="tab-btn" [class.active]="paymentMethod === 'Upi'" (click)="paymentMethod = 'Upi'">📱 UPI / QR</button>
+          <button class="tab-btn" [class.active]="paymentMethod === 'Card'" (click)="paymentMethod = 'Card'">💳 Card</button>
+          <button class="tab-btn" [class.active]="paymentMethod === 'Split'" (click)="paymentMethod = 'Split'">⚖️ Split Pay</button>
+        </div>
+
+        <!-- Cash Tab -->
+        <div *ngIf="paymentMethod === 'Cash'" class="tender-form">
+          <div class="form-group">
+            <label>Cash Tendered (₹):</label>
+            <input type="number" [ngModel]="cashTenderPaise / 100" (ngModelChange)="setCashTender($event)" class="form-input text-large" />
+          </div>
+          <div class="change-display" [class.valid]="changeDuePaise >= 0">
+            <span>Change to Return:</span>
+            <strong>₹{{ changeDuePaise / 100 | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+
+        <!-- UPI Tab -->
+        <div *ngIf="paymentMethod === 'Upi'" class="tender-form">
+          <div class="form-group">
+            <label>UPI Transaction Ref / UPI ID:</label>
+            <input type="text" [(ngModel)]="referenceNumber" placeholder="UPI12345678" class="form-input" />
+          </div>
+          <p class="tender-note">Customer scans QR code on terminal for exact amount ₹{{ grandTotalPaise / 100 | number:'1.2-2' }}.</p>
+        </div>
+
+        <!-- Card Tab -->
+        <div *ngIf="paymentMethod === 'Card'" class="tender-form">
+          <div class="form-group">
+            <label>Card Approval / Auth Code:</label>
+            <input type="text" [(ngModel)]="referenceNumber" placeholder="AUTH-987654" class="form-input" />
+          </div>
+        </div>
+
+        <!-- Split Tab -->
+        <div *ngIf="paymentMethod === 'Split'" class="tender-form split-grid">
+          <div class="form-group">
+            <label>Cash (₹):</label>
+            <input type="number" [ngModel]="cashTenderPaise / 100" (ngModelChange)="setCashTender($event)" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>UPI (₹):</label>
+            <input type="number" [ngModel]="upiTenderPaise / 100" (ngModelChange)="setUpiTender($event)" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Card (₹):</label>
+            <input type="number" [ngModel]="cardTenderPaise / 100" (ngModelChange)="setCardTender($event)" class="form-input" />
+          </div>
+          <div class="split-validation" [class.valid]="isPaymentValid" [class.invalid]="!isPaymentValid">
+            <span>Total Tendered: ₹{{ totalTenderedPaise / 100 | number:'1.2-2' }}</span>
+            <span *ngIf="!isPaymentValid">Short by ₹{{ (grandTotalPaise - totalTenderedPaise) / 100 | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Sale Notes (Optional):</label>
+          <input type="text" [(ngModel)]="saleNotes" placeholder="Bill remarks..." class="form-input" />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="showPaymentModal = false" [disabled]="isSubmitting">Cancel</button>
+        <button class="btn-submit" (click)="completeCheckout()" [disabled]="!isPaymentValid || isSubmitting">
+          {{ isSubmitting ? 'Processing Bill...' : 'Complete Sale & Print' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Receipt Thermal Modal -->
+  <div class="modal-overlay" *ngIf="showReceiptModal && completedInvoice">
+    <div class="modal-content receipt-modal">
+      <div class="modal-header">
+        <h3>Invoice Receipt — {{ completedInvoice.invoiceNumber }}</h3>
+        <div class="receipt-actions">
+          <button class="btn-toggle-size" (click)="receiptSize = receiptSize === '80mm' ? '58mm' : '80mm'">
+            {{ receiptSize }}
+          </button>
+          <button class="btn-close" (click)="startNewSale()">✕</button>
+        </div>
+      </div>
+
+      <div class="modal-body receipt-scrollable">
+        <div class="thermal-receipt" [class.size-58]="receiptSize === '58mm'" [class.size-80]="receiptSize === '80mm'">
+          <div class="receipt-header">
+            <h2 class="store-name">MAGIC RETAIL OUTLET</h2>
+            <p class="store-sub">Universal Business Management ERP</p>
+            <p>GSTIN: {{ completedInvoice.sellerGstin }}</p>
+            <p class="receipt-sep">--------------------------------</p>
+            <p class="invoice-title">TAX INVOICE</p>
+            <p>Invoice #: {{ completedInvoice.invoiceNumber }}</p>
+            <p>Date: {{ completedInvoice.invoiceDateUtc | date:'dd/MM/yyyy HH:mm' }}</p>
+            <p>Cashier: {{ completedInvoice.cashierName }}</p>
+            <p *ngIf="completedInvoice.customerName">Customer: {{ completedInvoice.customerName }}</p>
+            <p class="receipt-sep">--------------------------------</p>
+          </div>
+
+          <table class="receipt-lines">
+            <thead>
+              <tr>
+                <th class="col-item">Item</th>
+                <th class="col-qty">Qty</th>
+                <th class="col-rate">Rate</th>
+                <th class="col-total">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let l of completedInvoice.lines">
+                <td class="col-item">{{ l.productName }}<br><small>HSN: {{ l.hsnCode || 'N/A' }} ({{ l.gstRatePercentage }}%)</small></td>
+                <td class="col-qty">{{ l.quantity }}</td>
+                <td class="col-rate">₹{{ l.unitPricePaise / 100 | number:'1.2-2' }}</td>
+                <td class="col-total">₹{{ l.lineTotalPaise / 100 | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="receipt-summary">
+            <p class="receipt-sep">--------------------------------</p>
+            <div class="sum-row"><span>Subtotal:</span><span>₹{{ completedInvoice.subtotalPaise / 100 | number:'1.2-2' }}</span></div>
+            <div class="sum-row" *ngIf="completedInvoice.discountPaise > 0"><span>Discount:</span><span>−₹{{ completedInvoice.discountPaise / 100 | number:'1.2-2' }}</span></div>
+            <div class="sum-row"><span>CGST:</span><span>₹{{ completedInvoice.cgstPaise / 100 | number:'1.2-2' }}</span></div>
+            <div class="sum-row"><span>SGST:</span><span>₹{{ completedInvoice.sgstPaise / 100 | number:'1.2-2' }}</span></div>
+            <div class="sum-row" *ngIf="completedInvoice.igstPaise > 0"><span>IGST:</span><span>₹{{ completedInvoice.igstPaise / 100 | number:'1.2-2' }}</span></div>
+            <p class="receipt-sep">================================</p>
+            <div class="sum-row grand"><span>TOTAL:</span><span>₹{{ completedInvoice.grandTotalPaise / 100 | number:'1.2-2' }}</span></div>
+            <p class="receipt-sep">================================</p>
+          </div>
+
+          <div class="receipt-payments">
+            <div *ngFor="let pay of completedInvoice.payments" class="sum-row">
+              <span>Paid ({{ pay.paymentMethod }}):</span>
+              <span>₹{{ pay.amountPaise / 100 | number:'1.2-2' }}</span>
+            </div>
+            <p class="receipt-sep">--------------------------------</p>
+            <p class="receipt-footer">Thank you for your visit!<br>Goods once sold can be returned within 7 days with invoice.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-print" (click)="printReceipt()">🖨️ Print Receipt</button>
+        <button class="btn-submit" (click)="startNewSale()">New Sale</button>
+      </div>
+    </div>
+  </div>
+</div>

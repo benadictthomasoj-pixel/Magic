@@ -85,6 +85,18 @@ public sealed class SecurityDatabaseSeeder(
             ("inventory:reorder:view", "Inventory", "View reorder rules and stock replenishment suggestions"),
             ("inventory:reorder:manage", "Inventory", "Configure reorder points, safety stock, and lead times"),
 
+            // Sales & POS (Phase D)
+            ("pos:terminal:operate", "Sales", "Operate POS cashier terminal, barcode scanning and cart"),
+            ("pos:terminal:open-close-shift", "Sales", "Open and close cashier shifts, declare closing float"),
+            ("pos:cash:movement", "Sales", "Record cashier cash drops, pay-ins, and pay-outs"),
+            ("sales:invoice:create", "Sales", "Create, finalize, and tender sales invoices"),
+            ("sales:invoice:view", "Sales", "View sales invoices, line items, and tender breakdowns"),
+            ("sales:invoice:cancel", "Sales", "Cancel sales invoices and restore physical inventory"),
+            ("sales:returns:create", "Sales", "Process sales returns, credit notes, and restock items"),
+            ("sales:returns:view", "Sales", "View sales returns history and return lines"),
+            ("sales:credit-note:view", "Sales", "View and print customer credit notes"),
+            ("sales:reports:view", "Sales", "View sales metrics, payment method breakdowns, and hourly analytics"),
+
             // Administration
             ("admin:users:manage", "Admin", "Create, edit, and assign roles to users"),
             ("admin:roles:manage", "Admin", "Manage custom roles and permission assignments"),
@@ -182,7 +194,7 @@ public sealed class SecurityDatabaseSeeder(
             ["Administrator"] = permissionsToSeed.Select(p => p.Code).ToArray(),
             ["StoreManager"] = permissionsToSeed.Where(p => p.Module != "Admin").Select(p => p.Code).ToArray(),
             ["Accountant"] = permissionsToSeed.Where(p => p.Module == "Accounting" || p.Code == "commercial:products:view" || p.Code == "commercial:customers:view" || p.Code == "commercial:suppliers:view" || p.Code == "commercial:credit:approve" || p.Code == "commercial:suppliers:bank-details" || p.Code == "inventory:stock:view" || p.Code == "procurement:po:view" || p.Code == "procurement:po:approve" || p.Code == "procurement:grn:view" || p.Code == "inventory:reorder:view").Select(p => p.Code).ToArray(),
-            ["Cashier"] = ["billing:dashboard:view", "billing:pos:access", "billing:sales:view", "billing:sales:create", "commercial:products:view", "commercial:customers:view"]
+            ["Cashier"] = ["billing:dashboard:view", "billing:pos:access", "billing:sales:view", "billing:sales:create", "commercial:products:view", "commercial:customers:view", "pos:terminal:operate", "pos:terminal:open-close-shift", "pos:cash:movement", "sales:invoice:create", "sales:invoice:view", "sales:returns:create", "sales:returns:view", "sales:credit-note:view"]
         };
 
         var newRolePerms = new List<RolePermissionRecord>();

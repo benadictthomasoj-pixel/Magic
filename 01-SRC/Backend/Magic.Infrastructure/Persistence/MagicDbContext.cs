@@ -81,6 +81,16 @@ public sealed class MagicDbContext(DbContextOptions<MagicDbContext> options) : D
     public DbSet<StockTransferLineRecord> StockTransferLines => Set<StockTransferLineRecord>();
     public DbSet<ReorderRuleRecord> ReorderRules => Set<ReorderRuleRecord>();
 
+    // POS & Sales Billing schema (Phase D)
+    public DbSet<SalesInvoiceRecord> SalesInvoices => Set<SalesInvoiceRecord>();
+    public DbSet<SalesInvoiceLineRecord> SalesInvoiceLines => Set<SalesInvoiceLineRecord>();
+    public DbSet<SalesPaymentRecord> SalesPayments => Set<SalesPaymentRecord>();
+    public DbSet<SalesReturnRecord> SalesReturns => Set<SalesReturnRecord>();
+    public DbSet<SalesReturnLineRecord> SalesReturnLines => Set<SalesReturnLineRecord>();
+    public DbSet<CreditNoteRecord> CreditNotes => Set<CreditNoteRecord>();
+    public DbSet<CashierSessionRecord> CashierSessions => Set<CashierSessionRecord>();
+    public DbSet<CashMovementRecord> CashMovements => Set<CashMovementRecord>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         ArgumentNullException.ThrowIfNull(configurationBuilder);

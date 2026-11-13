@@ -216,3 +216,4 @@ export class PurchaseOrdersComponent implements OnInit {
     this.isDetailOpen.set(false);
   }
 }
+

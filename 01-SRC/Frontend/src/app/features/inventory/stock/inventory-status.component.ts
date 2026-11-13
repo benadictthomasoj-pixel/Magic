@@ -167,3 +167,4 @@ export class InventoryStatusComponent implements OnInit {
     });
   }
 }
+

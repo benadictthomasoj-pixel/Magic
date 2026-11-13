@@ -15,6 +15,11 @@ import { AccountingPeriodsComponent } from './features/accounting/periods/accoun
 import { SubledgersComponent } from './features/accounting/subledgers/subledgers.component';
 import { BillingDashboardComponent } from './features/billing/billing-dashboard.component';
 import { BillingFeaturePlaceholderComponent } from './features/billing/billing-feature-placeholder.component';
+import { PosCheckoutComponent } from './features/sales/pos/pos-checkout.component';
+import { SalesInvoicesComponent } from './features/sales/invoices/sales-invoices.component';
+import { SalesReturnsComponent } from './features/sales/returns/sales-returns.component';
+import { CashManagementComponent } from './features/sales/cash-management/cash-management.component';
+import { SalesReportsComponent } from './features/sales/reports/sales-reports.component';
 import { ProductsListComponent } from './features/commercial/products/products-list.component';
 import { CategoriesManagementComponent } from './features/commercial/categories/categories-management.component';
 import { CustomersListComponent } from './features/commercial/customers/customers-list.component';
@@ -112,53 +117,18 @@ export const routes: Routes = [
       },
       {
         path: 'billing/pos',
-        component: BillingFeaturePlaceholderComponent,
-        title: 'MAGIC · POS / New Bill',
-        data: {
-          title: 'POS / New Bill',
-          category: 'Retail Desk',
-          icon: '💳',
-          description: 'High-speed touch and barcode retail terminal with multi-pay split tenders, thermal receipt printing, and real-time inventory deduction.',
-          scope: [
-            'Instant item search via barcode scanner, SKU, or touchscreen product grid.',
-            'Cash, Card, UPI, and Split-tender payment capture.',
-            'Automatic double-entry voucher booking to General Ledger Cash & Bank accounts.',
-            'Direct thermal ESC/POS receipt generation (80mm / 58mm).',
-          ],
-        },
+        component: PosCheckoutComponent,
+        title: 'MAGIC · Retail POS Terminal',
       },
       {
         path: 'billing/sales',
-        component: BillingFeaturePlaceholderComponent,
-        title: 'MAGIC · Sales Invoices',
-        data: {
-          title: 'Sales & Invoices',
-          category: 'Sales Operations',
-          icon: '🧾',
-          description: 'GST-compliant B2B and wholesale tax invoice generation, quotation conversions, delivery challans, and customer credit ledger integration.',
-          scope: [
-            'Deterministic CGST, SGST, and IGST tax calculation engines.',
-            'Customer credit limit checks and outstanding payment status.',
-            'E-Way bill and e-Invoicing integration payload generation.',
-            'Direct link to Accounts Receivable control account (11300).',
-          ],
-        },
+        component: SalesInvoicesComponent,
+        title: 'MAGIC · Sales Invoices & Billing Register',
       },
       {
         path: 'billing/sales-returns',
-        component: BillingFeaturePlaceholderComponent,
-        title: 'MAGIC · Sales Returns',
-        data: {
-          title: 'Sales Returns (Credit Notes)',
-          category: 'Sales Operations',
-          icon: '↩️',
-          description: 'Record returned merchandise against original sales invoices, credit note issuance, and inventory restock booking.',
-          scope: [
-            'Lookup original invoice line items with quantity limit validations.',
-            'Credit note generation with statutory GST tax adjustments.',
-            'Automated inventory restock into warehouse locations.',
-          ],
-        },
+        component: SalesReturnsComponent,
+        title: 'MAGIC · Sales Returns & Credit Notes',
       },
       {
         path: 'billing/customers',
@@ -269,37 +239,13 @@ export const routes: Routes = [
       },
       {
         path: 'billing/reports',
-        component: BillingFeaturePlaceholderComponent,
-        title: 'MAGIC · Billing Reports',
-        data: {
-          title: 'Billing & Commercial Reports',
-          category: 'Analytics',
-          icon: '📈',
-          description: 'Daily sales summaries, product category velocity, cashier collections, item-wise profitability, and GST GSTR-1 preparation reports.',
-          scope: [
-            'Daily and monthly sales turnover dashboards.',
-            'Cashier performance and tender collection breakdowns.',
-            'Item sales velocity, slow-moving items, and stock aging.',
-            'GSTR-1 outward supply statutory export tables.',
-          ],
-        },
+        component: SalesReportsComponent,
+        title: 'MAGIC · Sales Reports & Analytics',
       },
       {
         path: 'billing/cash-closing',
-        component: BillingFeaturePlaceholderComponent,
-        title: 'MAGIC · Cash Closing',
-        data: {
-          title: 'Cashier Day Closing & Register',
-          category: 'Cash Desk',
-          icon: '🔒',
-          description: 'Cash drawer counting, shift handover, physical denomination audit, variance reconciliation, and daily cash closing lock.',
-          scope: [
-            'Opening float verification and mid-shift cash withdrawal logging.',
-            'Denomination counter for physical cash reconciliation.',
-            'Variance calculation (System Expected vs. Actual Count).',
-            'Closing journal voucher posting directly to General Ledger.',
-          ],
-        },
+        component: CashManagementComponent,
+        title: 'MAGIC · Cashier Shift & Cash Closing',
       },
       {
         path: 'billing/settings',

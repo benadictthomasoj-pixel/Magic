@@ -229,3 +229,4 @@ export class StockTransfersComponent implements OnInit {
     this.isReceiveOpen.set(false);
   }
 }
+

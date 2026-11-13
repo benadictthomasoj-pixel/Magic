@@ -1,0 +1,273 @@
+<div class="invoices-container">
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb">MAGIC &gt; Commercial &gt; Sales & Invoicing</div>
+      <h1 class="page-title">Sales Invoices & Billing Register</h1>
+      <p class="page-subtitle">Track, inspect, cancel, and reprint retail and commercial tax invoices.</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/billing/pos" class="btn-primary">➕ New POS Sale (F12)</a>
+    </div>
+  </div>
+
+  <div *ngIf="successMessage" class="alert-banner success">
+    <span>✅ {{ successMessage }}</span>
+    <button class="btn-close" (click)="successMessage = ''">✕</button>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-banner error">
+    <span>⚠️ {{ errorMessage }}</span>
+    <button class="btn-close" (click)="errorMessage = ''">✕</button>
+  </div>
+
+  <!-- Filter & Search Bar -->
+  <div class="filter-card">
+    <div class="filter-row">
+      <div class="search-wrap">
+        <input
+          type="text"
+          placeholder="Search by Invoice #, Customer name or GSTIN..."
+          [(ngModel)]="searchTerm"
+          (keydown.enter)="onFilterChange()"
+          class="form-input"
+        />
+      </div>
+
+      <div class="filter-group">
+        <label>Status:</label>
+        <select [(ngModel)]="statusFilter" (change)="onFilterChange()" class="form-select">
+          <option value="">All Statuses</option>
+          <option value="Paid">Paid</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>From:</label>
+        <input type="date" [(ngModel)]="fromDate" (change)="onFilterChange()" class="form-input date-input" />
+      </div>
+
+      <div class="filter-group">
+        <label>To:</label>
+        <input type="date" [(ngModel)]="toDate" (change)="onFilterChange()" class="form-input date-input" />
+      </div>
+
+      <button class="btn-filter" (click)="onFilterChange()">Filter</button>
+      <button class="btn-reset" (click)="clearFilters()">Reset</button>
+    </div>
+  </div>
+
+  <!-- Table Card -->
+  <div class="table-card">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Invoice #</th>
+            <th>Date & Time</th>
+            <th>Customer</th>
+            <th>Items</th>
+            <th>Subtotal</th>
+            <th>GST Tax</th>
+            <th>Grand Total</th>
+            <th>Tenders</th>
+            <th>Status</th>
+            <th class="actions-col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let inv of invoices">
+            <td>
+              <strong class="inv-num">{{ inv.invoiceNumber }}</strong>
+            </td>
+            <td>{{ inv.invoiceDateUtc | date:'dd MMM yyyy, HH:mm' }}</td>
+            <td>
+              <span *ngIf="inv.customerName">{{ inv.customerName }}</span>
+              <span *ngIf="!inv.customerName" class="text-muted">Cash Walk-in</span>
+            </td>
+            <td>{{ inv.lines.length }} items</td>
+            <td>₹{{ inv.subtotalPaise / 100 | number:'1.2-2' }}</td>
+            <td>₹{{ inv.totalTaxPaise / 100 | number:'1.2-2' }}</td>
+            <td>
+              <strong class="total-cell">₹{{ inv.grandTotalPaise / 100 | number:'1.2-2' }}</strong>
+            </td>
+            <td>
+              <span *ngFor="let p of inv.payments" class="pay-badge">{{ p.paymentMethod }}</span>
+            </td>
+            <td>
+              <span class="status-badge" [class.paid]="inv.status === 'Paid'" [class.cancelled]="inv.status === 'Cancelled'">
+                {{ inv.status }}
+              </span>
+            </td>
+            <td class="actions-col">
+              <button class="btn-action" (click)="viewDetails(inv)" title="View Details">👁️</button>
+              <button class="btn-action" (click)="openReprintModal(inv)" title="Reprint Thermal Receipt">🖨️</button>
+              <button *ngIf="inv.status !== 'Cancelled'" class="btn-action text-danger" (click)="openCancelModal(inv)" title="Cancel Invoice">✕</button>
+            </td>
+          </tr>
+          <tr *ngIf="!isLoading && invoices.length === 0">
+            <td colspan="10" class="empty-cell">No sales invoices found matching your filters.</td>
+          </tr>
+          <tr *ngIf="isLoading">
+            <td colspan="10" class="loading-cell">Loading invoices...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-bar" *ngIf="totalCount > 0">
+      <span class="page-info">Showing {{ (page - 1) * pageSize + 1 }} to {{ endItemIndex }} of {{ totalCount }} invoices</span>
+      <div class="page-controls">
+        <button [disabled]="page === 1" (click)="goToPage(page - 1)" class="btn-page">Previous</button>
+        <span class="current-page">Page {{ page }} of {{ totalPages }}</span>
+        <button [disabled]="page === totalPages" (click)="goToPage(page + 1)" class="btn-page">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal-overlay" *ngIf="showDetailModal && selectedInvoice">
+    <div class="modal-content invoice-detail-modal">
+      <div class="modal-header">
+        <h3>Invoice Details — {{ selectedInvoice.invoiceNumber }}</h3>
+        <button class="btn-close" (click)="showDetailModal = false">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-summary-grid">
+          <div><label>Invoice Date:</label><span>{{ selectedInvoice.invoiceDateUtc | date:'dd MMM yyyy, HH:mm:ss' }}</span></div>
+          <div><label>Cashier:</label><span>{{ selectedInvoice.cashierName }}</span></div>
+          <div><label>Customer:</label><span>{{ selectedInvoice.customerName || 'Cash Walk-in' }}</span></div>
+          <div><label>Status:</label><span class="status-badge" [class.paid]="selectedInvoice.status === 'Paid'" [class.cancelled]="selectedInvoice.status === 'Cancelled'">{{ selectedInvoice.status }}</span></div>
+        </div>
+
+        <h4>Itemized Line Items</h4>
+        <table class="detail-lines-table">
+          <thead>
+            <tr>
+              <th>Product Code / Name</th>
+              <th>Qty</th>
+              <th>Rate</th>
+              <th>Discount</th>
+              <th>Taxable</th>
+              <th>GST (%)</th>
+              <th>Tax Amount</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let l of selectedInvoice.lines">
+              <td><strong>{{ l.productCode }}</strong> — {{ l.productName }}</td>
+              <td>{{ l.quantity }}</td>
+              <td>₹{{ l.unitPricePaise / 100 | number:'1.2-2' }}</td>
+              <td>₹{{ l.discountPaise / 100 | number:'1.2-2' }}</td>
+              <td>₹{{ (l.unitPricePaise * l.quantity - l.discountPaise) / 100 | number:'1.2-2' }}</td>
+              <td>{{ l.gstRatePercentage }}%</td>
+              <td>₹{{ l.taxAmountPaise / 100 | number:'1.2-2' }}</td>
+              <td><strong>₹{{ l.lineTotalPaise / 100 | number:'1.2-2' }}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4>Payment Tenders</h4>
+        <div class="payment-tenders-list">
+          <div *ngFor="let pay of selectedInvoice.payments" class="pay-row">
+            <span>{{ pay.paymentMethod }}: ₹{{ pay.amountPaise / 100 | number:'1.2-2' }}</span>
+            <span *ngIf="pay.referenceNumber" class="text-muted">(Ref: {{ pay.referenceNumber }})</span>
+            <span class="badge-success">{{ pay.status }}</span>
+          </div>
+        </div>
+
+        <div class="modal-financial-totals">
+          <div class="row"><span>Subtotal:</span><span>₹{{ selectedInvoice.subtotalPaise / 100 | number:'1.2-2' }}</span></div>
+          <div class="row" *ngIf="selectedInvoice.discountPaise > 0"><span>Discount:</span><span>−₹{{ selectedInvoice.discountPaise / 100 | number:'1.2-2' }}</span></div>
+          <div class="row"><span>CGST:</span><span>₹{{ selectedInvoice.cgstPaise / 100 | number:'1.2-2' }}</span></div>
+          <div class="row"><span>SGST:</span><span>₹{{ selectedInvoice.sgstPaise / 100 | number:'1.2-2' }}</span></div>
+          <div class="row" *ngIf="selectedInvoice.igstPaise > 0"><span>IGST:</span><span>₹{{ selectedInvoice.igstPaise / 100 | number:'1.2-2' }}</span></div>
+          <div class="row total"><span>Grand Total:</span><span>₹{{ selectedInvoice.grandTotalPaise / 100 | number:'1.2-2' }}</span></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="showDetailModal = false">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cancellation Modal -->
+  <div class="modal-overlay" *ngIf="showCancelModal && invoiceToCancel">
+    <div class="modal-content cancel-modal">
+      <div class="modal-header">
+        <h3>Confirm Invoice Cancellation</h3>
+        <button class="btn-close" (click)="showCancelModal = false">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to cancel invoice <strong>{{ invoiceToCancel.invoiceNumber }}</strong> (Amount: ₹{{ invoiceToCancel.grandTotalPaise / 100 | number:'1.2-2' }})?</p>
+        <p class="warning-text">⚠️ This will atomically restore physical stock for all {{ invoiceToCancel.lines.length }} line items back into inventory.</p>
+
+        <div class="form-group">
+          <label>Cancellation Reason (Required):</label>
+          <textarea [(ngModel)]="cancelReason" placeholder="State reason for cancelling this sale..." class="form-textarea" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="showCancelModal = false" [disabled]="isCancelling">Cancel</button>
+        <button class="btn-danger" (click)="confirmCancel()" [disabled]="!cancelReason.trim() || isCancelling">
+          {{ isCancelling ? 'Cancelling...' : 'Confirm Cancellation & Restock' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reprint Receipt Modal -->
+  <div class="modal-overlay" *ngIf="showReprintModal && reprintInvoice">
+    <div class="modal-content receipt-modal">
+      <div class="modal-header">
+        <h3>Thermal Receipt — {{ reprintInvoice.invoiceNumber }}</h3>
+        <div class="receipt-actions">
+          <button class="btn-toggle-size" (click)="receiptSize = receiptSize === '80mm' ? '58mm' : '80mm'">{{ receiptSize }}</button>
+          <button class="btn-close" (click)="showReprintModal = false">✕</button>
+        </div>
+      </div>
+      <div class="modal-body receipt-scrollable">
+        <div class="thermal-receipt" [class.size-58]="receiptSize === '58mm'" [class.size-80]="receiptSize === '80mm'">
+          <div class="receipt-header">
+            <h2 class="store-name">MAGIC RETAIL OUTLET</h2>
+            <p>GSTIN: {{ reprintInvoice.sellerGstin }}</p>
+            <p class="receipt-sep">--------------------------------</p>
+            <p class="invoice-title">TAX INVOICE (REPRINT)</p>
+            <p>Invoice #: {{ reprintInvoice.invoiceNumber }}</p>
+            <p>Date: {{ reprintInvoice.invoiceDateUtc | date:'dd/MM/yyyy HH:mm' }}</p>
+            <p>Cashier: {{ reprintInvoice.cashierName }}</p>
+            <p *ngIf="reprintInvoice.customerName">Customer: {{ reprintInvoice.customerName }}</p>
+            <p class="receipt-sep">--------------------------------</p>
+          </div>
+
+          <table class="receipt-lines">
+            <thead>
+              <tr><th class="col-item">Item</th><th class="col-qty">Qty</th><th class="col-rate">Rate</th><th class="col-total">Total</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let l of reprintInvoice.lines">
+                <td class="col-item">{{ l.productName }}</td>
+                <td class="col-qty">{{ l.quantity }}</td>
+                <td class="col-rate">₹{{ l.unitPricePaise / 100 | number:'1.2-2' }}</td>
+                <td class="col-total">₹{{ l.lineTotalPaise / 100 | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="receipt-summary">
+            <p class="receipt-sep">--------------------------------</p>
+            <div class="sum-row"><span>Subtotal:</span><span>₹{{ reprintInvoice.subtotalPaise / 100 | number:'1.2-2' }}</span></div>
+            <div class="sum-row"><span>GST Tax:</span><span>₹{{ reprintInvoice.totalTaxPaise / 100 | number:'1.2-2' }}</span></div>
+            <div class="sum-row grand"><span>TOTAL:</span><span>₹{{ reprintInvoice.grandTotalPaise / 100 | number:'1.2-2' }}</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-print" (click)="printReceipt()">🖨️ Print</button>
+        <button class="btn-cancel" (click)="showReprintModal = false">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

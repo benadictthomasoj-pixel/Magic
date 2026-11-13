@@ -239,3 +239,4 @@ export class GoodsReceiptsComponent implements OnInit {
     this.isDetailOpen.set(false);
   }
 }
+

@@ -1,0 +1,285 @@
+<div class="cash-container">
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb">MAGIC &gt; Commercial &gt; Sales &gt; Cash Management</div>
+      <h1 class="page-title">Cashier Register & Day-End Closing</h1>
+      <p class="page-subtitle">Track shift cash drawers, log safe drops and float adjustments, and reconcile physical cash variances.</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/billing/pos" class="btn-subtle">💳 Open POS Terminal</a>
+      <button *ngIf="!activeSession || activeSession.status !== 'Open'" class="btn-primary" (click)="showOpenModal = true">
+        🔓 Open Cashier Shift
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="successMessage" class="alert-banner success">
+    <span>✅ {{ successMessage }}</span>
+    <button class="btn-close" (click)="successMessage = ''">✕</button>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-banner error">
+    <span>⚠️ {{ errorMessage }}</span>
+    <button class="btn-close" (click)="errorMessage = ''">✕</button>
+  </div>
+
+  <!-- Active Shift Drawer Card -->
+  <div class="active-shift-card" [class.open]="activeSession?.status === 'Open'" [class.closed]="!activeSession || activeSession.status !== 'Open'">
+    <div *ngIf="activeSession && activeSession.status === 'Open'">
+      <div class="shift-top-bar">
+        <div class="shift-title">
+          <span class="status-indicator"></span>
+          <h2>Active Shift: {{ activeSession.cashierUsername }}</h2>
+          <span class="time-badge">Opened: {{ activeSession.openedAtUtc | date:'dd MMM yyyy, HH:mm' }}</span>
+        </div>
+        <div class="shift-actions">
+          <button class="btn-action-alt" (click)="openMovementModal('Withdrawal')">🔻 Cash Drop / Safe</button>
+          <button class="btn-action-alt" (click)="openMovementModal('Deposit')">🔺 Float In</button>
+          <button class="btn-action-danger" (click)="initiateClosing()">🔒 End Shift & Reconcile</button>
+        </div>
+      </div>
+
+      <!-- Financial Metrics Tiles -->
+      <div class="drawer-tiles-grid">
+        <div class="drawer-tile">
+          <span class="tile-label">Opening Float</span>
+          <span class="tile-val">₹{{ activeSession.openingCashPaise / 100 | number:'1.2-2' }}</span>
+        </div>
+        <div class="drawer-tile tile-green">
+          <span class="tile-label">Cash Sales (+)</span>
+          <span class="tile-val">₹{{ activeSession.cashSalesPaise / 100 | number:'1.2-2' }}</span>
+        </div>
+        <div class="drawer-tile tile-red">
+          <span class="tile-label">Refunds Paid (−)</span>
+          <span class="tile-val">₹{{ activeSession.cashRefundsPaise / 100 | number:'1.2-2' }}</span>
+        </div>
+        <div class="drawer-tile tile-amber">
+          <span class="tile-label">Safe Drops (−)</span>
+          <span class="tile-val">₹{{ activeSession.cashWithdrawalsPaise / 100 | number:'1.2-2' }}</span>
+        </div>
+        <div class="drawer-tile tile-blue">
+          <span class="tile-label">Pay-Ins (+)</span>
+          <span class="tile-val">₹{{ activeSession.cashDepositsPaise / 100 | number:'1.2-2' }}</span>
+        </div>
+        <div class="drawer-tile tile-expected">
+          <span class="tile-label">Expected Drawer Cash</span>
+          <span class="tile-val">₹{{ activeSession.expectedCashPaise / 100 | number:'1.2-2' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Closed Shift Notice -->
+    <div *ngIf="!activeSession || activeSession.status !== 'Open'" class="shift-closed-banner">
+      <div class="closed-icon">🔒</div>
+      <div>
+        <h3>No Active Cashier Shift</h3>
+        <p>The register is closed for this branch. Open a shift to accept cash payments and tender POS transactions.</p>
+      </div>
+      <button class="btn-primary" (click)="showOpenModal = true">Open Shift Now</button>
+    </div>
+  </div>
+
+  <!-- Historical Shift Logs Table -->
+  <div class="table-card">
+    <div class="card-header">
+      <h3>Shift Reconciliation History</h3>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Shift ID</th>
+          <th>Cashier</th>
+          <th>Opened At</th>
+          <th>Closed At</th>
+          <th>Opening Float</th>
+          <th>Cash Sales</th>
+          <th>Expected Cash</th>
+          <th>Physical Count</th>
+          <th>Variance</th>
+          <th>Status</th>
+          <th class="actions-col">Audit</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let s of sessions">
+          <td><span class="mono-id">{{ s.id.substring(0, 8) }}</span></td>
+          <td><strong>{{ s.cashierUsername }}</strong></td>
+          <td>{{ s.openedAtUtc | date:'dd/MM/yy HH:mm' }}</td>
+          <td>{{ s.closedAtUtc ? (s.closedAtUtc | date:'dd/MM/yy HH:mm') : '—' }}</td>
+          <td>₹{{ s.openingCashPaise / 100 | number:'1.2-2' }}</td>
+          <td>₹{{ s.cashSalesPaise / 100 | number:'1.2-2' }}</td>
+          <td>₹{{ s.expectedCashPaise / 100 | number:'1.2-2' }}</td>
+          <td>
+            <span *ngIf="s.actualClosingCashPaise != null">₹{{ s.actualClosingCashPaise / 100 | number:'1.2-2' }}</span>
+            <span *ngIf="s.actualClosingCashPaise == null" class="text-muted">In Progress</span>
+          </td>
+          <td>
+            <span *ngIf="s.variancePaise != null" class="variance-badge"
+                  [class.zero]="s.variancePaise === 0"
+                  [class.over]="s.variancePaise > 0"
+                  [class.short]="s.variancePaise < 0">
+              {{ s.variancePaise === 0 ? 'Exact' : (s.variancePaise > 0 ? '+₹' + (s.variancePaise / 100 | number:'1.2-2') : '−₹' + (-s.variancePaise / 100 | number:'1.2-2')) }}
+            </span>
+            <span *ngIf="s.variancePaise == null">—</span>
+          </td>
+          <td>
+            <span class="status-badge" [class.open]="s.status === 'Open'" [class.closed]="s.status === 'Closed'">
+              {{ s.status }}
+            </span>
+          </td>
+          <td class="actions-col">
+            <button class="btn-action" (click)="viewSession(s)" title="Inspect Shift Logs">👁️</button>
+          </td>
+        </tr>
+        <tr *ngIf="!isLoading && sessions.length === 0">
+          <td colspan="11" class="empty-cell">No shift logs found.</td>
+        </tr>
+        <tr *ngIf="isLoading">
+          <td colspan="11" class="loading-cell">Loading cashier shifts...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Open Shift Modal -->
+  <div class="modal-overlay" *ngIf="showOpenModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Open Cashier Shift</h3>
+        <button class="btn-close" (click)="showOpenModal = false">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Declare the initial cash float placed in the physical till drawer to start your shift.</p>
+        <div class="form-group">
+          <label>Opening Cash Float (₹):</label>
+          <input type="number" [(ngModel)]="openingFloatRupees" min="0" class="form-input text-large" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="showOpenModal = false" [disabled]="isOpening">Cancel</button>
+        <button class="btn-submit" (click)="openShift()" [disabled]="openingFloatRupees < 0 || isOpening">
+          {{ isOpening ? 'Opening Shift...' : 'Confirm & Open Shift' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cash Movement Modal -->
+  <div class="modal-overlay" *ngIf="showMovementModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Record Cash Movement ({{ movementType }})</h3>
+        <button class="btn-close" (click)="showMovementModal = false">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Type:</label>
+          <select [(ngModel)]="movementType" class="form-select">
+            <option value="Withdrawal">Safe Drop (Cash Out / Drop to Vault)</option>
+            <option value="Deposit">Pay In (Add Change / Float Increase)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Amount (₹):</label>
+          <input type="number" [(ngModel)]="movementAmountRupees" min="1" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label>Reason / Note:</label>
+          <input type="text" [(ngModel)]="movementReason" placeholder="Purpose..." class="form-input" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="showMovementModal = false" [disabled]="isRecordingMovement">Cancel</button>
+        <button class="btn-submit" (click)="recordMovement()" [disabled]="movementAmountRupees <= 0 || isRecordingMovement">
+          {{ isRecordingMovement ? 'Recording...' : 'Record Movement' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Close Shift Modal -->
+  <div class="modal-overlay" *ngIf="showCloseModal && activeSession">
+    <div class="modal-content close-modal">
+      <div class="modal-header">
+        <h3>End Cashier Shift & Reconcile</h3>
+        <button class="btn-close" (click)="showCloseModal = false">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="reconcile-comparison">
+          <div class="comp-box">
+            <span class="label">System Expected Cash:</span>
+            <span class="val">₹{{ activeSession.expectedCashPaise / 100 | number:'1.2-2' }}</span>
+          </div>
+          <div class="comp-box">
+            <span class="label">Actual Count Declared:</span>
+            <span class="val highlight">₹{{ actualCountRupees | number:'1.2-2' }}</span>
+          </div>
+          <div class="comp-box variance" [class.zero]="closeVarianceRupees === 0" [class.over]="closeVarianceRupees > 0" [class.short]="closeVarianceRupees < 0">
+            <span class="label">Variance:</span>
+            <span class="val">{{ closeVarianceRupees === 0 ? 'Exact Match' : (closeVarianceRupees > 0 ? '+₹' + (closeVarianceRupees | number:'1.2-2') + ' (Over)' : '−₹' + (-closeVarianceRupees | number:'1.2-2') + ' (Short)') }}</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Physical Cash Counted in Drawer (₹):</label>
+          <input type="number" [(ngModel)]="actualCountRupees" min="0" class="form-input text-large" />
+        </div>
+
+        <div class="form-group">
+          <label>Closing Notes / Explanation for Variance:</label>
+          <textarea [(ngModel)]="closingNotes" class="form-textarea" rows="3" placeholder="Notes..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="showCloseModal = false" [disabled]="isClosing">Cancel</button>
+        <button class="btn-danger" (click)="confirmCloseShift()" [disabled]="actualCountRupees < 0 || isClosing">
+          {{ isClosing ? 'Closing Shift...' : 'Confirm & Finalize Closing' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session Details Modal -->
+  <div class="modal-overlay" *ngIf="showDetailsModal && selectedSession">
+    <div class="modal-content details-modal">
+      <div class="modal-header">
+        <h3>Shift Audit — {{ selectedSession.cashierUsername }}</h3>
+        <button class="btn-close" (click)="showDetailsModal = false">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="drawer-tiles-grid mb-4">
+          <div class="drawer-tile"><span class="tile-label">Opening Float</span><span class="tile-val">₹{{ selectedSession.openingCashPaise / 100 | number:'1.2-2' }}</span></div>
+          <div class="drawer-tile tile-green"><span class="tile-label">Cash Sales</span><span class="tile-val">₹{{ selectedSession.cashSalesPaise / 100 | number:'1.2-2' }}</span></div>
+          <div class="drawer-tile tile-red"><span class="tile-label">Refunds</span><span class="tile-val">₹{{ selectedSession.cashRefundsPaise / 100 | number:'1.2-2' }}</span></div>
+          <div class="drawer-tile tile-expected"><span class="tile-label">Expected</span><span class="tile-val">₹{{ selectedSession.expectedCashPaise / 100 | number:'1.2-2' }}</span></div>
+        </div>
+
+        <h4>Cash Drawer Movements Log</h4>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let m of selectedSession.movements">
+              <td>{{ m.movementDateUtc | date:'HH:mm:ss' }}</td>
+              <td><strong>{{ m.movementType }}</strong></td>
+              <td>₹{{ m.amountPaise / 100 | number:'1.2-2' }}</td>
+              <td>{{ m.reason }}</td>
+            </tr>
+            <tr *ngIf="selectedSession.movements.length === 0">
+              <td colspan="4" class="empty-cell">No mid-shift movements.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="showDetailsModal = false">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -73,7 +73,7 @@ public sealed class CommercialMastersTests : IClassFixture<MagicTestFixture>, IA
     public async Task Products_GetProducts_ReturnsSuccessAndSeedProducts()
     {
         var client = CreateAdminClient();
-        var response = await client.GetAsync("/api/v1/commercial/products");
+        var response = await client.GetAsync("/api/v1/commercial/products?search=PRD-001");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var envelope = await response.Content.ReadFromJsonAsync<ApiResponse<List<ProductSummaryDto>>>();

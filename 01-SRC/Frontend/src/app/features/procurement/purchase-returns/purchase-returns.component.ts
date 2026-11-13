@@ -195,3 +195,4 @@ export class PurchaseReturnsComponent implements OnInit {
     this.isDetailOpen.set(false);
   }
 }
+

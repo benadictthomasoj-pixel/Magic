@@ -175,3 +175,4 @@ export class StockAdjustmentsComponent implements OnInit {
     this.isDetailOpen.set(false);
   }
 }
+

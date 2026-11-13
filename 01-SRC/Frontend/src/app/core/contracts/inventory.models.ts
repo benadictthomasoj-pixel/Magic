@@ -537,3 +537,4 @@ export interface ReorderSuggestionDto {
   readonly leadTimeDays: number;
   readonly urgency: 'Critical' | 'Warning' | 'Normal';
 }
+
