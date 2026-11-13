@@ -394,3 +394,4 @@ export class SuppliersListComponent implements OnInit {
     };
   }
 }
+

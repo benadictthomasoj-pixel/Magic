@@ -13,7 +13,7 @@
 
 | Category | Modules | Count | Status Overview |
 |---|---|---|---|
-| **Fully Implemented & Verified** | Mod 06 (Accounting Core), Mod 05 (Product & Pricing Master), Mod 09 (Customer CRM), Mod 10 (Supplier Management), Mod 19 (Security, RBAC & Auth) | 5 | All backend APIs, EF Core PostgreSQL tables, Angular UI workspaces, and 100% tests passing |
+| **Fully Implemented & Verified** | Mod 06 (Accounting Core), Mod 05 (Product & Pricing Master), Mod 09 (Customer CRM), Mod 10 (Supplier Management), Mod 04 (Inventory & Procurement), Mod 19 (Security, RBAC & Auth) | 6 | All backend APIs, EF Core PostgreSQL tables, Angular UI workspaces, and 100% tests passing |
 | **Partially Implemented & Active** | Mod 01 (Accounting BI), Mod 18 (Multi-Branch Isolation), Mod 21 (Platform) | 3 | Core features live, expanding in Phase C–G |
 | **Foundational Domain Primitives** | Mod 08 (Tax Math) | 1 | Value objects and GST validators live, sales posting planned |
 | **Specified & Route-Configured** | Mod 02-04, 07, 11-17, 20 | 12 | UI routes configured, planned across Phases C–G |
@@ -28,7 +28,7 @@
 | **MOD-01** | **Dashboard & Business Intelligence** | G | `bi` | Partial (Accounting KPI) | Planned (`bi.*`) | Live (Accounting) + Card (Billing) | Passing (UI/API) | `Implemented` (Accounting) / `Planned` (Full) | Phase G |
 | **MOD-02** | **POS & Billing** | A | `pos` | Planned | Planned (`pos.*`) | Specification Card | Pending Backend | `Planned` | Phase D |
 | **MOD-03** | **Sales Management** | A | `sales` | Planned | Planned (`sales.*`) | Specification Card | Pending Backend | `Planned` | Phase D |
-| **MOD-04** | **Purchase & Procurement** | A / B | `purchases` | Planned | Planned (`purchases.*`) | Specification Card | Pending Backend | `Planned` | Phase C |
+| **MOD-04** | **Inventory & Procurement** | A / B | `inventory` | Live (9 Controllers) | Live (19 Tables in `inventory`) | Live (9 Workspaces) | Passing (Unit + Integration + Vitest) | `Implemented & Tested` | Phase C Complete |
 | **MOD-05** | **Product Master & Pricing** | B | `commercial` | Live (`ProductsController`, `CategoriesController`, `BrandsAndDepartmentsController`) | Live (`commercial.products`, `categories`, `brands`, `price_tiers`, etc.) | Live (`/billing/products`, `/billing/categories`) | Passing (Unit + Integration + Vitest) | `Independently Verified` | Phase B Complete |
 | **MOD-06** | **Accounting (Financial Core)** | C | `accounting` | Live (7 Controllers) | Live (12 Tables) | Live (8 Screens) | 89/89 Passing | `Independently Verified` | Phase 2 Complete |
 | **MOD-07** | **Financial Management & Treasury** | C | `finance` | Partial (Cash/Bank GL) | Live (GL Accounts) | Live (Ledger/Vouchers) | Passing (GL Tests) | `Partially Implemented` | Phase E |

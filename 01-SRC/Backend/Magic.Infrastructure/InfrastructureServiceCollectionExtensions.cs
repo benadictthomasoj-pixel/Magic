@@ -74,6 +74,17 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<Magic.Application.Commercial.Services.ISupplierPartyService, Magic.Infrastructure.Commercial.SupplierPartyService>();
         services.AddScoped<CommercialDatabaseSeeder>();
 
+        // Phase C: Inventory & Procurement
+        services.AddScoped<Magic.Application.Inventory.Services.IWarehouseService, Magic.Infrastructure.Inventory.Services.WarehouseService>();
+        services.AddScoped<Magic.Application.Inventory.Services.IInventoryLedgerService, Magic.Infrastructure.Inventory.Services.InventoryLedgerService>();
+        services.AddScoped<Magic.Application.Inventory.Services.IStockAdjustmentService, Magic.Infrastructure.Inventory.Services.StockAdjustmentService>();
+        services.AddScoped<Magic.Application.Inventory.Services.IStockCountService, Magic.Infrastructure.Inventory.Services.StockCountService>();
+        services.AddScoped<Magic.Application.Inventory.Services.IPurchaseOrderService, Magic.Infrastructure.Inventory.Services.PurchaseOrderService>();
+        services.AddScoped<Magic.Application.Inventory.Services.IGoodsReceiptService, Magic.Infrastructure.Inventory.Services.GoodsReceiptService>();
+        services.AddScoped<Magic.Application.Inventory.Services.IPurchaseReturnService, Magic.Infrastructure.Inventory.Services.PurchaseReturnService>();
+        services.AddScoped<Magic.Application.Inventory.Services.IStockTransferService, Magic.Infrastructure.Inventory.Services.StockTransferService>();
+        services.AddScoped<Magic.Application.Inventory.Services.IReorderService, Magic.Infrastructure.Inventory.Services.ReorderService>();
+
         // Scoped request security/branch/terminal context
         services.AddScoped<MutableRequestContext>();
         services.AddScoped<IRequestContextSetter>(sp => sp.GetRequiredService<MutableRequestContext>());

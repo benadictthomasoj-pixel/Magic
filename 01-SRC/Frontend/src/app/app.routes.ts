@@ -19,6 +19,15 @@ import { ProductsListComponent } from './features/commercial/products/products-l
 import { CategoriesManagementComponent } from './features/commercial/categories/categories-management.component';
 import { CustomersListComponent } from './features/commercial/customers/customers-list.component';
 import { SuppliersListComponent } from './features/commercial/suppliers/suppliers-list.component';
+import { WarehousesListComponent } from './features/inventory/warehouses/warehouses-list.component';
+import { InventoryStatusComponent } from './features/inventory/stock/inventory-status.component';
+import { StockAdjustmentsComponent } from './features/inventory/adjustments/stock-adjustments.component';
+import { StockCountsComponent } from './features/inventory/counts/stock-counts.component';
+import { StockTransfersComponent } from './features/inventory/transfers/stock-transfers.component';
+import { ReorderManagementComponent } from './features/inventory/reorder/reorder-management.component';
+import { PurchaseOrdersComponent } from './features/procurement/purchase-orders/purchase-orders.component';
+import { GoodsReceiptsComponent } from './features/procurement/goods-receipts/goods-receipts.component';
+import { PurchaseReturnsComponent } from './features/procurement/purchase-returns/purchase-returns.component';
 import { ShellComponent } from './layouts/shell/shell.component';
 
 export const routes: Routes = [
@@ -183,52 +192,59 @@ export const routes: Routes = [
         title: 'MAGIC · Categories & Taxonomy',
       },
       {
+        path: 'billing/warehouses',
+        component: WarehousesListComponent,
+        title: 'MAGIC · Warehouse Management',
+      },
+      {
         path: 'billing/inventory',
-        component: BillingFeaturePlaceholderComponent,
-        title: 'MAGIC · Inventory Status',
-        data: {
-          title: 'Inventory & Warehouse Status',
-          category: 'Inventory',
-          icon: '📦',
-          description: 'Real-time stock valuation across branches, reorder alerts, batch/lot tracking, expiry tracking, and serial number management.',
-          scope: [
-            'Multi-location stock on-hand, reserved, and available quantities.',
-            'Batch-wise manufacturing and expiration date monitoring.',
-            'Automated low-stock threshold triggers and reorder warnings.',
-          ],
-        },
+        component: InventoryStatusComponent,
+        title: 'MAGIC · Inventory Status & Ledger',
+      },
+      {
+        path: 'billing/stock-adjustments',
+        component: StockAdjustmentsComponent,
+        title: 'MAGIC · Stock Adjustments',
+      },
+      {
+        path: 'billing/stock-counts',
+        component: StockCountsComponent,
+        title: 'MAGIC · Stock Counting & Audits',
+      },
+      {
+        path: 'billing/stock-transfers',
+        component: StockTransfersComponent,
+        title: 'MAGIC · Warehouse Transfers',
+      },
+      {
+        path: 'billing/reorder-management',
+        component: ReorderManagementComponent,
+        title: 'MAGIC · Reorder Rules & Suggestions',
+      },
+      {
+        path: 'billing/purchase-orders',
+        component: PurchaseOrdersComponent,
+        title: 'MAGIC · Purchase Orders',
+      },
+      {
+        path: 'billing/goods-receipts',
+        component: GoodsReceiptsComponent,
+        title: 'MAGIC · Goods Receipt Notes (GRN)',
+      },
+      {
+        path: 'billing/purchase-returns',
+        component: PurchaseReturnsComponent,
+        title: 'MAGIC · Purchase Returns',
       },
       {
         path: 'billing/stock-management',
-        component: BillingFeaturePlaceholderComponent,
-        title: 'MAGIC · Stock Management',
-        data: {
-          title: 'Stock Management & Adjustments',
-          category: 'Inventory',
-          icon: '🔄',
-          description: 'Physical inventory audits, stock reconciliation, breakage/wastage write-offs, and inter-branch inventory transfer orders.',
-          scope: [
-            'Physical count discrepancy reconciliation worksheets.',
-            'Stock adjustment vouchers booking to GL Inventory Adjustment account.',
-            'Transfer orders with in-transit tracking between branch locations.',
-          ],
-        },
+        redirectTo: 'billing/stock-adjustments',
+        pathMatch: 'full',
       },
       {
         path: 'billing/purchases',
-        component: BillingFeaturePlaceholderComponent,
-        title: 'MAGIC · Purchases',
-        data: {
-          title: 'Purchases & Inbound Orders',
-          category: 'Procurement',
-          icon: '🛒',
-          description: 'Purchase orders, Goods Receipt Notes (GRN), vendor invoice booking, landed cost calculations, and input tax credit (ITC) tracking.',
-          scope: [
-            '3-way matching: Purchase Order vs. Goods Receipt vs. Vendor Bill.',
-            'Input CGST/SGST/IGST tax credit booking into GL accounts 1131/1132.',
-            'Direct posting to Accounts Payable control account (21100).',
-          ],
-        },
+        redirectTo: 'billing/purchase-orders',
+        pathMatch: 'full',
       },
       {
         path: 'billing/suppliers',

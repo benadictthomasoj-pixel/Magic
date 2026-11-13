@@ -1,0 +1,268 @@
+<div class="workspace-container">
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Procurement / Purchase Orders</div>
+      <h1 class="page-title">Purchase Orders</h1>
+      <p class="page-subtitle">Vendor purchase orders, approval pipelines, delivery expectations, and GST calculations.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="openCreate()">
+        <span>+</span> Create Purchase Order
+      </button>
+    </div>
+  </header>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type" role="alert">
+      <span class="alert-icon">{{ msg.type === 'ok' ? '✓' : '✕' }}</span>
+      <div class="alert-text">{{ msg.text }}</div>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <div class="card filter-toolbar">
+    <div class="filter-controls">
+      <select [(ngModel)]="filterWarehouseId" (change)="loadOrders()" class="form-control">
+        <option value="">All Warehouses</option>
+        @for (w of warehouses(); track w.id) {
+          <option [value]="w.id">{{ w.name }}</option>
+        }
+      </select>
+      <select [(ngModel)]="filterSupplierId" (change)="loadOrders()" class="form-control">
+        <option value="">All Suppliers</option>
+        @for (s of suppliers(); track s.id) {
+          <option [value]="s.id">{{ s.name }}</option>
+        }
+      </select>
+      <select [(ngModel)]="filterStatus" (change)="loadOrders()" class="form-control">
+        <option value="">All Statuses</option>
+        <option value="Draft">Draft</option>
+        <option value="Approved">Approved</option>
+        <option value="PartiallyReceived">Partially Received</option>
+        <option value="Completed">Completed</option>
+        <option value="Cancelled">Cancelled</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>PO Number</th>
+            <th>Date</th>
+            <th>Supplier</th>
+            <th>Warehouse</th>
+            <th style="text-align: right;">Total Amount</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr><td colspan="7" style="text-align: center; padding: 32px;">Loading purchase orders...</td></tr>
+          } @else if (purchaseOrders().length === 0) {
+            <tr><td colspan="7" style="text-align: center; padding: 32px; color: #64748b;">No purchase orders found.</td></tr>
+          } @else {
+            @for (po of purchaseOrders(); track po.id) {
+              <tr>
+                <td><strong>{{ po.orderNumber }}</strong></td>
+                <td>{{ po.orderDate }}</td>
+                <td>{{ po.supplierName }}</td>
+                <td>{{ po.warehouseName }}</td>
+                <td style="text-align: right; font-weight: 700;">₹{{ (po.grandTotalPaise / 100).toFixed(2) }}</td>
+                <td>
+                  <span class="badge" [ngClass]="po.status === 'Completed' ? 'badge-green' : (po.status === 'Draft' ? 'badge-amber' : (po.status === 'Cancelled' ? 'badge-red' : 'badge-blue'))">
+                    {{ po.status }}
+                  </span>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="viewDetails(po)">View</button>
+                  @if (po.status === 'Draft') {
+                    <button type="button" class="btn btn-success btn-sm" style="margin-left: 6px;" (click)="approveOrder(po)">Approve</button>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <span>Total: {{ totalOrders }} orders</span>
+    </div>
+  </div>
+
+  <!-- Create PO Drawer -->
+  @if (isCreateOpen()) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container" style="max-width: 800px;">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Draft New Purchase Order</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Receiving Warehouse *</label>
+            <select [(ngModel)]="formWarehouseId" class="form-control">
+              @for (w of warehouses(); track w.id) {
+                <option [value]="w.id">{{ w.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Supplier / Vendor *</label>
+            <select [(ngModel)]="formSupplierId" class="form-control">
+              @for (s of suppliers(); track s.id) {
+                <option [value]="s.id">{{ s.name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Payment Terms</label>
+            <select [(ngModel)]="formPaymentTerms" class="form-control">
+              <option value="Due on Receipt">Due on Receipt</option>
+              <option value="Net 15">Net 15</option>
+              <option value="Net 30">Net 30</option>
+              <option value="Net 45">Net 45</option>
+              <option value="Net 60">Net 60</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Expected Delivery Date</label>
+            <input type="date" [(ngModel)]="formExpectedDate" class="form-control" />
+          </div>
+        </div>
+
+        <div style="margin: 20px 0 10px; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 0.9375rem; margin: 0;">Order Line Items</h3>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="addLine()">+ Add Line</button>
+        </div>
+
+        <table class="data-table" style="margin-bottom: 20px;">
+          <thead>
+            <tr>
+              <th>Product ID</th>
+              <th>Qty</th>
+              <th>Unit Price (₹)</th>
+              <th>GST %</th>
+              <th>Total (₹)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of formLines; track $index) {
+              <tr>
+                <td><input type="text" [(ngModel)]="l.productId" placeholder="Product UUID" class="form-control" /></td>
+                <td><input type="number" [(ngModel)]="l.quantity" min="1" class="form-control" style="width: 80px;" /></td>
+                <td><input type="number" [(ngModel)]="l.unitPriceRupees" min="0" step="0.01" class="form-control" style="width: 110px;" /></td>
+                <td>
+                  <select [(ngModel)]="l.gstRatePercentage" class="form-control" style="width: 80px;">
+                    <option [ngValue]="0">0%</option>
+                    <option [ngValue]="5">5%</option>
+                    <option [ngValue]="12">12%</option>
+                    <option [ngValue]="18">18%</option>
+                    <option [ngValue]="28">28%</option>
+                  </select>
+                </td>
+                <td style="font-weight: 600;">
+                  ₹{{ ((l.quantity * l.unitPriceRupees) * (1 + l.gstRatePercentage / 100)).toFixed(2) }}
+                </td>
+                <td><button type="button" class="btn btn-danger btn-sm" (click)="removeLine($index)">✕</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; text-align: right;">
+          <div>Subtotal: ₹{{ calculateSubtotal().toFixed(2) }}</div>
+          <div>Estimated Tax: ₹{{ calculateTotalTax().toFixed(2) }}</div>
+          <div style="font-size: 1.125rem; font-weight: 700; margin-top: 6px;">
+            Grand Total: ₹{{ (calculateSubtotal() + calculateTotalTax()).toFixed(2) }}
+          </div>
+        </div>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Cancel</button>
+        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="savePurchaseOrder()">
+          {{ saving() ? 'Saving...' : 'Save Purchase Order' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- View PO Details Drawer -->
+  @if (isDetailOpen() && selectedOrder(); as po) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container" style="max-width: 800px;">
+      <div class="drawer-header">
+        <h2 class="drawer-title">PO: {{ po.orderNumber }}</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+          <div>
+            <div>Supplier: <strong>{{ po.supplierName }}</strong></div>
+            <div>Receiving Warehouse: <strong>{{ po.warehouseName }}</strong></div>
+            <div>Payment Terms: {{ po.paymentTerms }}</div>
+          </div>
+          <div>
+            <span class="badge" [ngClass]="po.status === 'Completed' ? 'badge-green' : (po.status === 'Draft' ? 'badge-amber' : 'badge-blue')">
+              {{ po.status }}
+            </span>
+            <div style="margin-top: 6px;">Date: {{ po.orderDate }}</div>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th style="text-align: right;">Ordered</th>
+              <th style="text-align: right;">Received</th>
+              <th style="text-align: right;">Unit Price</th>
+              <th style="text-align: right;">GST Rate</th>
+              <th style="text-align: right;">Total Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of po.lines; track line.id) {
+              <tr>
+                <td>{{ line.productCode }} - {{ line.productName }}</td>
+                <td style="text-align: right; font-weight: 600;">{{ line.quantity }}</td>
+                <td style="text-align: right; color: #15803d;">{{ line.receivedQuantity }}</td>
+                <td style="text-align: right;">₹{{ (line.unitPricePaise / 100).toFixed(2) }}</td>
+                <td style="text-align: right;">{{ line.gstRatePercentage }}%</td>
+                <td style="text-align: right; font-weight: 700;">₹{{ (line.totalAmountPaise / 100).toFixed(2) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; text-align: right; margin-top: 20px;">
+          <div>Subtotal: ₹{{ (po.subtotalPaise / 100).toFixed(2) }}</div>
+          <div>GST Tax: ₹{{ (po.totalTaxPaise / 100).toFixed(2) }}</div>
+          <div style="font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-top: 6px;">
+            Grand Total: ₹{{ (po.grandTotalPaise / 100).toFixed(2) }}
+          </div>
+        </div>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Close</button>
+        @if (po.status === 'Draft') {
+          <button type="button" class="btn btn-danger" (click)="cancelOrder(po)">Cancel PO</button>
+          <button type="button" class="btn btn-success" (click)="approveOrder(po)">Approve PO</button>
+        }
+      </div>
+    </div>
+  }
+</div>

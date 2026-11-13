@@ -1,0 +1,264 @@
+<div class="workspace-container">
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Inventory / Warehouses</div>
+      <h1 class="page-title">Warehouse Management</h1>
+      <p class="page-subtitle">Multi-location storage facilities, branch assignments, and internal location hierarchies.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="openCreate()">
+        <span>+</span> Add Warehouse
+      </button>
+    </div>
+  </header>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type" role="alert">
+      <span class="alert-icon">{{ msg.type === 'ok' ? '✓' : '✕' }}</span>
+      <div class="alert-text">{{ msg.text }}</div>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <div class="card filter-toolbar">
+    <div class="search-box">
+      <input
+        type="text"
+        [(ngModel)]="filterSearch"
+        (input)="onSearchChange()"
+        placeholder="Search warehouses by name, code, city, pin code..."
+        class="form-control"
+      />
+    </div>
+    <div class="filter-controls">
+      <select [(ngModel)]="filterActive" (change)="onSearchChange()" class="form-control">
+        <option [ngValue]="undefined">All Statuses</option>
+        <option [ngValue]="true">Active Only</option>
+        <option [ngValue]="false">Inactive / Archived</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>City & State</th>
+            <th>Pin Code</th>
+            <th>Manager / Contact</th>
+            <th>Locations</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr><td colspan="8" style="text-align: center; padding: 32px;">Loading warehouses...</td></tr>
+          } @else if (warehouses().length === 0) {
+            <tr><td colspan="8" style="text-align: center; padding: 32px; color: #64748b;">No warehouses found.</td></tr>
+          } @else {
+            @for (wh of warehouses(); track wh.id) {
+              <tr>
+                <td><strong>{{ wh.code }}</strong></td>
+                <td>{{ wh.name }}</td>
+                <td>{{ wh.city }}, {{ wh.state }}</td>
+                <td>{{ wh.pinCode }}</td>
+                <td>{{ wh.managerName || '—' }} ({{ wh.phone || wh.email || '—' }})</td>
+                <td>
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="openLocations(wh)">
+                    📍 {{ wh.locations.length }} Locations
+                  </button>
+                </td>
+                <td>
+                  <span class="badge" [ngClass]="wh.isActive ? 'badge-green' : 'badge-gray'">
+                    {{ wh.isActive ? 'Active' : 'Archived' }}
+                  </span>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="openEdit(wh)">Edit</button>
+                  @if (wh.isActive) {
+                    <button type="button" class="btn btn-danger btn-sm" style="margin-left: 6px;" (click)="archiveWarehouse(wh)">Archive</button>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-footer">
+      <span>Total: {{ totalWarehouses }} warehouses</span>
+    </div>
+  </div>
+
+  <!-- Create / Edit Drawer -->
+  @if (isCreateOpen() || isEditOpen()) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container">
+      <div class="drawer-header">
+        <h2 class="drawer-title">{{ isEditOpen() ? 'Edit Warehouse' : 'Register New Warehouse' }}</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Warehouse Code *</label>
+            <input type="text" [(ngModel)]="formModel.code" [disabled]="isEditOpen()" class="form-control" placeholder="e.g. WH-MAIN" />
+          </div>
+          <div class="form-group">
+            <label>Warehouse Name *</label>
+            <input type="text" [(ngModel)]="formModel.name" class="form-control" placeholder="e.g. Central Logistics Hub" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" [(ngModel)]="formModel.description" class="form-control" placeholder="Optional notes" />
+        </div>
+
+        <div class="form-group">
+          <label>Address Line 1 *</label>
+          <input type="text" [(ngModel)]="formModel.addressLine1" class="form-control" placeholder="Street / Plot address" />
+        </div>
+
+        <div class="form-group">
+          <label>Address Line 2</label>
+          <input type="text" [(ngModel)]="formModel.addressLine2" class="form-control" placeholder="Area / Landmark" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>City *</label>
+            <input type="text" [(ngModel)]="formModel.city" class="form-control" placeholder="City" />
+          </div>
+          <div class="form-group">
+            <label>State *</label>
+            <input type="text" [(ngModel)]="formModel.state" class="form-control" placeholder="State" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>State Code (GST) *</label>
+            <input type="text" [(ngModel)]="formModel.stateCode" class="form-control" placeholder="e.g. 33" />
+          </div>
+          <div class="form-group">
+            <label>Pin Code *</label>
+            <input type="text" [(ngModel)]="formModel.pinCode" class="form-control" placeholder="6-digit PIN" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Manager Name</label>
+            <input type="text" [(ngModel)]="formModel.managerName" class="form-control" placeholder="Warehouse Manager" />
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="text" [(ngModel)]="formModel.phone" class="form-control" placeholder="Phone Number" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" [(ngModel)]="formModel.email" class="form-control" placeholder="manager@magic.local" />
+          </div>
+          <div class="form-group">
+            <label>Capacity (Sq Ft)</label>
+            <input type="number" [(ngModel)]="formModel.capacitySqFt" class="form-control" placeholder="e.g. 50000" />
+          </div>
+        </div>
+
+        @if (isEditOpen()) {
+          <div class="form-group">
+            <label>
+              <input type="checkbox" [(ngModel)]="formModel.isActive" /> Active Status
+            </label>
+          </div>
+        }
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Cancel</button>
+        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="saveWarehouse()">
+          {{ saving() ? 'Saving...' : (isEditOpen() ? 'Save Changes' : 'Create Warehouse') }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Storage Locations Drawer -->
+  @if (isLocationsOpen() && selectedWarehouse(); as wh) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Storage Locations: {{ wh.name }}</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="card" style="padding: 16px; margin-bottom: 20px;">
+          <h3 style="font-size: 0.9375rem; margin-top: 0; margin-bottom: 12px;">Add Storage Location / Bin</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Location Code *</label>
+              <input type="text" [(ngModel)]="locationForm.code" class="form-control" placeholder="e.g. A1-R1-B1" />
+            </div>
+            <div class="form-group">
+              <label>Location Name *</label>
+              <input type="text" [(ngModel)]="locationForm.name" class="form-control" placeholder="e.g. Aisle 1 Rack 1 Bin 1" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Type</label>
+              <select [(ngModel)]="locationForm.locationType" class="form-control">
+                <option value="Bin">Bin</option>
+                <option value="Rack">Rack</option>
+                <option value="Shelf">Shelf</option>
+                <option value="Zone">Zone</option>
+                <option value="Floor">Floor</option>
+              </select>
+            </div>
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+              <button type="button" class="btn btn-primary" (click)="saveLocation()">+ Add Location</button>
+            </div>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Name</th>
+              <th>Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (locations().length === 0) {
+              <tr><td colspan="3" style="text-align: center; color: #64748b; padding: 24px;">No storage locations created yet.</td></tr>
+            } @else {
+              @for (loc of locations(); track loc.id) {
+                <tr>
+                  <td><strong>{{ loc.code }}</strong></td>
+                  <td>{{ loc.name }}</td>
+                  <td><span class="badge badge-blue">{{ loc.locationType }}</span></td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Done</button>
+      </div>
+    </div>
+  }
+</div>

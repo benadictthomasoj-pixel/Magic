@@ -1,0 +1,199 @@
+<div class="workspace-container">
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Inventory / Stock Counting</div>
+      <h1 class="page-title">Stock Counting & Physical Audits</h1>
+      <p class="page-subtitle">Cyclic and annual physical inventory verification, variance worksheets, and automatic reconciliation.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="openCreate()">
+        <span>+</span> Schedule Count Session
+      </button>
+    </div>
+  </header>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type" role="alert">
+      <span class="alert-icon">{{ msg.type === 'ok' ? '✓' : '✕' }}</span>
+      <div class="alert-text">{{ msg.text }}</div>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <div class="card filter-toolbar">
+    <div class="filter-controls">
+      <select [(ngModel)]="filterWarehouseId" (change)="loadCounts()" class="form-control">
+        <option value="">All Warehouses</option>
+        @for (w of warehouses(); track w.id) {
+          <option [value]="w.id">{{ w.name }}</option>
+        }
+      </select>
+      <select [(ngModel)]="filterStatus" (change)="loadCounts()" class="form-control">
+        <option value="">All Statuses</option>
+        <option value="Draft">Draft</option>
+        <option value="InProgress">In Progress</option>
+        <option value="Completed">Completed</option>
+        <option value="Reconciled">Reconciled</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Session #</th>
+            <th>Scheduled Date</th>
+            <th>Warehouse</th>
+            <th>Type</th>
+            <th>Items Counted</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr><td colspan="7" style="text-align: center; padding: 32px;">Loading count sessions...</td></tr>
+          } @else if (countSessions().length === 0) {
+            <tr><td colspan="7" style="text-align: center; padding: 32px; color: #64748b;">No stock count sessions found.</td></tr>
+          } @else {
+            @for (s of countSessions(); track s.id) {
+              <tr>
+                <td><strong>{{ s.countNumber }}</strong></td>
+                <td>{{ s.scheduledDate }}</td>
+                <td>{{ s.warehouseName }}</td>
+                <td><span class="badge badge-blue">{{ s.countType }}</span></td>
+                <td>{{ s.lines.length }} products</td>
+                <td>
+                  <span class="badge" [ngClass]="s.status === 'Reconciled' ? 'badge-green' : (s.status === 'Draft' ? 'badge-amber' : 'badge-blue')">
+                    {{ s.status }}
+                  </span>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="openWorksheet(s)">Worksheet</button>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <span>Total: {{ totalCounts }} count sessions</span>
+    </div>
+  </div>
+
+  <!-- Create Session Drawer -->
+  @if (isCreateOpen()) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Schedule Physical Stock Count</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="form-group">
+          <label>Warehouse *</label>
+          <select [(ngModel)]="formWarehouseId" class="form-control">
+            @for (w of warehouses(); track w.id) {
+              <option [value]="w.id">{{ w.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Count Type</label>
+            <select [(ngModel)]="formCountType" class="form-control">
+              <option value="Full">Full Physical Count</option>
+              <option value="Cycle">Cycle Count (Periodic)</option>
+              <option value="Spot">Spot Check</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Scheduled Date</label>
+            <input type="date" [(ngModel)]="formScheduledDate" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Notes</label>
+          <input type="text" [(ngModel)]="formNotes" class="form-control" placeholder="e.g. End of Month audit" />
+        </div>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Cancel</button>
+        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="createCountSession()">
+          {{ saving() ? 'Scheduling...' : 'Initialize Session' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Worksheet Drawer -->
+  @if (isWorksheetOpen() && selectedSession(); as session) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container" style="max-width: 800px;">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Physical Count Worksheet: {{ session.countNumber }}</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div style="margin-bottom: 16px; display: flex; justify-content: space-between;">
+          <span>Warehouse: <strong>{{ session.warehouseName }}</strong></span>
+          <span class="badge" [ngClass]="session.status === 'Reconciled' ? 'badge-green' : 'badge-amber'">{{ session.status }}</span>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th style="text-align: right;">System Qty</th>
+              <th style="text-align: right; width: 120px;">Physical Count</th>
+              <th style="text-align: right;">Variance</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of session.lines; track line.id) {
+              <tr>
+                <td>{{ line.productCode }} - {{ line.productName }}</td>
+                <td style="text-align: right; font-weight: 600;">{{ line.systemQuantity }}</td>
+                <td style="text-align: right;">
+                  <input
+                    type="number"
+                    [(ngModel)]="countedValues[line.id]"
+                    [disabled]="session.status === 'Reconciled'"
+                    class="form-control"
+                    style="text-align: right;"
+                  />
+                </td>
+                <td style="text-align: right;">
+                  @let diff = (countedValues[line.id] ?? line.systemQuantity) - line.systemQuantity;
+                  <span [style.color]="diff === 0 ? '#15803d' : (diff < 0 ? '#dc2626' : '#2563eb')" style="font-weight: 700;">
+                    {{ diff > 0 ? '+' : '' }}{{ diff }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Close</button>
+        @if (session.status !== 'Reconciled') {
+          <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="saveCountedLines()">
+            Save Count Entries
+          </button>
+          <button type="button" class="btn btn-success" (click)="reconcileCount(session)">
+            Reconcile Variances
+          </button>
+        }
+      </div>
+    </div>
+  }
+</div>

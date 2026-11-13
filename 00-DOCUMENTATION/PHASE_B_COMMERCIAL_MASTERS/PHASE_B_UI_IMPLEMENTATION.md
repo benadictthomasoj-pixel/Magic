@@ -78,3 +78,4 @@ All workspaces strictly adhere to MAGIC's enterprise aesthetic:
 - **Zero Hardcoded Credentials:** Removed all default usernames (`ben`, `admin`) and passwords from `login.page.ts`.
 - **Zero Development Shortcuts:** Completely removed the `Quick Sign-in` button group (`Admin`, `Accountant`, `Cashier`) from `login.page.html` and SCSS.
 - **Fail-Closed Auth Boundary:** Empty input state on load, requiring deliberate credential entry and server-side authentication token exchange.
+

@@ -19,3 +19,4 @@ describe('SuppliersListComponent', () => {
     expect(element.querySelector('.header-actions .btn-primary')?.textContent).toContain('Register Supplier');
   });
 });
+

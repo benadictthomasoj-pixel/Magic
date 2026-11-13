@@ -1,0 +1,295 @@
+<div class="workspace-container">
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Inventory / Stock Transfers</div>
+      <h1 class="page-title">Warehouse Transfers & In-Transit</h1>
+      <p class="page-subtitle">Two-phase inter-warehouse transfers: source dispatch into in-transit, destination receiving, and damage logging.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="openCreate()">
+        <span>+</span> Request Transfer
+      </button>
+    </div>
+  </header>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type" role="alert">
+      <span class="alert-icon">{{ msg.type === 'ok' ? '✓' : '✕' }}</span>
+      <div class="alert-text">{{ msg.text }}</div>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <div class="card filter-toolbar">
+    <div class="filter-controls">
+      <select [(ngModel)]="filterStatus" (change)="loadTransfers()" class="form-control">
+        <option value="">All Statuses</option>
+        <option value="Draft">Draft</option>
+        <option value="Dispatched">Dispatched (In Transit)</option>
+        <option value="Received">Received (Completed)</option>
+        <option value="Cancelled">Cancelled</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Transfer #</th>
+            <th>Date</th>
+            <th>Source Warehouse</th>
+            <th>Destination Warehouse</th>
+            <th>Carrier / Tracking</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr><td colspan="7" style="text-align: center; padding: 32px;">Loading transfers...</td></tr>
+          } @else if (transfers().length === 0) {
+            <tr><td colspan="7" style="text-align: center; padding: 32px; color: #64748b;">No stock transfers found.</td></tr>
+          } @else {
+            @for (t of transfers(); track t.id) {
+              <tr>
+                <td><strong>{{ t.transferNumber }}</strong></td>
+                <td>{{ t.transferDate }}</td>
+                <td>{{ t.sourceWarehouseName }}</td>
+                <td>{{ t.destinationWarehouseName }}</td>
+                <td>{{ t.carrierName || '—' }} {{ t.trackingNumber ? '(' + t.trackingNumber + ')' : '' }}</td>
+                <td>
+                  <span class="badge" [ngClass]="t.status === 'Received' ? 'badge-green' : (t.status === 'Dispatched' ? 'badge-blue' : 'badge-amber')">
+                    {{ t.status === 'Dispatched' ? '🚚 In Transit' : t.status }}
+                  </span>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="viewDetails(t)">View</button>
+                  @if (t.status === 'Draft') {
+                    <button type="button" class="btn btn-primary btn-sm" style="margin-left: 6px;" (click)="openDispatch(t)">Dispatch</button>
+                  }
+                  @if (t.status === 'Dispatched') {
+                    <button type="button" class="btn btn-success btn-sm" style="margin-left: 6px;" (click)="openReceive(t)">Receive</button>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <span>Total: {{ totalTransfers }} transfers</span>
+    </div>
+  </div>
+
+  <!-- Create Transfer Drawer -->
+  @if (isCreateOpen()) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container" style="max-width: 800px;">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Request Stock Transfer</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Source Warehouse (Dispatch From) *</label>
+            <select [(ngModel)]="formSourceWhId" class="form-control">
+              @for (w of warehouses(); track w.id) {
+                <option [value]="w.id">{{ w.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Destination Warehouse (Receive At) *</label>
+            <select [(ngModel)]="formDestWhId" class="form-control">
+              @for (w of warehouses(); track w.id) {
+                <option [value]="w.id">{{ w.name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Transfer Notes</label>
+          <input type="text" [(ngModel)]="formNotes" class="form-control" placeholder="Purpose of stock transfer..." />
+        </div>
+
+        <div style="margin: 20px 0 10px; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 0.9375rem; margin: 0;">Items to Transfer</h3>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="addLine()">+ Add Line</button>
+        </div>
+
+        <table class="data-table" style="margin-bottom: 20px;">
+          <thead>
+            <tr>
+              <th>Product ID</th>
+              <th>Quantity</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of formLines; track $index) {
+              <tr>
+                <td><input type="text" [(ngModel)]="l.productId" placeholder="Product UUID" class="form-control" /></td>
+                <td><input type="number" [(ngModel)]="l.requestedQuantity" min="1" class="form-control" style="width: 100px;" /></td>
+                <td><button type="button" class="btn btn-danger btn-sm" (click)="removeLine($index)">✕</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Cancel</button>
+        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="saveTransfer()">
+          {{ saving() ? 'Saving...' : 'Create Transfer Order' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- View Details Drawer -->
+  @if (isDetailOpen() && selectedTransfer(); as trn) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container" style="max-width: 800px;">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Transfer: {{ trn.transferNumber }}</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+          <div>
+            <div>Source: <strong>{{ trn.sourceWarehouseName }}</strong></div>
+            <div>Destination: <strong>{{ trn.destinationWarehouseName }}</strong></div>
+            <div>Carrier: {{ trn.carrierName || '—' }} (Tracking: {{ trn.trackingNumber || '—' }})</div>
+          </div>
+          <div>
+            <span class="badge" [ngClass]="trn.status === 'Received' ? 'badge-green' : (trn.status === 'Dispatched' ? 'badge-blue' : 'badge-amber')">
+              {{ trn.status }}
+            </span>
+            <div style="margin-top: 6px;">Date: {{ trn.transferDate }}</div>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th style="text-align: right;">Requested</th>
+              <th style="text-align: right;">Dispatched</th>
+              <th style="text-align: right;">Received</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of trn.lines; track line.id) {
+              <tr>
+                <td>{{ line.productCode }} - {{ line.productName }}</td>
+                <td style="text-align: right;">{{ line.requestedQuantity }}</td>
+                <td style="text-align: right; color: #2563eb; font-weight: 600;">{{ line.dispatchedQuantity }}</td>
+                <td style="text-align: right; color: #15803d; font-weight: 600;">{{ line.receivedQuantity }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Close</button>
+        @if (trn.status === 'Draft') {
+          <button type="button" class="btn btn-primary" (click)="openDispatch(trn)">Dispatch Stock</button>
+        }
+        @if (trn.status === 'Dispatched') {
+          <button type="button" class="btn btn-success" (click)="openReceive(trn)">Receive Stock</button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Dispatch Modal Drawer -->
+  @if (isDispatchOpen() && selectedTransfer(); as trn) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Dispatch Transfer: {{ trn.transferNumber }}</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <p style="color: #64748b; font-size: 0.875rem;">
+          Dispatching will atomically deduct stock from <strong>{{ trn.sourceWarehouseName }}</strong> and mark it as <strong>In-Transit</strong>.
+        </p>
+
+        <div class="form-group">
+          <label>Carrier / Transport Partner</label>
+          <input type="text" [(ngModel)]="dispatchCarrier" class="form-control" placeholder="e.g. BlueDart / Internal Fleet" />
+        </div>
+
+        <div class="form-group">
+          <label>Tracking / Vehicle Number</label>
+          <input type="text" [(ngModel)]="dispatchTracking" class="form-control" placeholder="e.g. TN-01-AB-1234" />
+        </div>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Cancel</button>
+        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="confirmDispatch()">
+          {{ saving() ? 'Dispatching...' : 'Confirm Dispatch' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Receive Modal Drawer -->
+  @if (isReceiveOpen() && selectedTransfer(); as trn) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container" style="max-width: 800px;">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Receive Transfer: {{ trn.transferNumber }}</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <p style="color: #64748b; font-size: 0.875rem;">
+          Receiving will add stock into <strong>{{ trn.destinationWarehouseName }}</strong> and clear the in-transit balance.
+        </p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th style="text-align: right;">Dispatched</th>
+              <th style="text-align: right; width: 120px;">Accepted</th>
+              <th style="text-align: right; width: 100px;">Damaged</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of trn.lines; track line.id) {
+              <tr>
+                <td>{{ line.productCode }} - {{ line.productName }}</td>
+                <td style="text-align: right; font-weight: 600;">{{ line.dispatchedQuantity }}</td>
+                <td style="text-align: right;">
+                  <input type="number" [(ngModel)]="receivedQuantities[line.id]" min="0" class="form-control" style="text-align: right;" />
+                </td>
+                <td style="text-align: right;">
+                  <input type="number" [(ngModel)]="damagedQuantities[line.id]" min="0" class="form-control" style="text-align: right;" />
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Cancel</button>
+        <button type="button" class="btn btn-success" [disabled]="saving()" (click)="confirmReceive()">
+          {{ saving() ? 'Receiving...' : 'Confirm Receipt at Destination' }}
+        </button>
+      </div>
+    </div>
+  }
+</div>

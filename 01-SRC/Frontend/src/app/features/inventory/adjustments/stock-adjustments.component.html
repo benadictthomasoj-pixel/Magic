@@ -1,0 +1,218 @@
+<div class="workspace-container">
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Inventory / Stock Adjustments</div>
+      <h1 class="page-title">Stock Adjustments</h1>
+      <p class="page-subtitle">Discrepancy write-offs, damages, wastage, and inventory corrections with authorization workflows.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="openCreate()">
+        <span>+</span> New Stock Adjustment
+      </button>
+    </div>
+  </header>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type" role="alert">
+      <span class="alert-icon">{{ msg.type === 'ok' ? '✓' : '✕' }}</span>
+      <div class="alert-text">{{ msg.text }}</div>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <div class="card filter-toolbar">
+    <div class="filter-controls">
+      <select [(ngModel)]="filterWarehouseId" (change)="loadAdjustments()" class="form-control">
+        <option value="">All Warehouses</option>
+        @for (w of warehouses(); track w.id) {
+          <option [value]="w.id">{{ w.name }}</option>
+        }
+      </select>
+      <select [(ngModel)]="filterStatus" (change)="loadAdjustments()" class="form-control">
+        <option value="">All Statuses</option>
+        <option value="Draft">Draft</option>
+        <option value="Approved">Approved</option>
+        <option value="Rejected">Rejected</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Adjustment #</th>
+            <th>Date</th>
+            <th>Warehouse</th>
+            <th>Reason</th>
+            <th>Lines</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr><td colspan="7" style="text-align: center; padding: 32px;">Loading adjustments...</td></tr>
+          } @else if (adjustments().length === 0) {
+            <tr><td colspan="7" style="text-align: center; padding: 32px; color: #64748b;">No stock adjustments found.</td></tr>
+          } @else {
+            @for (adj of adjustments(); track adj.id) {
+              <tr>
+                <td><strong>{{ adj.adjustmentNumber }}</strong></td>
+                <td>{{ adj.createdAtUtc | date:'mediumDate' }}</td>
+                <td>{{ adj.warehouseName }}</td>
+                <td>{{ adj.reasonCode }}</td>
+                <td>{{ adj.lines.length }} items</td>
+                <td>
+                  <span class="badge" [ngClass]="adj.status === 'Approved' ? 'badge-green' : (adj.status === 'Draft' ? 'badge-amber' : 'badge-red')">
+                    {{ adj.status }}
+                  </span>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="viewDetails(adj)">View Details</button>
+                  @if (adj.status === 'Draft') {
+                    <button type="button" class="btn btn-success btn-sm" style="margin-left: 6px;" (click)="approveAdjustment(adj)">Approve</button>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <span>Total: {{ totalAdjustments }} adjustments</span>
+    </div>
+  </div>
+
+  <!-- Create Adjustment Drawer -->
+  @if (isCreateOpen()) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container" style="max-width: 750px;">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Create Stock Adjustment</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Warehouse *</label>
+            <select [(ngModel)]="formWarehouseId" class="form-control">
+              @for (w of warehouses(); track w.id) {
+                <option [value]="w.id">{{ w.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Reason Category *</label>
+            <select [(ngModel)]="formReasonCode" class="form-control">
+              <option value="Damage">Damage</option>
+              <option value="Expired">Expired</option>
+              <option value="Found">Found</option>
+              <option value="Loss">Loss</option>
+              <option value="CountDiscrepancy">Count Discrepancy</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Description / Notes</label>
+          <input type="text" [(ngModel)]="formDescription" class="form-control" placeholder="Audit explanation..." />
+        </div>
+
+        <div style="margin: 20px 0 10px; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 0.9375rem; margin: 0;">Adjustment Lines</h3>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="addLine()">+ Add Line</button>
+        </div>
+
+        <table class="data-table" style="margin-bottom: 20px;">
+          <thead>
+            <tr>
+              <th>Product ID</th>
+              <th>Type</th>
+              <th>Qty</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of formLines; track $index) {
+              <tr>
+                <td><input type="text" [(ngModel)]="l.productId" placeholder="Product UUID" class="form-control" /></td>
+                <td>
+                  <select [(ngModel)]="l.adjustmentType" class="form-control" style="width: 110px;">
+                    <option value="Increase">+ Increase</option>
+                    <option value="Decrease">- Decrease</option>
+                  </select>
+                </td>
+                <td><input type="number" [(ngModel)]="l.quantity" min="1" class="form-control" style="width: 90px;" /></td>
+                <td><button type="button" class="btn btn-danger btn-sm" (click)="removeLine($index)">✕</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Cancel</button>
+        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="saveAdjustment()">
+          {{ saving() ? 'Saving...' : 'Save Draft' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- View Details Drawer -->
+  @if (isDetailOpen() && selectedAdjustment(); as adj) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Adjustment: {{ adj.adjustmentNumber }}</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div style="margin-bottom: 16px;">
+          <span class="badge" [ngClass]="adj.status === 'Approved' ? 'badge-green' : (adj.status === 'Draft' ? 'badge-amber' : 'badge-red')">
+            {{ adj.status }}
+          </span>
+          <span style="margin-left: 12px; color: #64748b;">Warehouse: <strong>{{ adj.warehouseName }}</strong></span>
+        </div>
+
+        <p><strong>Reason:</strong> {{ adj.reasonCode }} — {{ adj.description || 'No description provided.' }}</p>
+
+        <h3 style="font-size: 0.9375rem; margin-top: 20px;">Adjusted Items</h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Type</th>
+              <th style="text-align: right;">Quantity</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of adj.lines; track line.id) {
+              <tr>
+                <td>{{ line.productCode }} - {{ line.productName }}</td>
+                <td>
+                  <span class="badge" [ngClass]="line.adjustmentType === 'Increase' ? 'badge-green' : 'badge-red'">
+                    {{ line.adjustmentType }}
+                  </span>
+                </td>
+                <td style="text-align: right; font-weight: 600;">{{ line.quantity }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Close</button>
+        @if (adj.status === 'Draft') {
+          <button type="button" class="btn btn-success" (click)="approveAdjustment(adj)">Approve & Post</button>
+        }
+      </div>
+    </div>
+  }
+</div>

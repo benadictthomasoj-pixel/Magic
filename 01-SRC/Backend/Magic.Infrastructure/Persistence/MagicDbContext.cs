@@ -60,6 +60,27 @@ public sealed class MagicDbContext(DbContextOptions<MagicDbContext> options) : D
     public DbSet<SupplierAddressRecord> SupplierAddresses => Set<SupplierAddressRecord>();
     public DbSet<SupplierBankAccountRecord> SupplierBankAccounts => Set<SupplierBankAccountRecord>();
 
+    // Inventory & Procurement schema (Phase C)
+    public DbSet<WarehouseRecord> Warehouses => Set<WarehouseRecord>();
+    public DbSet<WarehouseBranchAssignmentRecord> WarehouseBranchAssignments => Set<WarehouseBranchAssignmentRecord>();
+    public DbSet<StorageLocationRecord> StorageLocations => Set<StorageLocationRecord>();
+    public DbSet<ProductStorageLocationRecord> ProductStorageLocations => Set<ProductStorageLocationRecord>();
+    public DbSet<StockBalanceRecord> StockBalances => Set<StockBalanceRecord>();
+    public DbSet<StockMovementRecord> StockMovements => Set<StockMovementRecord>();
+    public DbSet<StockAdjustmentRecord> StockAdjustments => Set<StockAdjustmentRecord>();
+    public DbSet<StockAdjustmentLineRecord> StockAdjustmentLines => Set<StockAdjustmentLineRecord>();
+    public DbSet<StockCountRecord> StockCounts => Set<StockCountRecord>();
+    public DbSet<StockCountLineRecord> StockCountLines => Set<StockCountLineRecord>();
+    public DbSet<PurchaseOrderRecord> PurchaseOrders => Set<PurchaseOrderRecord>();
+    public DbSet<PurchaseOrderLineRecord> PurchaseOrderLines => Set<PurchaseOrderLineRecord>();
+    public DbSet<GoodsReceiptNoteRecord> GoodsReceiptNotes => Set<GoodsReceiptNoteRecord>();
+    public DbSet<GoodsReceiptLineRecord> GoodsReceiptLines => Set<GoodsReceiptLineRecord>();
+    public DbSet<PurchaseReturnRecord> PurchaseReturns => Set<PurchaseReturnRecord>();
+    public DbSet<PurchaseReturnLineRecord> PurchaseReturnLines => Set<PurchaseReturnLineRecord>();
+    public DbSet<StockTransferRecord> StockTransfers => Set<StockTransferRecord>();
+    public DbSet<StockTransferLineRecord> StockTransferLines => Set<StockTransferLineRecord>();
+    public DbSet<ReorderRuleRecord> ReorderRules => Set<ReorderRuleRecord>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         ArgumentNullException.ThrowIfNull(configurationBuilder);

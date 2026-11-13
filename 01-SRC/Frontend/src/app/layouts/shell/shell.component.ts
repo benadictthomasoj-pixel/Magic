@@ -97,19 +97,31 @@ export class ShellComponent implements OnInit {
       ],
     },
     {
-      title: 'Catalog & Inventory',
+      title: 'Catalog & Master Data',
       items: [
         { path: '/billing/products', label: 'Products', icon: '🏷️' },
         { path: '/billing/categories', label: 'Categories', icon: '📁' },
-        { path: '/billing/inventory', label: 'Inventory', icon: '📦' },
-        { path: '/billing/stock-management', label: 'Stock Management', icon: '🔄' },
+        { path: '/billing/customers', label: 'Customers', icon: '👥' },
+        { path: '/billing/suppliers', label: 'Suppliers', icon: '🏢' },
       ],
     },
     {
-      title: 'Procurement & Costs',
+      title: 'Inventory Management',
       items: [
-        { path: '/billing/purchases', label: 'Purchases', icon: '🛒' },
-        { path: '/billing/suppliers', label: 'Suppliers', icon: '🏢' },
+        { path: '/billing/warehouses', label: 'Warehouses', icon: '🏛️' },
+        { path: '/billing/inventory', label: 'Stock Status & Ledger', icon: '📦' },
+        { path: '/billing/stock-adjustments', label: 'Stock Adjustments', icon: '🔄' },
+        { path: '/billing/stock-counts', label: 'Stock Counting', icon: '📝' },
+        { path: '/billing/stock-transfers', label: 'Warehouse Transfers', icon: '🚚' },
+        { path: '/billing/reorder-management', label: 'Reorder Alerts', icon: '🔔' },
+      ],
+    },
+    {
+      title: 'Procurement & Inbound',
+      items: [
+        { path: '/billing/purchase-orders', label: 'Purchase Orders', icon: '🛒' },
+        { path: '/billing/goods-receipts', label: 'Goods Receipts (GRN)', icon: '📥' },
+        { path: '/billing/purchase-returns', label: 'Purchase Returns', icon: '↩️' },
         { path: '/billing/expenses', label: 'Expenses', icon: '📉' },
       ],
     },

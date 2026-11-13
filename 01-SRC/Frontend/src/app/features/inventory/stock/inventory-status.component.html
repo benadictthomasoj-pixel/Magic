@@ -1,0 +1,209 @@
+<div class="workspace-container">
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Inventory / Stock & Movements</div>
+      <h1 class="page-title">Inventory Ledger & Status</h1>
+      <p class="page-subtitle">Real-time stock on-hand, multi-location balance inquiry, and audit-grade movement ledger.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn" [ngClass]="activeTab() === 'balances' ? 'btn-primary' : 'btn-secondary'" (click)="switchTab('balances')">
+        📦 Stock Balances
+      </button>
+      <button type="button" class="btn" [ngClass]="activeTab() === 'movements' ? 'btn-primary' : 'btn-secondary'" (click)="switchTab('movements')">
+        📜 Movement Ledger
+      </button>
+      <button type="button" class="btn" [ngClass]="activeTab() === 'opening' ? 'btn-primary' : 'btn-secondary'" (click)="switchTab('opening')">
+        ➕ Post Opening Stock
+      </button>
+    </div>
+  </header>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type" role="alert">
+      <span class="alert-icon">{{ msg.type === 'ok' ? '✓' : '✕' }}</span>
+      <div class="alert-text">{{ msg.text }}</div>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <!-- TAB 1: STOCK BALANCES -->
+  @if (activeTab() === 'balances') {
+    <div class="card filter-toolbar">
+      <div class="search-box">
+        <input
+          type="text"
+          [(ngModel)]="filterSearch"
+          (input)="loadBalances()"
+          placeholder="Search by product code, name, or batch..."
+          class="form-control"
+        />
+      </div>
+      <div class="filter-controls">
+        <select [(ngModel)]="filterWarehouseId" (change)="loadBalances()" class="form-control">
+          <option value="">All Warehouses</option>
+          @for (w of warehouses(); track w.id) {
+            <option [value]="w.id">{{ w.name }}</option>
+          }
+        </select>
+        <label style="display: flex; align-items: center; gap: 6px; font-size: 0.875rem;">
+          <input type="checkbox" [(ngModel)]="filterLowStock" (change)="loadBalances()" /> Low Stock Only
+        </label>
+      </div>
+    </div>
+
+    <div class="card table-card">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Product Code</th>
+              <th>Product Name</th>
+              <th>Warehouse</th>
+              <th>Location</th>
+              <th>Batch / Expiry</th>
+              <th style="text-align: right;">On Hand</th>
+              <th style="text-align: right;">Reserved</th>
+              <th style="text-align: right;">Available</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (loading()) {
+              <tr><td colspan="8" style="text-align: center; padding: 32px;">Loading stock balances...</td></tr>
+            } @else if (balances().length === 0) {
+              <tr><td colspan="8" style="text-align: center; padding: 32px; color: #64748b;">No inventory balances found.</td></tr>
+            } @else {
+              @for (b of balances(); track b.id) {
+                <tr>
+                  <td><strong>{{ b.productCode }}</strong></td>
+                  <td>{{ b.productName }}</td>
+                  <td>{{ b.warehouseName }}</td>
+                  <td>{{ b.locationCode || 'General' }}</td>
+                  <td>{{ b.batchNumber || '—' }} {{ b.expiryDate ? '(' + b.expiryDate + ')' : '' }}</td>
+                  <td style="text-align: right; font-weight: 700;">{{ b.quantityOnHand }}</td>
+                  <td style="text-align: right; color: #b45309;">{{ b.quantityReserved }}</td>
+                  <td style="text-align: right; color: #15803d; font-weight: 700;">{{ b.quantityAvailable }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="table-footer">
+        <span>Showing {{ balances().length }} records</span>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 2: MOVEMENT LEDGER -->
+  @if (activeTab() === 'movements') {
+    <div class="card filter-toolbar">
+      <div class="filter-controls">
+        <select [(ngModel)]="filterWarehouseId" (change)="loadMovements()" class="form-control">
+          <option value="">All Warehouses</option>
+          @for (w of warehouses(); track w.id) {
+            <option [value]="w.id">{{ w.name }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="card table-card">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Movement #</th>
+              <th>Date / Time</th>
+              <th>Product</th>
+              <th>Warehouse</th>
+              <th>Type</th>
+              <th>Direction</th>
+              <th style="text-align: right;">Quantity</th>
+              <th style="text-align: right;">Balance After</th>
+              <th>Ref Number</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (loading()) {
+              <tr><td colspan="9" style="text-align: center; padding: 32px;">Loading movements...</td></tr>
+            } @else if (movements().length === 0) {
+              <tr><td colspan="9" style="text-align: center; padding: 32px; color: #64748b;">No movement ledger entries found.</td></tr>
+            } @else {
+              @for (m of movements(); track m.id) {
+                <tr>
+                  <td><strong>{{ m.movementNumber }}</strong></td>
+                  <td>{{ m.movementDateUtc | date:'short' }}</td>
+                  <td>{{ m.productCode }} - {{ m.productName }}</td>
+                  <td>{{ m.warehouseName }}</td>
+                  <td><span class="badge badge-gray">{{ m.movementType }}</span></td>
+                  <td>
+                    <span class="badge" [ngClass]="m.direction === 'In' ? 'badge-green' : 'badge-red'">
+                      {{ m.direction }}
+                    </span>
+                  </td>
+                  <td style="text-align: right; font-weight: 600;">{{ m.quantity }}</td>
+                  <td style="text-align: right;">{{ m.balanceAfterMovement }}</td>
+                  <td>{{ m.referenceType }}: {{ m.referenceNumber }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 3: OPENING STOCK -->
+  @if (activeTab() === 'opening') {
+    <div class="card" style="padding: 24px;">
+      <h2 style="font-size: 1.125rem; font-weight: 700; margin-top: 0; margin-bottom: 16px;">Post Opening Physical Stock</h2>
+      <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 24px;">
+        Record starting warehouse physical inventory balances with exact unit costs (in Rupees, stored in integer paise).
+      </p>
+
+      <div class="form-group" style="max-width: 400px; margin-bottom: 24px;">
+        <label>Destination Warehouse *</label>
+        <select [(ngModel)]="openingWarehouseId" class="form-control">
+          @for (w of warehouses(); track w.id) {
+            <option [value]="w.id">{{ w.name }} ({{ w.code }})</option>
+          }
+        </select>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <button type="button" class="btn btn-secondary btn-sm" (click)="addOpeningRow()">+ Add Product Line</button>
+      </div>
+
+      <table class="data-table" style="margin-bottom: 24px;">
+        <thead>
+          <tr>
+            <th>Product ID / Code</th>
+            <th>Quantity</th>
+            <th>Unit Cost (₹)</th>
+            <th>Batch #</th>
+            <th>Expiry Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (openingItems.length === 0) {
+            <tr><td colspan="6" style="text-align: center; padding: 20px; color: #64748b;">No items added yet. Click "+ Add Product Line".</td></tr>
+          } @else {
+            @for (row of openingItems; track $index) {
+              <tr>
+                <td><input type="text" [(ngModel)]="row.productId" placeholder="Product UUID or Code" class="form-control" /></td>
+                <td><input type="number" [(ngModel)]="row.quantity" min="1" class="form-control" style="width: 100px;" /></td>
+                <td><input type="number" [(ngModel)]="row.unitCostRupees" min="0" step="0.01" class="form-control" style="width: 120px;" /></td>
+                <td><input type="text" [(ngModel)]="row.batchNumber" placeholder="Batch" class="form-control" style="width: 120px;" /></td>
+                <td><input type="date" [(ngModel)]="row.expiryDate" class="form-control" style="width: 150px;" /></td>
+                <td><button type="button" class="btn btn-danger btn-sm" (click)="removeOpeningRow($index)">✕</button></td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+
+      <button type="button" class="btn btn-primary" (click)="submitOpeningStock()">Post Opening Stock Ledger</button>
+    </div>
+  }
+</div>

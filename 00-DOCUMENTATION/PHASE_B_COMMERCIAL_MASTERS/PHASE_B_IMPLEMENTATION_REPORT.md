@@ -41,3 +41,4 @@ Phase B (Commercial Masters & Products) of MAGIC ERP has been completed in full 
 
 ## 5. Next Steps
 Phase B is complete. In accordance with the project instructions, work stops here. Phase C (POS, Sales Orders, Purchases, Inventory Movements) will begin only upon explicit authorization.
+

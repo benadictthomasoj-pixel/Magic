@@ -580,3 +580,4 @@ export interface UpdateSupplierRequest {
     isPrimary: boolean;
   }[];
 }
+

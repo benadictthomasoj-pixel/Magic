@@ -1,0 +1,248 @@
+<div class="workspace-container">
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Procurement / Goods Receipt Notes</div>
+      <h1 class="page-title">Goods Receipt Notes (GRN)</h1>
+      <p class="page-subtitle">Warehouse inbound shipments, PO 3-way matching, batch/expiry logging, and inventory inwarding.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="openCreate()">
+        <span>+</span> Receive Shipment (GRN)
+      </button>
+    </div>
+  </header>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type" role="alert">
+      <span class="alert-icon">{{ msg.type === 'ok' ? '✓' : '✕' }}</span>
+      <div class="alert-text">{{ msg.text }}</div>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <div class="card filter-toolbar">
+    <div class="filter-controls">
+      <select [(ngModel)]="filterWarehouseId" (change)="loadReceipts()" class="form-control">
+        <option value="">All Warehouses</option>
+        @for (w of warehouses(); track w.id) {
+          <option [value]="w.id">{{ w.name }}</option>
+        }
+      </select>
+      <select [(ngModel)]="filterSupplierId" (change)="loadReceipts()" class="form-control">
+        <option value="">All Suppliers</option>
+        @for (s of suppliers(); track s.id) {
+          <option [value]="s.id">{{ s.name }}</option>
+        }
+      </select>
+      <select [(ngModel)]="filterStatus" (change)="loadReceipts()" class="form-control">
+        <option value="">All Statuses</option>
+        <option value="Draft">Draft</option>
+        <option value="Confirmed">Confirmed</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>GRN Number</th>
+            <th>Receipt Date</th>
+            <th>Supplier</th>
+            <th>Warehouse</th>
+            <th>PO Reference</th>
+            <th style="text-align: right;">Total (₹)</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr><td colspan="8" style="text-align: center; padding: 32px;">Loading GRNs...</td></tr>
+          } @else if (receipts().length === 0) {
+            <tr><td colspan="8" style="text-align: center; padding: 32px; color: #64748b;">No goods receipt notes found.</td></tr>
+          } @else {
+            @for (grn of receipts(); track grn.id) {
+              <tr>
+                <td><strong>{{ grn.grnNumber }}</strong></td>
+                <td>{{ grn.receiptDate }}</td>
+                <td>{{ grn.supplierName }}</td>
+                <td>{{ grn.warehouseName }}</td>
+                <td>{{ grn.purchaseOrderNumber || 'Direct' }}</td>
+                <td style="text-align: right; font-weight: 700;">₹{{ (grn.grandTotalPaise / 100).toFixed(2) }}</td>
+                <td>
+                  <span class="badge" [ngClass]="grn.status === 'Confirmed' ? 'badge-green' : 'badge-amber'">
+                    {{ grn.status }}
+                  </span>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="viewDetails(grn)">View</button>
+                  @if (grn.status === 'Draft') {
+                    <button type="button" class="btn btn-success btn-sm" style="margin-left: 6px;" (click)="confirmReceipt(grn)">Confirm Inward</button>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <span>Total: {{ totalReceipts }} GRNs</span>
+    </div>
+  </div>
+
+  <!-- Create GRN Drawer -->
+  @if (isCreateOpen()) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container" style="max-width: 850px;">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Record Goods Receipt Note</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="form-group">
+          <label>Link Approved Purchase Order (Optional)</label>
+          <select [(ngModel)]="formPurchaseOrderId" (change)="onPoSelected(formPurchaseOrderId)" class="form-control">
+            <option value="">Direct Inward (No PO)</option>
+            @for (po of approvedPOs(); track po.id) {
+              <option [value]="po.id">{{ po.orderNumber }} — {{ po.supplierName }} (₹{{ (po.grandTotalPaise/100).toFixed(2) }})</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Receiving Warehouse *</label>
+            <select [(ngModel)]="formWarehouseId" class="form-control">
+              @for (w of warehouses(); track w.id) {
+                <option [value]="w.id">{{ w.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Supplier *</label>
+            <select [(ngModel)]="formSupplierId" class="form-control">
+              @for (s of suppliers(); track s.id) {
+                <option [value]="s.id">{{ s.name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Vendor Invoice Number</label>
+            <input type="text" [(ngModel)]="formInvoiceNumber" class="form-control" placeholder="e.g. INV-2026-99" />
+          </div>
+          <div class="form-group">
+            <label>Invoice Date</label>
+            <input type="date" [(ngModel)]="formInvoiceDate" class="form-control" />
+          </div>
+        </div>
+
+        <div style="margin: 20px 0 10px; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 0.9375rem; margin: 0;">Received Items</h3>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="addLine()">+ Add Line</button>
+        </div>
+
+        <table class="data-table" style="margin-bottom: 20px;">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Recv</th>
+              <th>Accp</th>
+              <th>Rej</th>
+              <th>Price (₹)</th>
+              <th>Batch</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of formLines; track $index) {
+              <tr>
+                <td><input type="text" [(ngModel)]="l.productId" placeholder="Product UUID" class="form-control" style="width: 140px;" /></td>
+                <td><input type="number" [(ngModel)]="l.receivedQuantity" min="1" class="form-control" style="width: 70px;" /></td>
+                <td><input type="number" [(ngModel)]="l.acceptedQuantity" min="0" class="form-control" style="width: 70px;" /></td>
+                <td><input type="number" [(ngModel)]="l.rejectedQuantity" min="0" class="form-control" style="width: 60px;" /></td>
+                <td><input type="number" [(ngModel)]="l.unitPriceRupees" min="0" step="0.01" class="form-control" style="width: 90px;" /></td>
+                <td><input type="text" [(ngModel)]="l.batchNumber" placeholder="Batch" class="form-control" style="width: 90px;" /></td>
+                <td><button type="button" class="btn btn-danger btn-sm" (click)="removeLine($index)">✕</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Cancel</button>
+        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="saveReceipt()">
+          {{ saving() ? 'Saving...' : 'Save Draft GRN' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- View GRN Details Drawer -->
+  @if (isDetailOpen() && selectedReceipt(); as grn) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container" style="max-width: 800px;">
+      <div class="drawer-header">
+        <h2 class="drawer-title">GRN: {{ grn.grnNumber }}</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+          <div>
+            <div>Supplier: <strong>{{ grn.supplierName }}</strong></div>
+            <div>Warehouse: <strong>{{ grn.warehouseName }}</strong></div>
+            <div>Invoice Ref: {{ grn.supplierInvoiceNumber || '—' }} ({{ grn.supplierInvoiceDate || '—' }})</div>
+          </div>
+          <div>
+            <span class="badge" [ngClass]="grn.status === 'Confirmed' ? 'badge-green' : 'badge-amber'">{{ grn.status }}</span>
+            <div style="margin-top: 6px;">Receipt Date: {{ grn.receiptDate }}</div>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th style="text-align: right;">Accepted</th>
+              <th style="text-align: right;">Rejected</th>
+              <th style="text-align: right;">Unit Price</th>
+              <th style="text-align: right;">Total Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of grn.lines; track line.id) {
+              <tr>
+                <td>{{ line.productCode }} - {{ line.productName }}</td>
+                <td style="text-align: right; color: #15803d; font-weight: 700;">{{ line.acceptedQuantity }}</td>
+                <td style="text-align: right; color: #dc2626;">{{ line.rejectedQuantity }}</td>
+                <td style="text-align: right;">₹{{ (line.unitPricePaise / 100).toFixed(2) }}</td>
+                <td style="text-align: right; font-weight: 700;">₹{{ (line.totalAmountPaise / 100).toFixed(2) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; text-align: right; margin-top: 20px;">
+          <div style="font-size: 1.25rem; font-weight: 700; color: #0f172a;">
+            Grand Total: ₹{{ (grn.grandTotalPaise / 100).toFixed(2) }}
+          </div>
+        </div>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Close</button>
+        @if (grn.status === 'Draft') {
+          <button type="button" class="btn btn-success" (click)="confirmReceipt(grn)">Confirm Inward Stock</button>
+        }
+      </div>
+    </div>
+  }
+</div>

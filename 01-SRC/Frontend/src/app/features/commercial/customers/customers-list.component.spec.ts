@@ -19,3 +19,4 @@ describe('CustomersListComponent', () => {
     expect(element.querySelector('.filter-toolbar')).toBeTruthy();
   });
 });
+

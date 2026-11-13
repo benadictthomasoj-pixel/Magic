@@ -1,0 +1,241 @@
+<div class="workspace-container">
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Procurement / Purchase Returns</div>
+      <h1 class="page-title">Purchase Returns (Debit Notes)</h1>
+      <p class="page-subtitle">Return defective merchandise to suppliers, debit note issuance, and inventory deduction.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="openCreate()">
+        <span>+</span> Create Purchase Return
+      </button>
+    </div>
+  </header>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type" role="alert">
+      <span class="alert-icon">{{ msg.type === 'ok' ? '✓' : '✕' }}</span>
+      <div class="alert-text">{{ msg.text }}</div>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <div class="card filter-toolbar">
+    <div class="filter-controls">
+      <select [(ngModel)]="filterWarehouseId" (change)="loadReturns()" class="form-control">
+        <option value="">All Warehouses</option>
+        @for (w of warehouses(); track w.id) {
+          <option [value]="w.id">{{ w.name }}</option>
+        }
+      </select>
+      <select [(ngModel)]="filterSupplierId" (change)="loadReturns()" class="form-control">
+        <option value="">All Suppliers</option>
+        @for (s of suppliers(); track s.id) {
+          <option [value]="s.id">{{ s.name }}</option>
+        }
+      </select>
+      <select [(ngModel)]="filterStatus" (change)="loadReturns()" class="form-control">
+        <option value="">All Statuses</option>
+        <option value="Draft">Draft</option>
+        <option value="Confirmed">Confirmed</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Return #</th>
+            <th>Date</th>
+            <th>Supplier</th>
+            <th>Warehouse</th>
+            <th>Reason</th>
+            <th style="text-align: right;">Total (₹)</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr><td colspan="8" style="text-align: center; padding: 32px;">Loading purchase returns...</td></tr>
+          } @else if (returns().length === 0) {
+            <tr><td colspan="8" style="text-align: center; padding: 32px; color: #64748b;">No purchase returns found.</td></tr>
+          } @else {
+            @for (ret of returns(); track ret.id) {
+              <tr>
+                <td><strong>{{ ret.returnNumber }}</strong></td>
+                <td>{{ ret.returnDate }}</td>
+                <td>{{ ret.supplierName }}</td>
+                <td>{{ ret.warehouseName }}</td>
+                <td>{{ ret.reasonCode }}</td>
+                <td style="text-align: right; font-weight: 700;">₹{{ (ret.grandTotalPaise / 100).toFixed(2) }}</td>
+                <td>
+                  <span class="badge" [ngClass]="ret.status === 'Confirmed' ? 'badge-green' : 'badge-amber'">
+                    {{ ret.status }}
+                  </span>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="viewDetails(ret)">View</button>
+                  @if (ret.status === 'Draft') {
+                    <button type="button" class="btn btn-success btn-sm" style="margin-left: 6px;" (click)="confirmReturn(ret)">Confirm Return</button>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <span>Total: {{ totalReturns }} returns</span>
+    </div>
+  </div>
+
+  <!-- Create Return Drawer -->
+  @if (isCreateOpen()) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container" style="max-width: 800px;">
+      <div class="drawer-header">
+        <h2 class="drawer-title">New Purchase Return</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Source Warehouse *</label>
+            <select [(ngModel)]="formWarehouseId" class="form-control">
+              @for (w of warehouses(); track w.id) {
+                <option [value]="w.id">{{ w.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Vendor / Supplier *</label>
+            <select [(ngModel)]="formSupplierId" class="form-control">
+              @for (s of suppliers(); track s.id) {
+                <option [value]="s.id">{{ s.name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Return Reason Category</label>
+          <select [(ngModel)]="formReasonCode" class="form-control">
+            <option value="Defective">Defective / Damaged</option>
+            <option value="WrongItem">Wrong Product Shipped</option>
+            <option value="Overdelivery">Over-delivered Quantity</option>
+            <option value="Expired">Expired Goods</option>
+          </select>
+        </div>
+
+        <div style="margin: 20px 0 10px; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 0.9375rem; margin: 0;">Returned Items</h3>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="addLine()">+ Add Line</button>
+        </div>
+
+        <table class="data-table" style="margin-bottom: 20px;">
+          <thead>
+            <tr>
+              <th>Product ID</th>
+              <th>Qty</th>
+              <th>Price (₹)</th>
+              <th>GST %</th>
+              <th>Reason</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of formLines; track $index) {
+              <tr>
+                <td><input type="text" [(ngModel)]="l.productId" placeholder="Product UUID" class="form-control" /></td>
+                <td><input type="number" [(ngModel)]="l.quantity" min="1" class="form-control" style="width: 70px;" /></td>
+                <td><input type="number" [(ngModel)]="l.unitPriceRupees" min="0" step="0.01" class="form-control" style="width: 90px;" /></td>
+                <td>
+                  <select [(ngModel)]="l.gstRatePercentage" class="form-control" style="width: 80px;">
+                    <option [ngValue]="0">0%</option>
+                    <option [ngValue]="5">5%</option>
+                    <option [ngValue]="12">12%</option>
+                    <option [ngValue]="18">18%</option>
+                    <option [ngValue]="28">28%</option>
+                  </select>
+                </td>
+                <td><input type="text" [(ngModel)]="l.returnReason" placeholder="Reason" class="form-control" /></td>
+                <td><button type="button" class="btn btn-danger btn-sm" (click)="removeLine($index)">✕</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Cancel</button>
+        <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="saveReturn()">
+          {{ saving() ? 'Saving...' : 'Record Return' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- View Details Drawer -->
+  @if (isDetailOpen() && selectedReturn(); as ret) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <div class="drawer-container" style="max-width: 800px;">
+      <div class="drawer-header">
+        <h2 class="drawer-title">Purchase Return: {{ ret.returnNumber }}</h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+          <div>
+            <div>Supplier: <strong>{{ ret.supplierName }}</strong></div>
+            <div>Warehouse: <strong>{{ ret.warehouseName }}</strong></div>
+            <div>Reason: {{ ret.reasonCode }}</div>
+          </div>
+          <div>
+            <span class="badge" [ngClass]="ret.status === 'Confirmed' ? 'badge-green' : 'badge-amber'">{{ ret.status }}</span>
+            <div style="margin-top: 6px;">Return Date: {{ ret.returnDate }}</div>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th style="text-align: right;">Quantity</th>
+              <th style="text-align: right;">Price</th>
+              <th style="text-align: right;">Total Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of ret.lines; track line.id) {
+              <tr>
+                <td>{{ line.productCode }} - {{ line.productName }}</td>
+                <td style="text-align: right; color: #dc2626; font-weight: 700;">-{{ line.quantity }}</td>
+                <td style="text-align: right;">₹{{ (line.unitPricePaise / 100).toFixed(2) }}</td>
+                <td style="text-align: right; font-weight: 700;">₹{{ (line.totalAmountPaise / 100).toFixed(2) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; text-align: right; margin-top: 20px;">
+          <div style="font-size: 1.25rem; font-weight: 700; color: #0f172a;">
+            Total Debit Amount: ₹{{ (ret.grandTotalPaise / 100).toFixed(2) }}
+          </div>
+        </div>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Close</button>
+        @if (ret.status === 'Draft') {
+          <button type="button" class="btn btn-success" (click)="confirmReturn(ret)">Confirm & Deduct Stock</button>
+        }
+      </div>
+    </div>
+  }
+</div>

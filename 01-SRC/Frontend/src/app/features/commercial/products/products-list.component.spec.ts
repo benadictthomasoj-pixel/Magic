@@ -35,3 +35,4 @@ describe('ProductsListComponent', () => {
     expect(scannerInput.placeholder).toContain('Scan or enter Barcode');
   });
 });
+

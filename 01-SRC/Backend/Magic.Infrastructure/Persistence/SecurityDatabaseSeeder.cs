@@ -63,6 +63,28 @@ public sealed class SecurityDatabaseSeeder(
             ("commercial:suppliers:manage", "Commercial", "Create and edit supplier records"),
             ("commercial:suppliers:bank-details", "Commercial", "View unmasked supplier bank account details"),
 
+            // Inventory & Procurement (Phase C)
+            ("inventory:warehouse:view", "Inventory", "View warehouses and storage locations"),
+            ("inventory:warehouse:manage", "Inventory", "Create, edit, and configure warehouses"),
+            ("inventory:stock:view", "Inventory", "View stock balances, levels, and movements"),
+            ("inventory:stock:manage", "Inventory", "Post opening stock and manage inventory movements"),
+            ("inventory:adjust:create", "Inventory", "Create draft stock adjustments"),
+            ("inventory:adjust:approve", "Inventory", "Approve and post stock adjustments"),
+            ("inventory:count:view", "Inventory", "View physical stock counting sessions"),
+            ("inventory:count:manage", "Inventory", "Perform stock counting, recording, and reconciliation"),
+            ("procurement:po:view", "Procurement", "View purchase orders and vendor orders"),
+            ("procurement:po:create", "Procurement", "Create and edit purchase orders"),
+            ("procurement:po:approve", "Procurement", "Approve and authorize purchase orders"),
+            ("procurement:grn:view", "Procurement", "View goods receipt notes"),
+            ("procurement:grn:create", "Procurement", "Create goods receipt notes and record inspections"),
+            ("procurement:grn:confirm", "Procurement", "Confirm goods receipts and atomically update inventory"),
+            ("procurement:return:manage", "Procurement", "Create and confirm purchase returns to suppliers"),
+            ("inventory:transfer:create", "Inventory", "Create warehouse transfer requests"),
+            ("inventory:transfer:dispatch", "Inventory", "Dispatch stock for warehouse transfers"),
+            ("inventory:transfer:receive", "Inventory", "Confirm receipt of transferred stock"),
+            ("inventory:reorder:view", "Inventory", "View reorder rules and stock replenishment suggestions"),
+            ("inventory:reorder:manage", "Inventory", "Configure reorder points, safety stock, and lead times"),
+
             // Administration
             ("admin:users:manage", "Admin", "Create, edit, and assign roles to users"),
             ("admin:roles:manage", "Admin", "Manage custom roles and permission assignments"),
@@ -89,8 +111,15 @@ public sealed class SecurityDatabaseSeeder(
         if (newPermissions.Count > 0)
         {
             dbContext.Permissions.AddRange(newPermissions);
-            await dbContext.SaveChangesAsync(cancellationToken);
-            logger.LogInformation("Seeded {Count} security permissions.", newPermissions.Count);
+            try
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+                logger.LogInformation("Seeded {Count} security permissions.", newPermissions.Count);
+            }
+            catch (DbUpdateException)
+            {
+                dbContext.ChangeTracker.Clear();
+            }
         }
 
         var allPermissions = await dbContext.Permissions.ToListAsync(cancellationToken);
@@ -128,7 +157,20 @@ public sealed class SecurityDatabaseSeeder(
                 roleMap[code] = role;
             }
         }
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            dbContext.ChangeTracker.Clear();
+        }
+
+        // Re-read permissions and roles to get latest IDs
+        allPermissions = await dbContext.Permissions.ToListAsync(cancellationToken);
+        permMap = allPermissions.ToDictionary(p => p.Code, p => p.Id);
+        var refreshedRoles = await dbContext.Roles.ToListAsync(cancellationToken);
+        roleMap = refreshedRoles.ToDictionary(r => r.Code, r => r);
 
         // 3. Seed Role-Permissions
         var existingRolePerms = await dbContext.RolePermissions
@@ -139,7 +181,7 @@ public sealed class SecurityDatabaseSeeder(
         {
             ["Administrator"] = permissionsToSeed.Select(p => p.Code).ToArray(),
             ["StoreManager"] = permissionsToSeed.Where(p => p.Module != "Admin").Select(p => p.Code).ToArray(),
-            ["Accountant"] = permissionsToSeed.Where(p => p.Module == "Accounting" || p.Code == "commercial:products:view" || p.Code == "commercial:customers:view" || p.Code == "commercial:suppliers:view" || p.Code == "commercial:credit:approve" || p.Code == "commercial:suppliers:bank-details").Select(p => p.Code).ToArray(),
+            ["Accountant"] = permissionsToSeed.Where(p => p.Module == "Accounting" || p.Code == "commercial:products:view" || p.Code == "commercial:customers:view" || p.Code == "commercial:suppliers:view" || p.Code == "commercial:credit:approve" || p.Code == "commercial:suppliers:bank-details" || p.Code == "inventory:stock:view" || p.Code == "procurement:po:view" || p.Code == "procurement:po:approve" || p.Code == "procurement:grn:view" || p.Code == "inventory:reorder:view").Select(p => p.Code).ToArray(),
             ["Cashier"] = ["billing:dashboard:view", "billing:pos:access", "billing:sales:view", "billing:sales:create", "commercial:products:view", "commercial:customers:view"]
         };
 
@@ -171,7 +213,14 @@ public sealed class SecurityDatabaseSeeder(
         if (newRolePerms.Count > 0)
         {
             dbContext.RolePermissions.AddRange(newRolePerms);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                dbContext.ChangeTracker.Clear();
+            }
         }
 
         // 4. Seed Users

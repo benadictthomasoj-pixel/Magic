@@ -19,3 +19,4 @@ describe('CategoriesManagementComponent', () => {
     expect(element.querySelectorAll('.tab-btn').length).toBe(3);
   });
 });
+
