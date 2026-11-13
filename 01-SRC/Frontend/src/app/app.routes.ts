@@ -33,6 +33,15 @@ import { ReorderManagementComponent } from './features/inventory/reorder/reorder
 import { PurchaseOrdersComponent } from './features/procurement/purchase-orders/purchase-orders.component';
 import { GoodsReceiptsComponent } from './features/procurement/goods-receipts/goods-receipts.component';
 import { PurchaseReturnsComponent } from './features/procurement/purchase-returns/purchase-returns.component';
+import { ReceivablesManagementComponent } from './features/accounting/receivables/receivables-management.component';
+import { CustomerReceiptsComponent } from './features/accounting/customer-receipts/customer-receipts.component';
+import { PayablesManagementComponent } from './features/accounting/payables/payables-management.component';
+import { SupplierPaymentsComponent } from './features/accounting/supplier-payments/supplier-payments.component';
+import { BankAccountsComponent } from './features/accounting/bank-accounts/bank-accounts.component';
+import { TreasuryManagementComponent } from './features/accounting/treasury/treasury-management.component';
+import { BankReconciliationComponent } from './features/accounting/bank-reconciliation/bank-reconciliation.component';
+import { FinancialVouchersComponent } from './features/accounting/financial-vouchers/financial-vouchers.component';
+import { FinancialReportsComponent } from './features/accounting/financial-reports/financial-reports.component';
 import { ShellComponent } from './layouts/shell/shell.component';
 
 export const routes: Routes = [
@@ -103,6 +112,51 @@ export const routes: Routes = [
         component: SubledgersComponent,
         title: 'MAGIC · Subledgers (AR & AP)',
       },
+      {
+        path: 'accounting/receivables',
+        component: ReceivablesManagementComponent,
+        title: 'MAGIC · Customer Receivables (AR)',
+      },
+      {
+        path: 'accounting/customer-receipts',
+        component: CustomerReceiptsComponent,
+        title: 'MAGIC · Customer Receipts & Allocation',
+      },
+      {
+        path: 'accounting/payables',
+        component: PayablesManagementComponent,
+        title: 'MAGIC · Supplier Payables (AP)',
+      },
+      {
+        path: 'accounting/supplier-payments',
+        component: SupplierPaymentsComponent,
+        title: 'MAGIC · Supplier Payments & Settlement',
+      },
+      {
+        path: 'accounting/bank-accounts',
+        component: BankAccountsComponent,
+        title: 'MAGIC · Bank & Cash Accounts',
+      },
+      {
+        path: 'accounting/treasury',
+        component: TreasuryManagementComponent,
+        title: 'MAGIC · Treasury Management & Contra',
+      },
+      {
+        path: 'accounting/bank-reconciliation',
+        component: BankReconciliationComponent,
+        title: 'MAGIC · Bank Reconciliation (BRS)',
+      },
+      {
+        path: 'accounting/financial-vouchers',
+        component: FinancialVouchersComponent,
+        title: 'MAGIC · Financial Vouchers Explorer',
+      },
+      {
+        path: 'accounting/financial-reports',
+        component: FinancialReportsComponent,
+        title: 'MAGIC · Financial Reports & Books',
+      },
 
       // Billing Module
       {
@@ -137,19 +191,8 @@ export const routes: Routes = [
       },
       {
         path: 'billing/customer-payments',
-        component: BillingFeaturePlaceholderComponent,
-        title: 'MAGIC · Customer Payments',
-        data: {
-          title: 'Customer Payments & Receipts',
-          category: 'Parties',
-          icon: '💵',
-          description: 'Record incoming customer payments, invoice allocations, partial remittances, and automatic Receipt Voucher (RV) generation.',
-          scope: [
-            'Multi-invoice payment distribution (FIFO or manual allocation).',
-            'Cheque, NEFT/RTGS, UPI, and Bank transfer reconciliation.',
-            'Automatic posting to GL Control Account 11300 and Bank ledgers.',
-          ],
-        },
+        component: CustomerReceiptsComponent,
+        title: 'MAGIC · Customer Payments & Receipts',
       },
       {
         path: 'billing/products',

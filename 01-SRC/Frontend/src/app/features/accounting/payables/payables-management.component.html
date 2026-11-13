@@ -1,0 +1,439 @@
+<div class="workspace-container">
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">Supplier Payables (AP)</h1>
+      <p class="page-subtitle">Manage authorized commercial purchase bills, disbursements, debit notes, and aging</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="showBillModal = true">
+        <span class="btn-icon">📋</span> Register Supplier Bill
+      </button>
+      <a routerLink="/accounting/supplier-payments" class="btn btn-secondary">
+        <span class="btn-icon">💳</span> Supplier Payments
+      </a>
+    </div>
+  </header>
+
+  <!-- Summary KPI Cards -->
+  @if (summary(); as s) {
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Total Outstanding AP</span>
+        <span class="kpi-value">₹{{ formatPaise(s.totalPayablePaise) }}</span>
+        <span class="kpi-sub">Across {{ s.supplierCount }} suppliers</span>
+      </div>
+      <div class="kpi-card alert">
+        <span class="kpi-label">Total Overdue AP</span>
+        <span class="kpi-value text-danger">₹{{ formatPaise(s.totalOverduePaise) }}</span>
+        <span class="kpi-sub">Due past contractual terms</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Open Supplier Bills</span>
+        <span class="kpi-value">{{ s.openBillCount }}</span>
+        <span class="kpi-sub">Pending settlement liability</span>
+      </div>
+    </section>
+  }
+
+  <!-- Navigation Tabs -->
+  <nav class="sub-nav-tabs">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'bills'"
+      (click)="setTab('bills')"
+    >
+      📑 Supplier Invoices Register
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'aging'"
+      (click)="setTab('aging')"
+    >
+      ⏳ AP Aging Analysis
+    </button>
+  </nav>
+
+  <!-- Tab 1: Bills Register -->
+  @if (activeTab() === 'bills') {
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label for="status-filter">Status:</label>
+        <select id="status-filter" [(ngModel)]="filterStatus" (change)="loadPayables()">
+          <option value="">All Statuses</option>
+          <option value="OPEN">Open (Unsettled)</option>
+          <option value="PARTIALLY_PAID">Partially Paid</option>
+          <option value="PAID">Fully Settled</option>
+        </select>
+      </div>
+
+      <div class="filter-group checkbox">
+        <label>
+          <input type="checkbox" [(ngModel)]="filterOverdueOnly" (change)="loadPayables()" />
+          Overdue Only
+        </label>
+      </div>
+
+      <button type="button" class="btn btn-secondary btn-sm" (click)="loadPayables()">
+        Refresh
+      </button>
+    </div>
+
+    @if (loading()) {
+      <div class="loading-state">Loading supplier payables...</div>
+    } @else if (payables().length === 0) {
+      <div class="empty-state">No open supplier payables match the active filters.</div>
+    } @else {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Bill / Ref #</th>
+              <th>System #</th>
+              <th>Supplier</th>
+              <th>Date</th>
+              <th>Due Date</th>
+              <th class="text-right">Total Liability</th>
+              <th class="text-right">Settled</th>
+              <th class="text-right">Outstanding</th>
+              <th>Status</th>
+              <th>Aging</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of payables(); track item.id) {
+              <tr [class.overdue-row]="item.overdueDays > 0 && item.status !== 'PAID'">
+                <td class="font-mono font-bold">{{ item.billNumber }}</td>
+                <td class="font-mono text-muted">{{ item.systemInvoiceNumber }}</td>
+                <td>{{ item.supplierName }}</td>
+                <td>{{ item.itemDate }}</td>
+                <td>{{ item.dueDate }}</td>
+                <td class="text-right">₹{{ formatPaise(item.originalAmountPaise) }}</td>
+                <td class="text-right text-muted">₹{{ formatPaise(item.settledAmountPaise) }}</td>
+                <td class="text-right font-bold">₹{{ formatPaise(item.outstandingAmountPaise) }}</td>
+                <td>
+                  <magic-status-badge
+                    [label]="item.status"
+                    [tone]="item.status === 'PAID' ? 'ok' : item.status === 'PARTIALLY_PAID' ? 'warn' : 'error'"
+                  />
+                </td>
+                <td>
+                  @if (item.overdueDays > 0) {
+                    <span class="badge badge-overdue">{{ item.overdueDays }}d overdue</span>
+                  } @else {
+                    <span class="badge badge-current">Current</span>
+                  }
+                </td>
+                <td>
+                  <button type="button" class="btn-link" (click)="viewStatement(item.supplierId)">
+                    Statement
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- Tab 2: Aging Analysis -->
+  @if (activeTab() === 'aging') {
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label for="aging-date">Report Date:</label>
+        <input
+          id="aging-date"
+          type="date"
+          [(ngModel)]="agingReportDate"
+          (change)="loadAging()"
+        />
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="loadAging()">
+        Recalculate
+      </button>
+    </div>
+
+    @if (agingReport(); as report) {
+      <div class="aging-summary-cards">
+        <div class="bucket-pill current">
+          <span class="pill-title">Current</span>
+          <span class="pill-amt">₹{{ formatPaise(report.totalCurrentPaise) }}</span>
+        </div>
+        <div class="bucket-pill d30">
+          <span class="pill-title">1–30 Days</span>
+          <span class="pill-amt">₹{{ formatPaise(report.total1To30Paise) }}</span>
+        </div>
+        <div class="bucket-pill d60">
+          <span class="pill-title">31–60 Days</span>
+          <span class="pill-amt">₹{{ formatPaise(report.total31To60Paise) }}</span>
+        </div>
+        <div class="bucket-pill d90">
+          <span class="pill-title">61–90 Days</span>
+          <span class="pill-amt">₹{{ formatPaise(report.total61To90Paise) }}</span>
+        </div>
+        <div class="bucket-pill dover">
+          <span class="pill-title">> 90 Days</span>
+          <span class="pill-amt">₹{{ formatPaise(report.totalAbove90Paise) }}</span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Supplier Name</th>
+              <th class="text-right">Total Payable</th>
+              <th class="text-right">Current</th>
+              <th class="text-right">1–30 Days</th>
+              <th class="text-right">31–60 Days</th>
+              <th class="text-right">61–90 Days</th>
+              <th class="text-right">> 90 Days</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of report.suppliers; track row.supplierId) {
+              <tr>
+                <td class="font-bold">{{ row.supplierName }}</td>
+                <td class="text-right font-bold">₹{{ formatPaise(row.totalOutstandingPaise) }}</td>
+                <td class="text-right text-success">₹{{ formatPaise(row.currentPaise) }}</td>
+                <td class="text-right">₹{{ formatPaise(row.overdue1To30Paise) }}</td>
+                <td class="text-right">₹{{ formatPaise(row.overdue31To60Paise) }}</td>
+                <td class="text-right text-warn">₹{{ formatPaise(row.overdue61To90Paise) }}</td>
+                <td class="text-right text-danger font-bold">₹{{ formatPaise(row.overdueAbove90Paise) }}</td>
+                <td>
+                  <button type="button" class="btn-link" (click)="viewStatement(row.supplierId)">
+                    Statement
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- Register Supplier Bill Modal -->
+  @if (showBillModal) {
+    <div class="modal-backdrop" (click)="showBillModal = false">
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <h3>Register Commercial Supplier Bill</h3>
+          <button type="button" class="close-btn" (click)="showBillModal = false">✕</button>
+        </header>
+
+        <form (ngSubmit)="submitSupplierBill()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="supp-select">Supplier *</label>
+              <select id="supp-select" [(ngModel)]="billSupplierId" name="billSupplierId" required>
+                <option value="">-- Select Supplier --</option>
+                @for (s of suppliers(); track s.id) {
+                  <option [value]="s.id">{{ s.name }} ({{ s.supplierCode }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="inv-num">Supplier Tax Invoice / Bill # *</label>
+              <input
+                id="inv-num"
+                type="text"
+                placeholder="e.g. INV/2026/894"
+                [(ngModel)]="billInvoiceNumber"
+                name="billInvoiceNumber"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="inv-date">Bill Date *</label>
+              <input
+                id="inv-date"
+                type="date"
+                [(ngModel)]="billInvoiceDate"
+                name="billInvoiceDate"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="due-date">Payment Due Date *</label>
+              <input
+                id="due-date"
+                type="date"
+                [(ngModel)]="billDueDate"
+                name="billDueDate"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="bill-lines-section">
+            <div class="lines-header">
+              <h4>Line Items & Input Taxes</h4>
+              <button type="button" class="btn btn-secondary btn-sm" (click)="addBillLine()">
+                ➕ Add Line
+              </button>
+            </div>
+
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th style="width: 100px;">Qty</th>
+                  <th style="width: 140px;">Unit Price (₹)</th>
+                  <th style="width: 120px;">GST %</th>
+                  <th class="text-right" style="width: 140px;">Total</th>
+                  <th style="width: 50px;"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of billLines; track $index) {
+                  <tr>
+                    <td>
+                      <input
+                        type="text"
+                        placeholder="Item description"
+                        [(ngModel)]="line.description"
+                        [name]="'desc_' + $index"
+                        required
+                        class="table-input"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        min="1"
+                        [(ngModel)]="line.quantity"
+                        [name]="'qty_' + $index"
+                        required
+                        class="table-input text-right"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        [(ngModel)]="line.unitPrice"
+                        [name]="'price_' + $index"
+                        required
+                        class="table-input text-right"
+                      />
+                    </td>
+                    <td>
+                      <select [(ngModel)]="line.taxRate" [name]="'tax_' + $index" class="table-input">
+                        <option [value]="0">0%</option>
+                        <option [value]="5">5%</option>
+                        <option [value]="12">12%</option>
+                        <option [value]="18">18%</option>
+                        <option [value]="28">28%</option>
+                      </select>
+                    </td>
+                    <td class="text-right font-bold">
+                      ₹{{ ((line.quantity * line.unitPrice) * (1 + line.taxRate / 100)).toFixed(2) }}
+                    </td>
+                    <td class="text-center">
+                      <button
+                        type="button"
+                        class="btn-icon-danger"
+                        (click)="removeBillLine($index)"
+                        [disabled]="billLines.length === 1"
+                      >
+                        🗑️
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            <div class="bill-summary-bar">
+              <div>Subtotal: <strong>₹{{ calculateSubtotal().toFixed(2) }}</strong></div>
+              <div>Input GST: <strong>₹{{ calculateTax().toFixed(2) }}</strong></div>
+              <div>Net Payable Liability: <strong class="text-danger">₹{{ calculateTotal().toFixed(2) }}</strong></div>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="notes">Remarks / PO Notes</label>
+            <input
+              id="notes"
+              type="text"
+              placeholder="e.g. GRN verified and accepted"
+              [(ngModel)]="billNotes"
+              name="billNotes"
+            />
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="showBillModal = false">Cancel</button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              [disabled]="isCreatingBill() || !billSupplierId || !billInvoiceNumber"
+            >
+              {{ isCreatingBill() ? 'Registering Liability...' : 'Approve & Post Bill' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Statement Drawer / Modal -->
+  @if (selectedStatement(); as stmt) {
+    <div class="modal-backdrop" (click)="closeStatement()">
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <div>
+            <h3>Supplier Statement of Account</h3>
+            <p class="modal-subtitle">{{ stmt.supplierName }} ({{ stmt.fromDate }} to {{ stmt.toDate }})</p>
+          </div>
+          <button type="button" class="close-btn" (click)="closeStatement()">✕</button>
+        </header>
+
+        <div class="statement-summary-bar">
+          <div>Opening: <strong>₹{{ formatPaise(stmt.openingBalancePaise) }}</strong></div>
+          <div>Total Debits (Payments): <strong>₹{{ formatPaise(stmt.totalDebitPaise) }}</strong></div>
+          <div>Total Credits (Bills): <strong>₹{{ formatPaise(stmt.totalCreditPaise) }}</strong></div>
+          <div>Net Payable: <strong class="text-danger">₹{{ formatPaise(stmt.closingBalancePaise) }}</strong></div>
+        </div>
+
+        <div class="statement-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Document #</th>
+                <th>Ref #</th>
+                <th class="text-right">Debit (Disbursed)</th>
+                <th class="text-right">Credit (Billed)</th>
+                <th class="text-right">Net Payable</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of stmt.lines; track line.documentNumber) {
+                <tr>
+                  <td>{{ line.date }}</td>
+                  <td>{{ line.documentType }}</td>
+                  <td class="font-mono">{{ line.documentNumber }}</td>
+                  <td>{{ line.referenceNumber || '—' }}</td>
+                  <td class="text-right text-success">₹{{ formatPaise(line.debitPaise) }}</td>
+                  <td class="text-right">₹{{ formatPaise(line.creditPaise) }}</td>
+                  <td class="text-right font-bold">₹{{ formatPaise(line.runningBalancePaise) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+</div>

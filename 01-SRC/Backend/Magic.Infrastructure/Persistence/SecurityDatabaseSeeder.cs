@@ -97,6 +97,21 @@ public sealed class SecurityDatabaseSeeder(
             ("sales:credit-note:view", "Sales", "View and print customer credit notes"),
             ("sales:reports:view", "Sales", "View sales metrics, payment method breakdowns, and hourly analytics"),
 
+            // Financial Management & Treasury (Phase E)
+            ("finance:receivables:view", "Finance", "View customer receivables, aging, and customer statements"),
+            ("finance:receipts:create", "Finance", "Create customer receipts and allocate against open invoices"),
+            ("finance:receipts:cancel", "Finance", "Reverse customer receipts with companion reversal vouchers"),
+            ("finance:payables:view", "Finance", "View supplier payables register, AP aging, and statements"),
+            ("finance:bills:create", "Finance", "Register and approve supplier commercial bills and purchase liability"),
+            ("finance:payments:create", "Finance", "Create supplier payments and allocate against open bills"),
+            ("finance:payments:cancel", "Finance", "Reverse supplier payments with companion reversal vouchers"),
+            ("finance:bank-accounts:view", "Finance", "View bank and cash accounts with masked numbers"),
+            ("finance:bank-accounts:manage", "Finance", "Create, configure, and manage bank and cash account masters"),
+            ("finance:bank-accounts:reveal", "Finance", "Reveal unmasked bank account numbers (Audited in platform log)"),
+            ("finance:treasury:create", "Finance", "Record Contra cash/bank transfers, deposits, and bank adjustments"),
+            ("finance:reconciliation:manage", "Finance", "Import bank statements, match transactions, post adjustments, and approve"),
+            ("finance:reports:view", "Finance", "View and export financial reports, Cash Book, Bank Book, and statements"),
+
             // Administration
             ("admin:users:manage", "Admin", "Create, edit, and assign roles to users"),
             ("admin:roles:manage", "Admin", "Manage custom roles and permission assignments"),
@@ -193,7 +208,7 @@ public sealed class SecurityDatabaseSeeder(
         {
             ["Administrator"] = permissionsToSeed.Select(p => p.Code).ToArray(),
             ["StoreManager"] = permissionsToSeed.Where(p => p.Module != "Admin").Select(p => p.Code).ToArray(),
-            ["Accountant"] = permissionsToSeed.Where(p => p.Module == "Accounting" || p.Code == "commercial:products:view" || p.Code == "commercial:customers:view" || p.Code == "commercial:suppliers:view" || p.Code == "commercial:credit:approve" || p.Code == "commercial:suppliers:bank-details" || p.Code == "inventory:stock:view" || p.Code == "procurement:po:view" || p.Code == "procurement:po:approve" || p.Code == "procurement:grn:view" || p.Code == "inventory:reorder:view").Select(p => p.Code).ToArray(),
+            ["Accountant"] = permissionsToSeed.Where(p => p.Module == "Accounting" || p.Module == "Finance" || p.Code == "commercial:products:view" || p.Code == "commercial:customers:view" || p.Code == "commercial:suppliers:view" || p.Code == "commercial:credit:approve" || p.Code == "commercial:suppliers:bank-details" || p.Code == "inventory:stock:view" || p.Code == "procurement:po:view" || p.Code == "procurement:po:approve" || p.Code == "procurement:grn:view" || p.Code == "inventory:reorder:view").Select(p => p.Code).ToArray(),
             ["Cashier"] = ["billing:dashboard:view", "billing:pos:access", "billing:sales:view", "billing:sales:create", "commercial:products:view", "commercial:customers:view", "pos:terminal:operate", "pos:terminal:open-close-shift", "pos:cash:movement", "sales:invoice:create", "sales:invoice:view", "sales:returns:create", "sales:returns:view", "sales:credit-note:view"]
         };
 

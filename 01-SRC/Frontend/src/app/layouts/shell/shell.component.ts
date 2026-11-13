@@ -56,12 +56,30 @@ export class ShellComponent implements OnInit {
   // Accounting Module Navigation Sections
   private readonly accountingSections: readonly NavSection[] = [
     {
-      title: 'Financial Accounting',
+      title: 'Receivables & Payables',
+      items: [
+        { path: '/accounting/receivables', label: 'Customer Receivables (AR)', icon: '📥' },
+        { path: '/accounting/customer-receipts', label: 'Customer Receipts', icon: '💵' },
+        { path: '/accounting/payables', label: 'Supplier Payables (AP)', icon: '📤' },
+        { path: '/accounting/supplier-payments', label: 'Supplier Payments', icon: '💸' },
+      ],
+    },
+    {
+      title: 'Treasury & Banking',
+      items: [
+        { path: '/accounting/bank-accounts', label: 'Bank & Cash Accounts', icon: '🏦' },
+        { path: '/accounting/treasury', label: 'Treasury & Contra', icon: '🔄' },
+        { path: '/accounting/bank-reconciliation', label: 'Bank Reconciliation (BRS)', icon: '📑' },
+        { path: '/accounting/financial-reports', label: 'Financial Reports & Books', icon: '📈' },
+      ],
+    },
+    {
+      title: 'General Ledger & Core',
       items: [
         { path: '/accounting/dashboard', label: 'Accounting Overview', icon: '📊' },
+        { path: '/accounting/financial-vouchers', label: 'Financial Vouchers', icon: '📋' },
         { path: '/accounting/chart-of-accounts', label: 'Chart of Accounts', icon: '📑' },
         { path: '/accounting/journal-entry', label: 'Journal Entry', icon: '✍️' },
-        { path: '/accounting/vouchers', label: 'Voucher Registry', icon: '📋' },
         { path: '/accounting/general-ledger', label: 'General Ledger', icon: '📖' },
         { path: '/accounting/trial-balance', label: 'Trial Balance', icon: '⚖️' },
         { path: '/accounting/periods', label: 'Fiscal Years & Periods', icon: '📅' },

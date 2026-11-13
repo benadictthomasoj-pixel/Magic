@@ -1,0 +1,200 @@
+<div class="workspace-container">
+  <div class="workspace-header">
+    <div>
+      <h1 class="page-title">Bank & Cash Accounts</h1>
+      <p class="page-subtitle">Treasury liquidity management, GL mappings, and secure masked banking instruments</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" (click)="openCreateModal()">
+        + Add Account
+      </button>
+    </div>
+  </div>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert" [ngClass]="msg.type === 'ok' ? 'alert-success' : 'alert-error'">
+      <span>{{ msg.text }}</span>
+      <button class="alert-close" (click)="actionMessage.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- Account Filter Tabs -->
+  <div class="filter-tabs">
+    <button class="tab-btn" [class.active]="selectedFilter() === 'ALL'" (click)="setFilter('ALL')">All Accounts</button>
+    <button class="tab-btn" [class.active]="selectedFilter() === 'Bank'" (click)="setFilter('Bank')">Bank Accounts</button>
+    <button class="tab-btn" [class.active]="selectedFilter() === 'Cash'" (click)="setFilter('Cash')">Cash In Hand</button>
+  </div>
+
+  <!-- Accounts Grid -->
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading financial accounts...</p>
+    </div>
+  } @else if (accounts().length === 0) {
+    <div class="empty-state">
+      <h3>No Accounts Found</h3>
+      <p>Create a bank or cash account to begin tracking treasury balances and processing vouchers.</p>
+      <button class="btn btn-secondary" (click)="openCreateModal()">Add Account Now</button>
+    </div>
+  } @else {
+    <div class="accounts-grid">
+      @for (acc of accounts(); track acc.id) {
+        <div class="account-card" [class.cash-card]="acc.accountType === 'Cash'">
+          <div class="card-header">
+            <div class="account-badge" [ngClass]="'badge-' + acc.accountType.toLowerCase()">
+              {{ acc.accountType }}
+            </div>
+            <div class="status-indicator" [class.active]="acc.isActive">
+              {{ acc.isActive ? 'Active' : 'Inactive' }}
+            </div>
+          </div>
+
+          <div class="card-body">
+            <h3 class="account-title">{{ acc.accountName }}</h3>
+            @if (acc.accountType !== 'Cash') {
+              <p class="bank-details">{{ acc.bankName || 'Bank' }} &bull; {{ acc.branchName || 'Main Branch' }}</p>
+            } @else {
+              <p class="bank-details">Physical Vault / Petty Cash</p>
+            }
+
+            <div class="number-row">
+              <span class="label">A/C Number:</span>
+              <span class="account-number font-mono">{{ acc.maskedAccountNumber }}</span>
+              @if (acc.accountType !== 'Cash') {
+                <button class="btn-reveal" title="Reveal Full Account Number (Audit Logged)" (click)="revealAccount(acc)">
+                  👁 Reveal
+                </button>
+              }
+            </div>
+
+            @if (acc.ifscCode) {
+              <div class="meta-row">
+                <span class="label">IFSC:</span>
+                <span class="value font-mono">{{ acc.ifscCode }}</span>
+              </div>
+            }
+
+            <div class="meta-row">
+              <span class="label">GL Mapping:</span>
+              <span class="value">{{ acc.glAccountCode }} — {{ acc.glAccountName }}</span>
+            </div>
+
+            <div class="balance-container">
+              <span class="balance-label">Current Ledger Balance</span>
+              <span class="balance-amount" [class.negative]="acc.currentBalancePaise < 0">
+                {{ formatPaise(acc.currentBalancePaise) }}
+              </span>
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <button class="btn btn-sm btn-outline" (click)="openEditModal(acc)">Edit</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Add/Edit Modal -->
+  @if (isModalOpen()) {
+    <div class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h2>{{ editingAccount() ? 'Edit Account' : 'New Bank/Cash Account' }}</h2>
+          <button class="close-btn" (click)="closeModal()">✕</button>
+        </div>
+
+        <form [formGroup]="accountForm" (ngSubmit)="saveAccount()">
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Account Name *</label>
+                <input type="text" formControlName="accountName" placeholder="e.g. HDFC Main Operating A/C" />
+              </div>
+              <div class="form-group">
+                <label>Account Type *</label>
+                <select formControlName="accountType">
+                  <option value="Bank">Bank Account</option>
+                  <option value="Cash">Cash in Hand</option>
+                </select>
+              </div>
+            </div>
+
+            @if (accountForm.get('accountType')?.value !== 'Cash') {
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Bank Name</label>
+                  <input type="text" formControlName="bankName" placeholder="e.g. HDFC Bank Ltd." />
+                </div>
+                <div class="form-group">
+                  <label>Branch Name</label>
+                  <input type="text" formControlName="branchName" placeholder="e.g. Indiranagar, Bengaluru" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Account Number *</label>
+                  <input type="text" formControlName="accountNumber" placeholder="Full Account Number" />
+                </div>
+                <div class="form-group">
+                  <label>IFSC Code</label>
+                  <input type="text" formControlName="ifscCode" placeholder="HDFC0001234" />
+                </div>
+              </div>
+            }
+
+            <div class="form-group">
+              <label>General Ledger Account *</label>
+              <select formControlName="glAccountId">
+                <option value="">Select GL Asset Account...</option>
+                @for (gl of glAccounts(); track gl.id) {
+                  <option [value]="gl.id">{{ gl.code }} — {{ gl.name }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-row checkbox-row">
+              <label>
+                <input type="checkbox" formControlName="isActive" />
+                Account Active & Eligible for Treasury Vouchers
+              </label>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="saving()">
+              {{ saving() ? 'Saving...' : 'Save Account' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Reveal Unmasked Modal -->
+  @if (isRevealModalOpen(); as modal) {
+    <div class="modal-backdrop">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-header">
+          <h2>Secure Account Details</h2>
+          <button class="close-btn" (click)="closeRevealModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="security-warning">
+            ⚠️ <strong>Security Audit Notice:</strong> This unmasking operation has been logged with your authenticated user ID and timestamp in the central system audit log.
+          </div>
+          <div class="revealed-box">
+            <span class="revealed-label">{{ revealedAccount()?.name }}</span>
+            <span class="revealed-number font-mono">{{ revealedAccount()?.fullNumber }}</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" (click)="closeRevealModal()">Done</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

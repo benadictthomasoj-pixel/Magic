@@ -1,0 +1,270 @@
+<div class="workspace-container">
+  <!-- Top Header -->
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">Customer Receivables (AR)</h1>
+      <p class="page-subtitle">Track open customer invoices, settlements, unallocated advances, and aging</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/accounting/customer-receipts" class="btn btn-primary">
+        <span class="btn-icon">💵</span> Record Customer Receipt
+      </a>
+    </div>
+  </header>
+
+  <!-- Summary KPI Cards -->
+  @if (summary(); as s) {
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Total Outstanding AR</span>
+        <span class="kpi-value">₹{{ formatPaise(s.totalReceivablePaise) }}</span>
+        <span class="kpi-sub">Across {{ s.customerCount }} customers</span>
+      </div>
+      <div class="kpi-card alert">
+        <span class="kpi-label">Total Overdue AR</span>
+        <span class="kpi-value text-danger">₹{{ formatPaise(s.totalOverduePaise) }}</span>
+        <span class="kpi-sub">Requires collection follow-up</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Open Receivables</span>
+        <span class="kpi-value">{{ s.openInvoiceCount }}</span>
+        <span class="kpi-sub">Unsettled invoices/items</span>
+      </div>
+    </section>
+  }
+
+  <!-- Navigation Tabs -->
+  <nav class="sub-nav-tabs">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'invoices'"
+      (click)="setTab('invoices')"
+    >
+      📄 Invoice-wise Receivables
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'aging'"
+      (click)="setTab('aging')"
+    >
+      ⏳ AR Aging Analysis
+    </button>
+  </nav>
+
+  <!-- Tab 1: Invoice Receivables -->
+  @if (activeTab() === 'invoices') {
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label for="status-filter">Status:</label>
+        <select id="status-filter" [(ngModel)]="filterStatus" (change)="loadReceivables()">
+          <option value="">All Statuses</option>
+          <option value="OPEN">Open (Unsettled)</option>
+          <option value="PARTIALLY_PAID">Partially Paid</option>
+          <option value="PAID">Fully Settled</option>
+        </select>
+      </div>
+
+      <div class="filter-group checkbox">
+        <label>
+          <input type="checkbox" [(ngModel)]="filterOverdueOnly" (change)="loadReceivables()" />
+          Overdue Only
+        </label>
+      </div>
+
+      <button type="button" class="btn btn-secondary btn-sm" (click)="loadReceivables()">
+        Refresh
+      </button>
+    </div>
+
+    @if (loading()) {
+      <div class="loading-state">Loading customer receivables...</div>
+    } @else if (receivables().length === 0) {
+      <div class="empty-state">No open receivables match the active filters.</div>
+    } @else {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Document #</th>
+              <th>Customer</th>
+              <th>Date</th>
+              <th>Due Date</th>
+              <th class="text-right">Original Amount</th>
+              <th class="text-right">Settled</th>
+              <th class="text-right">Outstanding</th>
+              <th>Status</th>
+              <th>Aging</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of receivables(); track item.id) {
+              <tr [class.overdue-row]="item.overdueDays > 0 && item.status !== 'PAID'">
+                <td class="font-mono font-bold">{{ item.documentNumber }}</td>
+                <td>{{ item.customerName }}</td>
+                <td>{{ item.itemDate }}</td>
+                <td>{{ item.dueDate }}</td>
+                <td class="text-right">₹{{ formatPaise(item.originalAmountPaise) }}</td>
+                <td class="text-right text-muted">₹{{ formatPaise(item.settledAmountPaise) }}</td>
+                <td class="text-right font-bold">₹{{ formatPaise(item.outstandingAmountPaise) }}</td>
+                <td>
+                  <magic-status-badge
+                    [label]="item.status"
+                    [tone]="item.status === 'PAID' ? 'ok' : item.status === 'PARTIALLY_PAID' ? 'warn' : 'error'"
+                  />
+                </td>
+                <td>
+                  @if (item.overdueDays > 0) {
+                    <span class="badge badge-overdue">{{ item.overdueDays }}d overdue</span>
+                  } @else {
+                    <span class="badge badge-current">Current</span>
+                  }
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn-link"
+                    (click)="viewStatement(item.customerId)"
+                  >
+                    Statement
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- Tab 2: Aging Analysis -->
+  @if (activeTab() === 'aging') {
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label for="aging-date">Report Date:</label>
+        <input
+          id="aging-date"
+          type="date"
+          [(ngModel)]="agingReportDate"
+          (change)="loadAging()"
+        />
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="loadAging()">
+        Recalculate
+      </button>
+    </div>
+
+    @if (agingReport(); as report) {
+      <div class="aging-summary-cards">
+        <div class="bucket-pill current">
+          <span class="pill-title">Current</span>
+          <span class="pill-amt">₹{{ formatPaise(report.totalCurrentPaise) }}</span>
+        </div>
+        <div class="bucket-pill d30">
+          <span class="pill-title">1–30 Days</span>
+          <span class="pill-amt">₹{{ formatPaise(report.total1To30Paise) }}</span>
+        </div>
+        <div class="bucket-pill d60">
+          <span class="pill-title">31–60 Days</span>
+          <span class="pill-amt">₹{{ formatPaise(report.total31To60Paise) }}</span>
+        </div>
+        <div class="bucket-pill d90">
+          <span class="pill-title">61–90 Days</span>
+          <span class="pill-amt">₹{{ formatPaise(report.total61To90Paise) }}</span>
+        </div>
+        <div class="bucket-pill dover">
+          <span class="pill-title">> 90 Days</span>
+          <span class="pill-amt">₹{{ formatPaise(report.totalAbove90Paise) }}</span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Customer Name</th>
+              <th class="text-right">Total Outstanding</th>
+              <th class="text-right">Current</th>
+              <th class="text-right">1–30 Days</th>
+              <th class="text-right">31–60 Days</th>
+              <th class="text-right">61–90 Days</th>
+              <th class="text-right">> 90 Days</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of report.customers; track row.customerId) {
+              <tr>
+                <td class="font-bold">{{ row.customerName }}</td>
+                <td class="text-right font-bold">₹{{ formatPaise(row.totalOutstandingPaise) }}</td>
+                <td class="text-right text-success">₹{{ formatPaise(row.currentPaise) }}</td>
+                <td class="text-right">₹{{ formatPaise(row.overdue1To30Paise) }}</td>
+                <td class="text-right">₹{{ formatPaise(row.overdue31To60Paise) }}</td>
+                <td class="text-right text-warn">₹{{ formatPaise(row.overdue61To90Paise) }}</td>
+                <td class="text-right text-danger font-bold">₹{{ formatPaise(row.overdueAbove90Paise) }}</td>
+                <td>
+                  <button type="button" class="btn-link" (click)="viewStatement(row.customerId)">
+                    Statement
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- Statement Drawer / Modal -->
+  @if (selectedStatement(); as stmt) {
+    <div class="modal-backdrop" (click)="closeStatement()">
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <div>
+            <h3>Customer Statement of Account</h3>
+            <p class="modal-subtitle">{{ stmt.customerName }} ({{ stmt.fromDate }} to {{ stmt.toDate }})</p>
+          </div>
+          <button type="button" class="close-btn" (click)="closeStatement()">✕</button>
+        </header>
+
+        <div class="statement-summary-bar">
+          <div>Opening: <strong>₹{{ formatPaise(stmt.openingBalancePaise) }}</strong></div>
+          <div>Total Debits: <strong>₹{{ formatPaise(stmt.totalDebitPaise) }}</strong></div>
+          <div>Total Credits: <strong>₹{{ formatPaise(stmt.totalCreditPaise) }}</strong></div>
+          <div>Closing Balance: <strong class="text-primary">₹{{ formatPaise(stmt.closingBalancePaise) }}</strong></div>
+        </div>
+
+        <div class="statement-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Document #</th>
+                <th>Ref #</th>
+                <th class="text-right">Debit (Invoiced)</th>
+                <th class="text-right">Credit (Paid)</th>
+                <th class="text-right">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of stmt.lines; track line.documentNumber) {
+                <tr>
+                  <td>{{ line.date }}</td>
+                  <td>{{ line.documentType }}</td>
+                  <td class="font-mono">{{ line.documentNumber }}</td>
+                  <td>{{ line.referenceNumber || '—' }}</td>
+                  <td class="text-right">₹{{ formatPaise(line.debitPaise) }}</td>
+                  <td class="text-right text-success">₹{{ formatPaise(line.creditPaise) }}</td>
+                  <td class="text-right font-bold">₹{{ formatPaise(line.runningBalancePaise) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+</div>

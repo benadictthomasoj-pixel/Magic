@@ -1,0 +1,216 @@
+<div class="workspace-container">
+  <div class="workspace-header">
+    <div>
+      <h1 class="page-title">Financial Reports & Registers</h1>
+      <p class="page-subtitle">Executive liquidity KPIs, Cash Book, Bank Book, and working capital summaries</p>
+    </div>
+  </div>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert" [ngClass]="msg.type === 'ok' ? 'alert-success' : 'alert-error'">
+      <span>{{ msg.text }}</span>
+      <button class="alert-close" (click)="actionMessage.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- Report Navigation Tabs -->
+  <div class="report-tabs">
+    <button class="tab-btn" [class.active]="activeTab() === 'kpi'" (click)="setTab('kpi')">
+      Liquidity & Working Capital KPIs
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'cashbook'" (click)="setTab('cashbook')">
+      Cash Book Register
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'bankbook'" (click)="setTab('bankbook')">
+      Bank Book Register
+    </button>
+  </div>
+
+  <!-- TAB 1: EXECUTIVE LIQUIDITY KPIS -->
+  @if (activeTab() === 'kpi') {
+    @if (loading()) {
+      <div class="loading-state"><div class="spinner"></div><p>Calculating financial KPIs...</p></div>
+    } @else if (summaryKpi(); as kpi) {
+      <div class="kpi-grid">
+        <div class="kpi-card liquid">
+          <span class="label">Total Liquid Funds</span>
+          <span class="amount font-mono">{{ formatPaise(kpi.totalCashBalancePaise + kpi.totalBankBalancePaise) }}</span>
+          <span class="sub">Cash + Operating Bank Balances</span>
+        </div>
+        <div class="kpi-card">
+          <span class="label">Cash on Hand</span>
+          <span class="amount font-mono">{{ formatPaise(kpi.totalCashBalancePaise) }}</span>
+          <span class="sub">Vault / Cash Registers</span>
+        </div>
+        <div class="kpi-card">
+          <span class="label">Bank Operating Balance</span>
+          <span class="amount font-mono">{{ formatPaise(kpi.totalBankBalancePaise) }}</span>
+          <span class="sub">Current & Savings Accounts</span>
+        </div>
+        <div class="kpi-card ar">
+          <span class="label">Total Open Receivables (AR)</span>
+          <span class="amount font-mono">{{ formatPaise(kpi.totalReceivablePaise) }}</span>
+          <span class="sub">Customer Invoices Outstanding</span>
+        </div>
+        <div class="kpi-card ap">
+          <span class="label">Total Open Payables (AP)</span>
+          <span class="amount font-mono">{{ formatPaise(kpi.totalPayablePaise) }}</span>
+          <span class="sub">Supplier Bills Outstanding</span>
+        </div>
+        <div class="kpi-card nwc">
+          <span class="label">Net Working Capital Position</span>
+          <span class="amount font-mono" [class.negative]="(kpi.totalCashBalancePaise + kpi.totalBankBalancePaise + kpi.totalReceivablePaise - kpi.totalPayablePaise) < 0">
+            {{ formatPaise(kpi.totalCashBalancePaise + kpi.totalBankBalancePaise + kpi.totalReceivablePaise - kpi.totalPayablePaise) }}
+          </span>
+          <span class="sub">(Liquid + AR) − AP</span>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- TAB 2: CASH BOOK -->
+  @if (activeTab() === 'cashbook') {
+    <div class="filter-bar">
+      <div class="filter-item">
+        <label>Cash Account:</label>
+        <select [(ngModel)]="selectedCashAccountId" (change)="loadCashBook()">
+          @for (c of cashAccounts(); track c.id) {
+            <option [value]="c.id">{{ c.accountName }}</option>
+          }
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>From Date:</label>
+        <input type="date" [(ngModel)]="fromDate" (change)="loadCashBook()" />
+      </div>
+      <div class="filter-item">
+        <label>To Date:</label>
+        <input type="date" [(ngModel)]="toDate" (change)="loadCashBook()" />
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="loading-state"><div class="spinner"></div><p>Generating Cash Book...</p></div>
+    } @else if (cashBook(); as cb) {
+      <div class="book-container">
+        <div class="book-header-box">
+          <div class="box-col">
+            <span class="box-label">Opening Balance:</span>
+            <span class="box-val font-mono font-bold">{{ formatPaise(cb.openingBalancePaise) }}</span>
+          </div>
+          <div class="box-col">
+            <span class="box-label">Total Cash Receipts:</span>
+            <span class="box-val font-mono text-success font-bold">+{{ formatPaise(cb.totalReceiptsPaise) }}</span>
+          </div>
+          <div class="box-col">
+            <span class="box-label">Total Cash Payments:</span>
+            <span class="box-val font-mono text-danger font-bold">-{{ formatPaise(cb.totalPaymentsPaise) }}</span>
+          </div>
+          <div class="box-col">
+            <span class="box-label">Closing Cash Balance:</span>
+            <span class="box-val font-mono font-bold">{{ formatPaise(cb.closingBalancePaise) }}</span>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Voucher #</th>
+              <th>Narration / Particulars</th>
+              <th class="text-right">Cash Received (Dr ₹)</th>
+              <th class="text-right">Cash Paid (Cr ₹)</th>
+              <th class="text-right">Running Balance (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of cb.entries; track row.voucherNumber) {
+              <tr>
+                <td>{{ row.date }}</td>
+                <td class="font-mono font-bold">{{ row.voucherNumber }}</td>
+                <td>{{ row.narration }}</td>
+                <td class="text-right font-mono text-success">{{ row.receiptPaise > 0 ? formatPaise(row.receiptPaise) : '—' }}</td>
+                <td class="text-right font-mono text-danger">{{ row.paymentPaise > 0 ? formatPaise(row.paymentPaise) : '—' }}</td>
+                <td class="text-right font-mono font-bold">{{ formatPaise(row.runningBalancePaise) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- TAB 3: BANK BOOK -->
+  @if (activeTab() === 'bankbook') {
+    <div class="filter-bar">
+      <div class="filter-item">
+        <label>Bank Account:</label>
+        <select [(ngModel)]="selectedBankAccountId" (change)="loadBankBook()">
+          @for (b of bankAccounts(); track b.id) {
+            <option [value]="b.id">{{ b.accountName }} ({{ b.bankName }})</option>
+          }
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>From Date:</label>
+        <input type="date" [(ngModel)]="fromDate" (change)="loadBankBook()" />
+      </div>
+      <div class="filter-item">
+        <label>To Date:</label>
+        <input type="date" [(ngModel)]="toDate" (change)="loadBankBook()" />
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="loading-state"><div class="spinner"></div><p>Generating Bank Book...</p></div>
+    } @else if (bankBook(); as bb) {
+      <div class="book-container">
+        <div class="book-header-box">
+          <div class="box-col">
+            <span class="box-label">Bank Opening Balance:</span>
+            <span class="box-val font-mono font-bold">{{ formatPaise(bb.openingBalancePaise) }}</span>
+          </div>
+          <div class="box-col">
+            <span class="box-label">Total Deposits / Receipts:</span>
+            <span class="box-val font-mono text-success font-bold">+{{ formatPaise(bb.totalDepositsPaise) }}</span>
+          </div>
+          <div class="box-col">
+            <span class="box-label">Total Withdrawals / Payments:</span>
+            <span class="box-val font-mono text-danger font-bold">-{{ formatPaise(bb.totalWithdrawalsPaise) }}</span>
+          </div>
+          <div class="box-col">
+            <span class="box-label">Closing Bank Balance:</span>
+            <span class="box-val font-mono font-bold">{{ formatPaise(bb.closingBalancePaise) }}</span>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Voucher #</th>
+              <th>Particulars</th>
+              <th>Bank Ref</th>
+              <th class="text-right">Deposits (Dr ₹)</th>
+              <th class="text-right">Withdrawals (Cr ₹)</th>
+              <th class="text-right">Running Balance (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of bb.entries; track row.voucherNumber) {
+              <tr>
+                <td>{{ row.date }}</td>
+                <td class="font-mono font-bold">{{ row.voucherNumber }}</td>
+                <td>{{ row.narration }}</td>
+                <td class="font-mono text-sm">{{ row.referenceNumber || '—' }}</td>
+                <td class="text-right font-mono text-success">{{ row.depositPaise > 0 ? formatPaise(row.depositPaise) : '—' }}</td>
+                <td class="text-right font-mono text-danger">{{ row.withdrawalPaise > 0 ? formatPaise(row.withdrawalPaise) : '—' }}</td>
+                <td class="text-right font-mono font-bold">{{ formatPaise(row.runningBalancePaise) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>

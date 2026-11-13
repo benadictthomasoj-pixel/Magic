@@ -1,0 +1,261 @@
+<div class="workspace-container">
+  <div class="workspace-header">
+    <div>
+      <h1 class="page-title">Treasury Management & Contra</h1>
+      <p class="page-subtitle">Cash deposits, withdrawals, inter-bank fund transfers, bank charges & interest adjustments</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary mr-2" (click)="openAdjustmentModal()">
+        + Treasury Adjustment
+      </button>
+      <button class="btn btn-primary" (click)="openContraModal()">
+        + Contra Transfer
+      </button>
+    </div>
+  </div>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert" [ngClass]="msg.type === 'ok' ? 'alert-success' : 'alert-error'">
+      <span>{{ msg.text }}</span>
+      <button class="alert-close" (click)="actionMessage.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- Liquidity Accounts Quick Bar -->
+  <div class="accounts-summary-bar">
+    @for (acc of accounts(); track acc.id) {
+      <div class="summary-pill">
+        <span class="pill-name">{{ acc.accountName }}</span>
+        <span class="pill-type">({{ acc.accountType }})</span>
+        <span class="pill-balance" [class.negative]="acc.currentBalancePaise < 0">
+          {{ formatPaise(acc.currentBalancePaise) }}
+        </span>
+      </div>
+    }
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-card">
+    <div class="filter-group">
+      <label>Transaction Type</label>
+      <select [(ngModel)]="filterType" (change)="loadTransactions()">
+        <option value="">All Treasury Types</option>
+        <option value="CashDeposit">Cash Deposit</option>
+        <option value="CashWithdrawal">Cash Withdrawal</option>
+        <option value="BankTransfer">Inter-Bank Transfer</option>
+        <option value="BankCharges">Bank Charges</option>
+        <option value="BankInterest">Bank Interest</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>From Date</label>
+      <input type="date" [(ngModel)]="filterFromDate" (change)="loadTransactions()" />
+    </div>
+    <div class="filter-group">
+      <label>To Date</label>
+      <input type="date" [(ngModel)]="filterToDate" (change)="loadTransactions()" />
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-outline btn-sm" (click)="filterType = ''; filterFromDate = ''; filterToDate = ''; loadTransactions()">
+        Reset Filters
+      </button>
+    </div>
+  </div>
+
+  <!-- Transactions Table -->
+  <div class="table-container">
+    @if (loading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading treasury ledger transactions...</p>
+      </div>
+    } @else if (transactions().length === 0) {
+      <div class="empty-state">
+        <h3>No Treasury Transactions</h3>
+        <p>Record a cash deposit, cash withdrawal, inter-bank transfer or bank charge adjustment.</p>
+        <button class="btn btn-primary" (click)="openContraModal()">Record Contra Transfer</button>
+      </div>
+    } @else {
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Txn Number</th>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Source Account</th>
+            <th>Destination Account</th>
+            <th class="text-right">Amount</th>
+            <th>Reference</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (txn of transactions(); track txn.id) {
+            <tr>
+              <td class="font-mono font-bold">{{ txn.transactionNumber }}</td>
+              <td>{{ txn.transactionDate }}</td>
+              <td>
+                <span class="badge" [ngClass]="'badge-' + txn.transactionType.toLowerCase()">
+                  {{ txn.transactionType }}
+                </span>
+              </td>
+              <td>{{ txn.sourceAccountName || '—' }}</td>
+              <td>{{ txn.destinationAccountName || '—' }}</td>
+              <td class="text-right font-bold">{{ formatPaise(txn.amountPaise) }}</td>
+              <td>
+                <span class="reference-text" [title]="txn.narration">{{ txn.referenceNumber || txn.narration }}</span>
+              </td>
+              <td>
+                <span class="status-pill status-completed">{{ txn.status }}</span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+
+  <!-- Modal -->
+  @if (isModalOpen()) {
+    <div class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h2>{{ modalMode() === 'contra' ? 'Contra Transfer (Cash / Bank)' : 'Treasury Adjustment (Charges / Interest)' }}</h2>
+          <button class="close-btn" (click)="closeModal()">✕</button>
+        </div>
+
+        @if (modalMode() === 'contra') {
+          <form [formGroup]="contraForm" (ngSubmit)="submitContra()">
+            <div class="modal-body">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Contra Type *</label>
+                  <select formControlName="transactionType" (change)="onContraTypeChange()">
+                    <option value="CashDeposit">Cash Deposit (Cash ➔ Bank)</option>
+                    <option value="CashWithdrawal">Cash Withdrawal (Bank ➔ Cash)</option>
+                    <option value="BankTransfer">Inter-Bank Transfer (Bank ➔ Bank)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Date *</label>
+                  <input type="date" formControlName="transactionDate" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>From Account (Source) *</label>
+                  <select formControlName="fromAccountId">
+                    <option value="">Select Source Account...</option>
+                    @for (acc of accounts(); track acc.id) {
+                      <option [value]="acc.id">{{ acc.accountName }} ({{ acc.accountType }} — {{ formatPaise(acc.currentBalancePaise) }})</option>
+                    }
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>To Account (Destination) *</label>
+                  <select formControlName="toAccountId">
+                    <option value="">Select Destination Account...</option>
+                    @for (acc of accounts(); track acc.id) {
+                      <option [value]="acc.id">{{ acc.accountName }} ({{ acc.accountType }} — {{ formatPaise(acc.currentBalancePaise) }})</option>
+                    }
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Transfer Amount (₹) *</label>
+                  <input type="number" step="0.01" min="0.01" formControlName="amountRupees" placeholder="0.00" />
+                </div>
+                <div class="form-group">
+                  <label>Reference / Cheque #</label>
+                  <input type="text" formControlName="referenceNumber" placeholder="e.g. CHQ-991201 or IMPS Ref" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Narration / Description *</label>
+                <textarea rows="2" formControlName="description"></textarea>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary" [disabled]="submitting()">
+                {{ submitting() ? 'Processing Contra...' : 'Post Contra Voucher' }}
+              </button>
+            </div>
+          </form>
+        } @else {
+          <form [formGroup]="adjustmentForm" (ngSubmit)="submitAdjustment()">
+            <div class="modal-body">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Adjustment Type *</label>
+                  <select formControlName="adjustmentType">
+                    <option value="BankCharges">Bank Charges & Fees (Expense)</option>
+                    <option value="BankInterest">Bank Interest Credited (Revenue)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Date *</label>
+                  <input type="date" formControlName="transactionDate" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Bank Account *</label>
+                <select formControlName="bankAccountId">
+                  <option value="">Select Bank Account...</option>
+                  @for (acc of accounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.accountName }} ({{ acc.accountType }})</option>
+                  }
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Contra General Ledger Account *</label>
+                <select formControlName="contraLedgerAccountId">
+                  <option value="">Select Ledger Account...</option>
+                  @if (adjustmentForm.get('adjustmentType')?.value === 'BankCharges') {
+                    @for (gl of expenseGlAccounts(); track gl.id) {
+                      <option [value]="gl.id">{{ gl.code }} — {{ gl.name }}</option>
+                    }
+                  } @else {
+                    @for (gl of incomeGlAccounts(); track gl.id) {
+                      <option [value]="gl.id">{{ gl.code }} — {{ gl.name }}</option>
+                    }
+                  }
+                </select>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Amount (₹) *</label>
+                  <input type="number" step="0.01" min="0.01" formControlName="amountRupees" placeholder="0.00" />
+                </div>
+                <div class="form-group">
+                  <label>Bank Ref / Advice #</label>
+                  <input type="text" formControlName="referenceNumber" placeholder="Ref code" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Narration / Description *</label>
+                <textarea rows="2" formControlName="description"></textarea>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary" [disabled]="submitting()">
+                {{ submitting() ? 'Posting Adjustment...' : 'Post Adjustment' }}
+              </button>
+            </div>
+          </form>
+        }
+      </div>
+    </div>
+  }
+</div>

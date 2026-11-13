@@ -1,0 +1,250 @@
+<div class="workspace-container">
+  <div class="workspace-header">
+    <div>
+      <h1 class="page-title">Bank Reconciliation (BRS)</h1>
+      <p class="page-subtitle">CSV statement parsing, ledger matching, and variance resolution</p>
+    </div>
+    <div class="header-actions">
+      @if (!currentWorkspace()) {
+        <button class="btn btn-primary" (click)="openImportModal()">
+          + Import Bank Statement (CSV)
+        </button>
+      } @else {
+        <button class="btn btn-secondary mr-2" (click)="closeWorkspace()">
+          ← Back to Statements
+        </button>
+        <button class="btn btn-success" (click)="completeReconciliation()" [disabled]="processing()">
+          ✓ Complete & Sign Off
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert" [ngClass]="msg.type === 'ok' ? 'alert-success' : 'alert-error'">
+      <span>{{ msg.text }}</span>
+      <button class="alert-close" (click)="actionMessage.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- Bank Account Selector (when not in workspace) -->
+  @if (!currentWorkspace()) {
+    <div class="account-selector-bar">
+      <label>Select Operating Bank Account:</label>
+      <select [(ngModel)]="selectedBankAccountId" (change)="loadStatements()">
+        @for (acc of bankAccounts(); track acc.id) {
+          <option [value]="acc.id">{{ acc.accountName }} ({{ acc.bankName }} - {{ acc.maskedAccountNumber }})</option>
+        }
+      </select>
+    </div>
+
+    <!-- Statements List -->
+    <div class="table-container">
+      @if (loading()) {
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading bank reconciliation records...</p>
+        </div>
+      } @else if (statements().length === 0) {
+        <div class="empty-state">
+          <h3>No Bank Statements Found</h3>
+          <p>Import a CSV statement to begin bank reconciliation for this account.</p>
+          <button class="btn btn-primary" (click)="openImportModal()">Import First Statement</button>
+        </div>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Period</th>
+              <th>Bank Account</th>
+              <th>File Name</th>
+              <th>Total Lines</th>
+              <th>Matched Lines</th>
+              <th class="text-right">Statement Balance</th>
+              <th>Status</th>
+              <th class="text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (st of statements(); track st.id) {
+              <tr>
+                <td class="font-bold">{{ st.statementStartDate }} to {{ st.statementEndDate }}</td>
+                <td>{{ st.bankAccountName }}</td>
+                <td class="font-mono text-sm">{{ st.filename }}</td>
+                <td>{{ st.totalLines }}</td>
+                <td>
+                  <span class="text-success font-bold">{{ st.reconciledLines }}</span> / {{ st.totalLines }}
+                </td>
+                <td class="text-right font-mono">{{ formatPaise(st.closingBalancePaise) }}</td>
+                <td>
+                  <span class="status-badge" [ngClass]="'status-' + st.status.toLowerCase()">{{ st.status }}</span>
+                </td>
+                <td class="text-center">
+                  <button class="btn btn-sm btn-outline" (click)="openWorkspace(st.id)">
+                    Open Workspace
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  } @else {
+    <!-- Active Reconciliation Workspace -->
+    @if (currentWorkspace(); as ws) {
+      <div class="workspace-kpis">
+        <div class="kpi-card">
+          <span class="label">Statement Closing Balance</span>
+          <span class="amount font-mono">{{ formatPaise(ws.statementBalancePaise) }}</span>
+        </div>
+        <div class="kpi-card">
+          <span class="label">General Ledger Balance</span>
+          <span class="amount font-mono">{{ formatPaise(ws.bookBalancePaise) }}</span>
+        </div>
+        <div class="kpi-card" [class.kpi-danger]="ws.differencePaise !== 0" [class.kpi-success]="ws.differencePaise === 0">
+          <span class="label">Unreconciled Difference</span>
+          <span class="amount font-mono">{{ formatPaise(ws.differencePaise) }}</span>
+        </div>
+      </div>
+
+      <!-- Match Action Bar -->
+      <div class="match-action-bar">
+        <div class="selected-summary">
+          <span>Selected Statement Line: <strong>{{ selectedStatementLine() ? selectedStatementLine()?.description : '(None)' }}</strong></span>
+          <span>Selected GL Line: <strong>{{ selectedGlLine() ? selectedGlLine()?.narration : '(None)' }}</strong></span>
+        </div>
+        <button class="btn btn-primary" [disabled]="!selectedStatementLine() || !selectedGlLine() || processing()" (click)="matchLines()">
+          Link & Match Selected
+        </button>
+      </div>
+
+      <!-- Split Reconciliation Panes -->
+      <div class="split-panes">
+        <!-- Left Pane: Statement Lines -->
+        <div class="pane">
+          <div class="pane-header">
+            <h3>Bank Statement Transactions ({{ ws.statementLines.length }})</h3>
+          </div>
+          <div class="pane-body">
+            @for (line of ws.statementLines; track line.id) {
+              <div
+                class="line-item"
+                [class.selected]="selectedStatementLine()?.id === line.id"
+                [class.matched]="line.isReconciled"
+                (click)="selectStatementLine(line)"
+              >
+                <div class="line-top">
+                  <span class="date">{{ line.transactionDate }}</span>
+                  <span class="ref font-mono">{{ line.referenceNumber || 'No Ref' }}</span>
+                  <span class="amount font-mono font-bold" [class.credit]="line.depositCreditPaise > 0" [class.debit]="line.withdrawalDebitPaise > 0">
+                    {{ line.depositCreditPaise > 0 ? '+' + formatPaise(line.depositCreditPaise) : '-' + formatPaise(line.withdrawalDebitPaise) }}
+                  </span>
+                </div>
+                <div class="line-bottom">
+                  <span class="desc">{{ line.description }}</span>
+                  @if (line.isReconciled) {
+                    <span class="matched-tag">
+                      ✓ Matched
+                      <button class="unmatch-link" (click)="unmatchLine(line); $event.stopPropagation()">Unlink</button>
+                    </span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Right Pane: Unmatched GL Lines -->
+        <div class="pane">
+          <div class="pane-header">
+            <h3>Unreconciled General Ledger Transactions ({{ ws.unmatchedLedgerLines.length }})</h3>
+          </div>
+          <div class="pane-body">
+            @if (ws.unmatchedLedgerLines.length === 0) {
+              <div class="empty-pane">
+                <p>All internal GL transactions in this period are reconciled.</p>
+              </div>
+            } @else {
+              @for (gl of ws.unmatchedLedgerLines; track gl.journalLineId) {
+                <div
+                  class="line-item"
+                  [class.selected]="selectedGlLine()?.journalLineId === gl.journalLineId"
+                  (click)="selectGlLine(gl)"
+                >
+                  <div class="line-top">
+                    <span class="date">{{ gl.voucherDate }} &bull; {{ gl.voucherNumber }}</span>
+                    <span class="amount font-mono font-bold" [class.credit]="gl.creditPaise > 0" [class.debit]="gl.debitPaise > 0">
+                      {{ gl.debitPaise > 0 ? '+' + formatPaise(gl.debitPaise) : '-' + formatPaise(gl.creditPaise) }}
+                    </span>
+                  </div>
+                  <div class="line-bottom">
+                    <span class="desc">{{ gl.narration }}</span>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- Import Modal -->
+  @if (isImportModalOpen()) {
+    <div class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h2>Import Bank Statement (CSV)</h2>
+          <button class="close-btn" (click)="closeImportModal()">✕</button>
+        </div>
+
+        <form [formGroup]="importForm" (ngSubmit)="submitImport()">
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Bank Account *</label>
+                <select formControlName="bankAccountId">
+                  @for (acc of bankAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.accountName }} ({{ acc.bankName }})</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Start Date *</label>
+                <input type="date" formControlName="statementStartDate" />
+              </div>
+              <div class="form-group">
+                <label>End Date *</label>
+                <input type="date" formControlName="statementEndDate" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Opening Balance (₹) *</label>
+                <input type="number" step="0.01" formControlName="openingBalanceRupees" placeholder="0.00" />
+              </div>
+              <div class="form-group">
+                <label>Closing Balance (₹) *</label>
+                <input type="number" step="0.01" formControlName="closingBalanceRupees" placeholder="0.00" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>CSV Content (Date, Description, Ref, Debit, Credit, Balance) *</label>
+              <textarea rows="6" formControlName="csvContent" class="font-mono text-sm"></textarea>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="closeImportModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="processing()">
+              {{ processing() ? 'Importing CSV...' : 'Parse & Open Workspace' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

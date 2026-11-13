@@ -1,0 +1,331 @@
+<div class="workspace-container">
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">Customer Receipts & Collections</h1>
+      <p class="page-subtitle">Record remittances, multi-invoice settlements, advances, and companion reversals</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="showCreateModal = true">
+        <span class="btn-icon">➕</span> Record New Receipt
+      </button>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="loading-state">Loading receipts register...</div>
+  } @else if (receipts().length === 0) {
+    <div class="empty-state">No customer receipts registered yet.</div>
+  } @else {
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Receipt #</th>
+            <th>Customer</th>
+            <th>Date</th>
+            <th>Method</th>
+            <th>Bank / Cash Account</th>
+            <th>Ref #</th>
+            <th class="text-right">Total Amount</th>
+            <th class="text-right">Allocated</th>
+            <th class="text-right">Advance Balance</th>
+            <th>Status</th>
+            <th>Voucher</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of receipts(); track r.id) {
+            <tr>
+              <td class="font-mono font-bold">{{ r.receiptNumber }}</td>
+              <td>{{ r.customerName }}</td>
+              <td>{{ r.receiptDate }}</td>
+              <td><span class="method-tag">{{ r.paymentMethod }}</span></td>
+              <td>{{ r.bankCashAccountName }}</td>
+              <td>{{ r.referenceNumber || '—' }}</td>
+              <td class="text-right font-bold">₹{{ formatPaise(r.totalAmountPaise) }}</td>
+              <td class="text-right text-success">₹{{ formatPaise(r.allocatedAmountPaise) }}</td>
+              <td class="text-right text-warn">₹{{ formatPaise(r.unallocatedAmountPaise) }}</td>
+              <td>
+                <magic-status-badge
+                  [label]="r.status"
+                  [tone]="r.status === 'SUBMITTED' ? 'ok' : 'error'"
+                />
+              </td>
+              <td class="font-mono text-muted">{{ r.voucherNumber }}</td>
+              <td>
+                <button type="button" class="btn-link" (click)="selectedReceipt.set(r)">
+                  View & Print
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- New Receipt Modal -->
+  @if (showCreateModal) {
+    <div class="modal-backdrop" (click)="showCreateModal = false">
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <h3>Record Customer Receipt</h3>
+          <button type="button" class="close-btn" (click)="showCreateModal = false">✕</button>
+        </header>
+
+        <form (ngSubmit)="submitReceipt()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="cust-select">Customer *</label>
+              <select
+                id="cust-select"
+                [(ngModel)]="formCustomerId"
+                name="formCustomerId"
+                (change)="onCustomerSelected()"
+                required
+              >
+                <option value="">-- Select Customer --</option>
+                @for (c of customers(); track c.id) {
+                  <option [value]="c.id">{{ c.name }} ({{ c.customerCode }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="rcpt-date">Receipt Date *</label>
+              <input
+                id="rcpt-date"
+                type="date"
+                [(ngModel)]="formReceiptDate"
+                name="formReceiptDate"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="rcpt-method">Payment Tender *</label>
+              <select
+                id="rcpt-method"
+                [(ngModel)]="formPaymentMethod"
+                name="formPaymentMethod"
+                required
+              >
+                <option value="BankTransfer">Bank Transfer (NEFT/RTGS/IMPS)</option>
+                <option value="UPI">UPI / QR Payment</option>
+                <option value="Cash">Cash on Hand</option>
+                <option value="Cheque">Cheque / Demand Draft</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="bank-select">Deposit Into Account *</label>
+              <select
+                id="bank-select"
+                [(ngModel)]="formBankAccountId"
+                name="formBankAccountId"
+                required
+              >
+                @for (b of bankAccounts(); track b.id) {
+                  <option [value]="b.id">{{ b.accountName }} ({{ b.accountType }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="ref-num">Transaction / Cheque Ref #</label>
+              <input
+                id="ref-num"
+                type="text"
+                placeholder="UTR or Cheque Number"
+                [(ngModel)]="formReferenceNumber"
+                name="formReferenceNumber"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="total-amt">Total Amount Received (₹) *</label>
+              <input
+                id="total-amt"
+                type="number"
+                step="0.01"
+                min="0.01"
+                [(ngModel)]="formTotalAmount"
+                name="formTotalAmount"
+                (input)="autoAllocate()"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="narration">Receipt Remarks / Narration</label>
+            <input
+              id="narration"
+              type="text"
+              placeholder="e.g. Cleared pending invoices for Nov"
+              [(ngModel)]="formNarration"
+              name="formNarration"
+            />
+          </div>
+
+          <!-- Allocation Sub-Grid -->
+          <div class="allocation-section">
+            <div class="alloc-header">
+              <h4>Invoice Settlement Distribution</h4>
+              <button type="button" class="btn btn-secondary btn-sm" (click)="autoAllocate()">
+                Auto-Distribute (FIFO)
+              </button>
+            </div>
+
+            @if (openArItems().length === 0) {
+              <p class="text-muted text-sm">No open invoices for this customer. Full payment will be recorded as unallocated customer advance.</p>
+            } @else {
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Settle?</th>
+                    <th>Invoice / Document #</th>
+                    <th>Due Date</th>
+                    <th class="text-right">Outstanding</th>
+                    <th class="text-right">Allocate (Paise)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of openArItems(); track row.arItemId) {
+                    <tr>
+                      <td>
+                        <input type="checkbox" [(ngModel)]="row.isSelected" [name]="'sel_' + row.arItemId" />
+                      </td>
+                      <td class="font-mono">{{ row.documentNumber }}</td>
+                      <td>{{ row.dueDate }}</td>
+                      <td class="text-right">₹{{ formatPaise(row.outstandingPaise) }}</td>
+                      <td class="text-right">
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          [max]="row.outstandingPaise"
+                          [(ngModel)]="row.allocatedPaise"
+                          [name]="'alloc_' + row.arItemId"
+                          class="alloc-input text-right"
+                          (input)="row.isSelected = row.allocatedPaise > 0"
+                        />
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+
+            <div class="alloc-summary">
+              <div>Total Received: <strong>₹{{ (formTotalAmount || 0).toFixed(2) }}</strong></div>
+              <div>Total Allocated: <strong class="text-success">₹{{ (calculateAllocatedPaise() / 100).toFixed(2) }}</strong></div>
+              <div>Advance Balance: <strong class="text-warn">₹{{ (calculateUnallocatedPaise() / 100).toFixed(2) }}</strong></div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="showCreateModal = false">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="isCreating() || formTotalAmount <= 0">
+              {{ isCreating() ? 'Posting Receipt...' : 'Confirm & Post Receipt' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Receipt Detail & Print Modal -->
+  @if (selectedReceipt(); as receipt) {
+    <div class="modal-backdrop" (click)="selectedReceipt.set(null)">
+      <div class="modal-card modal-lg print-card" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <div>
+            <h3>Receipt Advice: {{ receipt.receiptNumber }}</h3>
+            <p class="modal-subtitle">Journal Voucher: {{ receipt.voucherNumber }}</p>
+          </div>
+          <button type="button" class="close-btn" (click)="selectedReceipt.set(null)">✕</button>
+        </header>
+
+        <div class="receipt-print-body">
+          <div class="receipt-header-row">
+            <div>
+              <p><strong>Customer:</strong> {{ receipt.customerName }}</p>
+              <p><strong>Receipt Date:</strong> {{ receipt.receiptDate }}</p>
+            </div>
+            <div>
+              <p><strong>Payment Method:</strong> {{ receipt.paymentMethod }}</p>
+              <p><strong>Reference / UTR:</strong> {{ receipt.referenceNumber || 'N/A' }}</p>
+            </div>
+            <div>
+              <p><strong>Deposited To:</strong> {{ receipt.bankCashAccountName }}</p>
+              <p><strong>Status:</strong> {{ receipt.status }}</p>
+            </div>
+          </div>
+
+          <div class="receipt-amount-banner">
+            <span class="label">Total Amount Received:</span>
+            <span class="val">₹{{ formatPaise(receipt.totalAmountPaise) }}</span>
+          </div>
+
+          @if (receipt.allocations.length > 0) {
+            <h5>Settlement Allocations</h5>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Invoice Document #</th>
+                  <th>Allocation Date</th>
+                  <th class="text-right">Settled Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of receipt.allocations; track a.id) {
+                  <tr>
+                    <td class="font-mono">{{ a.documentNumber }}</td>
+                    <td>{{ a.allocationDate }}</td>
+                    <td class="text-right">₹{{ formatPaise(a.allocatedAmountPaise) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          @if (receipt.unallocatedAmountPaise > 0) {
+            <div class="advance-box">
+              <span>Customer Advance Token:</span>
+              <strong>₹{{ formatPaise(receipt.unallocatedAmountPaise) }}</strong>
+            </div>
+          }
+
+          <p class="receipt-narration"><strong>Narration:</strong> {{ receipt.narration }}</p>
+        </div>
+
+        <div class="modal-footer">
+          @if (receipt.status === 'SUBMITTED') {
+            <div class="cancel-group">
+              <input
+                type="text"
+                placeholder="Reason for cancellation reversal"
+                [(ngModel)]="cancelReason"
+                class="cancel-input"
+              />
+              <button
+                type="button"
+                class="btn btn-danger btn-sm"
+                [disabled]="isCancelling() || !cancelReason"
+                (click)="confirmCancelReceipt()"
+              >
+                {{ isCancelling() ? 'Reversing...' : 'Reverse Receipt' }}
+              </button>
+            </div>
+          }
+          <div class="action-buttons">
+            <button type="button" class="btn btn-secondary" (click)="printReceipt()">🖨️ Print Receipt</button>
+            <button type="button" class="btn btn-secondary" (click)="selectedReceipt.set(null)">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

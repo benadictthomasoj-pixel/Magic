@@ -93,6 +93,16 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<Magic.Application.Sales.Services.ICashierSessionService, Magic.Infrastructure.Sales.Services.CashierSessionService>();
         services.AddScoped<Magic.Application.Sales.Services.ISalesReportingService, Magic.Infrastructure.Sales.Services.SalesReportingService>();
 
+        // Financial Management & Treasury Services (Phase E)
+        services.AddScoped<Magic.Application.Finance.Services.IReceivablesService, Magic.Infrastructure.Finance.Services.ReceivablesService>();
+        services.AddScoped<Magic.Application.Finance.Services.ICustomerReceiptService, Magic.Infrastructure.Finance.Services.CustomerReceiptService>();
+        services.AddScoped<Magic.Application.Finance.Services.IPayablesService, Magic.Infrastructure.Finance.Services.PayablesService>();
+        services.AddScoped<Magic.Application.Finance.Services.ISupplierPaymentService, Magic.Infrastructure.Finance.Services.SupplierPaymentService>();
+        services.AddScoped<Magic.Application.Finance.Services.IBankCashAccountService, Magic.Infrastructure.Finance.Services.BankCashAccountService>();
+        services.AddScoped<Magic.Application.Finance.Services.ITreasuryService, Magic.Infrastructure.Finance.Services.TreasuryService>();
+        services.AddScoped<Magic.Application.Finance.Services.IBankReconciliationService, Magic.Infrastructure.Finance.Services.BankReconciliationService>();
+        services.AddScoped<Magic.Application.Finance.Services.IFinancialReportingService, Magic.Infrastructure.Finance.Services.FinancialReportingService>();
+
         // Scoped request security/branch/terminal context
         services.AddScoped<MutableRequestContext>();
         services.AddScoped<IRequestContextSetter>(sp => sp.GetRequiredService<MutableRequestContext>());

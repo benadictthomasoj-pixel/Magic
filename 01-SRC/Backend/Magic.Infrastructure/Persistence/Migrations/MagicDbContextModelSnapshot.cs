@@ -929,6 +929,244 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BankCashAccountRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AccountName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("account_name");
+
+                    b.Property<string>("AccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("account_number");
+
+                    b.Property<string>("AccountType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("Bank")
+                        .HasColumnName("account_type");
+
+                    b.Property<string>("BankName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("bank_name");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<string>("BranchName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("branch_name");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<long>("CurrentBalancePaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("current_balance_paise");
+
+                    b.Property<Guid>("GlAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("gl_account_id");
+
+                    b.Property<string>("IfscCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("ifsc_code");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("MaskedAccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("masked_account_number");
+
+                    b.Property<long>("OpeningBalancePaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("opening_balance_paise");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bank_cash_accounts");
+
+                    b.HasIndex("GlAccountId");
+
+                    b.HasIndex("CompanyId", "BranchId", "AccountName")
+                        .HasDatabaseName("ix_bank_cash_accounts_company_branch");
+
+                    b.ToTable("bank_cash_accounts", "finance");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BankStatementLineRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("BalancePaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("balance_paise");
+
+                    b.Property<long>("DepositCreditPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("deposit_credit_paise");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsReconciled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_reconciled");
+
+                    b.Property<string>("MatchType")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("match_type");
+
+                    b.Property<DateTimeOffset?>("MatchedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("matched_at_utc");
+
+                    b.Property<Guid?>("MatchedVoucherLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("matched_voucher_line_id");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reference_number");
+
+                    b.Property<Guid>("StatementId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("statement_id");
+
+                    b.Property<DateOnly>("TransactionDate")
+                        .HasColumnType("date")
+                        .HasColumnName("transaction_date");
+
+                    b.Property<DateOnly?>("ValueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("value_date");
+
+                    b.Property<long>("WithdrawalDebitPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("withdrawal_debit_paise");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bank_statement_lines");
+
+                    b.HasIndex("MatchedVoucherLineId");
+
+                    b.HasIndex("StatementId", "IsReconciled")
+                        .HasDatabaseName("ix_bank_statement_lines_reconciled");
+
+                    b.ToTable("bank_statement_lines", "finance", t =>
+                        {
+                            t.HasCheckConstraint("chk_stmt_line_amounts", "withdrawal_debit_paise >= 0 AND deposit_credit_paise >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BankStatementRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BankAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bank_account_id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<long>("ClosingBalancePaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("closing_balance_paise");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<string>("Filename")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("filename");
+
+                    b.Property<DateTimeOffset>("ImportedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("imported_at_utc");
+
+                    b.Property<Guid>("ImportedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("imported_by_user_id");
+
+                    b.Property<long>("OpeningBalancePaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("opening_balance_paise");
+
+                    b.Property<DateOnly>("StatementEndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("statement_end_date");
+
+                    b.Property<DateOnly>("StatementStartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("statement_start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("OPEN")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bank_statements");
+
+                    b.HasIndex("BankAccountId");
+
+                    b.ToTable("bank_statements", "finance");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BrandRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1344,6 +1582,159 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("customer_groups", "commercial");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CustomerReceiptAllocationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AllocatedAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("allocated_amount_paise");
+
+                    b.Property<DateOnly>("AllocationDate")
+                        .HasColumnType("date")
+                        .HasColumnName("allocation_date");
+
+                    b.Property<Guid>("ArItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ar_item_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receipt_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_customer_receipt_allocations");
+
+                    b.HasIndex("ArItemId");
+
+                    b.HasIndex("ReceiptId");
+
+                    b.ToTable("customer_receipt_allocations", "finance", t =>
+                        {
+                            t.HasCheckConstraint("chk_receipt_alloc_positive", "allocated_amount_paise > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CustomerReceiptRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AllocatedAmountPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("allocated_amount_paise");
+
+                    b.Property<Guid>("BankCashAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bank_cash_account_id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("Narration")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasDefaultValue("")
+                        .HasColumnName("narration");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("payment_method");
+
+                    b.Property<DateOnly>("ReceiptDate")
+                        .HasColumnType("date")
+                        .HasColumnName("receipt_date");
+
+                    b.Property<string>("ReceiptNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("receipt_number");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reference_number");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("SUBMITTED")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TotalAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_amount_paise");
+
+                    b.Property<long>("UnallocatedAmountPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("unallocated_amount_paise");
+
+                    b.Property<Guid>("VoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("voucher_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_customer_receipts");
+
+                    b.HasIndex("BankCashAccountId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("ReceiptNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_customer_receipts_number");
+
+                    b.HasIndex("VoucherId");
+
+                    b.HasIndex("CompanyId", "ReceiptDate")
+                        .HasDatabaseName("ix_customer_receipts_date");
+
+                    b.HasIndex("CompanyId", "BranchId", "CustomerId")
+                        .HasDatabaseName("ix_customer_receipts_customer");
+
+                    b.ToTable("customer_receipts", "finance", t =>
+                        {
+                            t.HasCheckConstraint("chk_receipt_amounts", "allocated_amount_paise + unallocated_amount_paise = total_amount_paise");
+
+                            t.HasCheckConstraint("chk_receipt_total_positive", "total_amount_paise > 0");
+                        });
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CustomerRecord", b =>
@@ -3783,6 +4174,332 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.ToTable("supplier_bank_accounts", "commercial");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SupplierInvoiceLineRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(14, 4)
+                        .HasColumnType("numeric(14,4)")
+                        .HasColumnName("quantity");
+
+                    b.Property<long>("TaxAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tax_amount_paise");
+
+                    b.Property<decimal>("TaxRatePercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("tax_rate_percentage");
+
+                    b.Property<long>("TotalAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_amount_paise");
+
+                    b.Property<long>("UnitPricePaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unit_price_paise");
+
+                    b.HasKey("Id")
+                        .HasName("pk_supplier_invoice_lines");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("supplier_invoice_lines", "finance");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SupplierInvoiceRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("due_date");
+
+                    b.Property<Guid?>("GrnId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("grn_id");
+
+                    b.Property<DateOnly>("InvoiceDate")
+                        .HasColumnType("date")
+                        .HasColumnName("invoice_date");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("invoice_number");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasDefaultValue("")
+                        .HasColumnName("notes");
+
+                    b.Property<long>("OutstandingAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("outstanding_amount_paise");
+
+                    b.Property<Guid?>("PoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("po_id");
+
+                    b.Property<long>("SettledAmountPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("settled_amount_paise");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("APPROVED")
+                        .HasColumnName("status");
+
+                    b.Property<long>("SubTotalPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("sub_total_paise");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_id");
+
+                    b.Property<string>("SystemInvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("system_invoice_number");
+
+                    b.Property<long>("TaxAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tax_amount_paise");
+
+                    b.Property<long>("TotalAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_amount_paise");
+
+                    b.Property<Guid>("VoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("voucher_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_supplier_invoices");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("SystemInvoiceNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_supplier_invoices_system_number");
+
+                    b.HasIndex("VoucherId");
+
+                    b.HasIndex("CompanyId", "DueDate")
+                        .HasDatabaseName("ix_supplier_invoices_due_date");
+
+                    b.HasIndex("CompanyId", "SupplierId", "InvoiceNumber")
+                        .HasDatabaseName("ix_supplier_invoices_supplier_number");
+
+                    b.ToTable("supplier_invoices", "finance", t =>
+                        {
+                            t.HasCheckConstraint("chk_supplier_invoice_amounts", "settled_amount_paise + outstanding_amount_paise = total_amount_paise");
+
+                            t.HasCheckConstraint("chk_supplier_invoice_positive", "total_amount_paise > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SupplierPaymentAllocationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AllocatedAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("allocated_amount_paise");
+
+                    b.Property<DateOnly>("AllocationDate")
+                        .HasColumnType("date")
+                        .HasColumnName("allocation_date");
+
+                    b.Property<Guid>("ApItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ap_item_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("PaymentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payment_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_supplier_payment_allocations");
+
+                    b.HasIndex("ApItemId");
+
+                    b.HasIndex("PaymentId");
+
+                    b.ToTable("supplier_payment_allocations", "finance", t =>
+                        {
+                            t.HasCheckConstraint("chk_payment_alloc_positive", "allocated_amount_paise > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SupplierPaymentRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AllocatedAmountPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("allocated_amount_paise");
+
+                    b.Property<Guid>("BankCashAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bank_cash_account_id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Narration")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasDefaultValue("")
+                        .HasColumnName("narration");
+
+                    b.Property<DateOnly>("PaymentDate")
+                        .HasColumnType("date")
+                        .HasColumnName("payment_date");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("payment_method");
+
+                    b.Property<string>("PaymentNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("payment_number");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reference_number");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("SUBMITTED")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_id");
+
+                    b.Property<long>("TotalAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_amount_paise");
+
+                    b.Property<long>("UnallocatedAmountPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("unallocated_amount_paise");
+
+                    b.Property<Guid>("VoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("voucher_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_supplier_payments");
+
+                    b.HasIndex("BankCashAccountId");
+
+                    b.HasIndex("PaymentNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_supplier_payments_number");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("VoucherId");
+
+                    b.HasIndex("CompanyId", "PaymentDate")
+                        .HasDatabaseName("ix_supplier_payments_date");
+
+                    b.HasIndex("CompanyId", "BranchId", "SupplierId")
+                        .HasDatabaseName("ix_supplier_payments_supplier");
+
+                    b.ToTable("supplier_payments", "finance", t =>
+                        {
+                            t.HasCheckConstraint("chk_payment_amounts", "allocated_amount_paise + unallocated_amount_paise = total_amount_paise");
+
+                            t.HasCheckConstraint("chk_payment_total_positive", "total_amount_paise > 0");
+                        });
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SupplierRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4058,6 +4775,103 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("terminals", "security");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.TreasuryTransactionRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_paise");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<Guid?>("DestinationAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("destination_account_id");
+
+                    b.Property<string>("Narration")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasDefaultValue("")
+                        .HasColumnName("narration");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reference_number");
+
+                    b.Property<Guid>("SourceAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_account_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("POSTED")
+                        .HasColumnName("status");
+
+                    b.Property<DateOnly>("TransactionDate")
+                        .HasColumnType("date")
+                        .HasColumnName("transaction_date");
+
+                    b.Property<string>("TransactionNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("transaction_number");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("transaction_type");
+
+                    b.Property<Guid>("VoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("voucher_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_treasury_transactions");
+
+                    b.HasIndex("DestinationAccountId");
+
+                    b.HasIndex("SourceAccountId");
+
+                    b.HasIndex("TransactionNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_treasury_transactions_number");
+
+                    b.HasIndex("VoucherId");
+
+                    b.HasIndex("CompanyId", "TransactionDate")
+                        .HasDatabaseName("ix_treasury_transactions_date");
+
+                    b.ToTable("treasury_transactions", "finance", t =>
+                        {
+                            t.HasCheckConstraint("chk_treasury_amount_positive", "amount_paise > 0");
+                        });
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.UnitOfMeasureRecord", b =>
@@ -4464,6 +5278,46 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("ReversalVoucher");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BankCashAccountRecord", b =>
+                {
+                    b.HasOne("Magic.Domain.Accounting.Entities.Account", "GlAccount")
+                        .WithMany()
+                        .HasForeignKey("GlAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("GlAccount");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BankStatementLineRecord", b =>
+                {
+                    b.HasOne("Magic.Domain.Accounting.Entities.JournalLine", "MatchedVoucherLine")
+                        .WithMany()
+                        .HasForeignKey("MatchedVoucherLineId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.BankStatementRecord", "Statement")
+                        .WithMany("Lines")
+                        .HasForeignKey("StatementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MatchedVoucherLine");
+
+                    b.Navigation("Statement");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BankStatementRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.BankCashAccountRecord", "BankAccount")
+                        .WithMany()
+                        .HasForeignKey("BankAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BankAccount");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CashMovementRecord", b =>
                 {
                     b.HasOne("Magic.Infrastructure.Persistence.Entities.CashierSessionRecord", "CashierSession")
@@ -4519,6 +5373,52 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CustomerReceiptAllocationRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ArSubledgerItemRecord", "ArItem")
+                        .WithMany()
+                        .HasForeignKey("ArItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CustomerReceiptRecord", "Receipt")
+                        .WithMany("Allocations")
+                        .HasForeignKey("ReceiptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ArItem");
+
+                    b.Navigation("Receipt");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CustomerReceiptRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.BankCashAccountRecord", "BankCashAccount")
+                        .WithMany()
+                        .HasForeignKey("BankCashAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CustomerRecord", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Domain.Accounting.Entities.JournalVoucher", "Voucher")
+                        .WithMany()
+                        .HasForeignKey("VoucherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BankCashAccount");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Voucher");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CustomerRecord", b =>
@@ -5261,6 +6161,115 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("Supplier");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SupplierInvoiceLineRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SupplierInvoiceRecord", "Invoice")
+                        .WithMany("Lines")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ProductRecord", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SupplierInvoiceRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SupplierRecord", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Domain.Accounting.Entities.JournalVoucher", "Voucher")
+                        .WithMany()
+                        .HasForeignKey("VoucherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Supplier");
+
+                    b.Navigation("Voucher");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SupplierPaymentAllocationRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ApSubledgerItemRecord", "ApItem")
+                        .WithMany()
+                        .HasForeignKey("ApItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SupplierPaymentRecord", "Payment")
+                        .WithMany("Allocations")
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApItem");
+
+                    b.Navigation("Payment");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SupplierPaymentRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.BankCashAccountRecord", "BankCashAccount")
+                        .WithMany()
+                        .HasForeignKey("BankCashAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SupplierRecord", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Domain.Accounting.Entities.JournalVoucher", "Voucher")
+                        .WithMany()
+                        .HasForeignKey("VoucherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BankCashAccount");
+
+                    b.Navigation("Supplier");
+
+                    b.Navigation("Voucher");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.TreasuryTransactionRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.BankCashAccountRecord", "DestinationAccount")
+                        .WithMany()
+                        .HasForeignKey("DestinationAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.BankCashAccountRecord", "SourceAccount")
+                        .WithMany()
+                        .HasForeignKey("SourceAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Domain.Accounting.Entities.JournalVoucher", "Voucher")
+                        .WithMany()
+                        .HasForeignKey("VoucherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DestinationAccount");
+
+                    b.Navigation("SourceAccount");
+
+                    b.Navigation("Voucher");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.UserBranchAssignmentRecord", b =>
                 {
                     b.HasOne("Magic.Infrastructure.Persistence.Entities.UserRecord", "User")
@@ -5317,6 +6326,11 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("Lines");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BankStatementRecord", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BrandRecord", b =>
                 {
                     b.Navigation("Products");
@@ -5341,6 +6355,11 @@ namespace Magic.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CustomerGroupRecord", b =>
                 {
                     b.Navigation("Customers");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CustomerReceiptRecord", b =>
+                {
+                    b.Navigation("Allocations");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CustomerRecord", b =>
@@ -5425,6 +6444,16 @@ namespace Magic.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.StorageLocationRecord", b =>
                 {
                     b.Navigation("Children");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SupplierInvoiceRecord", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SupplierPaymentRecord", b =>
+                {
+                    b.Navigation("Allocations");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SupplierRecord", b =>

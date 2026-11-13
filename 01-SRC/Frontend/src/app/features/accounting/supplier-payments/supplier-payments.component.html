@@ -1,0 +1,331 @@
+<div class="workspace-container">
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">Supplier Payments & Settlements</h1>
+      <p class="page-subtitle">Disburse vendor payments, settle purchase bills, manage advances, and companion reversals</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="showCreateModal = true">
+        <span class="btn-icon">💸</span> Disburse Payment
+      </button>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="loading-state">Loading supplier disbursements register...</div>
+  } @else if (payments().length === 0) {
+    <div class="empty-state">No supplier payments disbursed yet.</div>
+  } @else {
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Payment #</th>
+            <th>Supplier</th>
+            <th>Date</th>
+            <th>Method</th>
+            <th>Disbursed From</th>
+            <th>Ref / UTR #</th>
+            <th class="text-right">Total Paid</th>
+            <th class="text-right">Allocated</th>
+            <th class="text-right">Advance Balance</th>
+            <th>Status</th>
+            <th>Voucher</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of payments(); track p.id) {
+            <tr>
+              <td class="font-mono font-bold">{{ p.paymentNumber }}</td>
+              <td>{{ p.supplierName }}</td>
+              <td>{{ p.paymentDate }}</td>
+              <td><span class="method-tag">{{ p.paymentMethod }}</span></td>
+              <td>{{ p.bankCashAccountName }}</td>
+              <td>{{ p.referenceNumber || '—' }}</td>
+              <td class="text-right font-bold">₹{{ formatPaise(p.totalAmountPaise) }}</td>
+              <td class="text-right text-success">₹{{ formatPaise(p.allocatedAmountPaise) }}</td>
+              <td class="text-right text-warn">₹{{ formatPaise(p.unallocatedAmountPaise) }}</td>
+              <td>
+                <magic-status-badge
+                  [label]="p.status"
+                  [tone]="p.status === 'SUBMITTED' ? 'ok' : 'error'"
+                />
+              </td>
+              <td class="font-mono text-muted">{{ p.voucherNumber }}</td>
+              <td>
+                <button type="button" class="btn-link" (click)="selectedPayment.set(p)">
+                  Advice & Reversal
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- New Payment Modal -->
+  @if (showCreateModal) {
+    <div class="modal-backdrop" (click)="showCreateModal = false">
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <h3>Disburse Supplier Payment</h3>
+          <button type="button" class="close-btn" (click)="showCreateModal = false">✕</button>
+        </header>
+
+        <form (ngSubmit)="submitPayment()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="supp-select">Supplier *</label>
+              <select
+                id="supp-select"
+                [(ngModel)]="formSupplierId"
+                name="formSupplierId"
+                (change)="onSupplierSelected()"
+                required
+              >
+                <option value="">-- Select Supplier --</option>
+                @for (s of suppliers(); track s.id) {
+                  <option [value]="s.id">{{ s.name }} ({{ s.supplierCode }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="pay-date">Payment Date *</label>
+              <input
+                id="pay-date"
+                type="date"
+                [(ngModel)]="formPaymentDate"
+                name="formPaymentDate"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="pay-method">Payment Tender *</label>
+              <select
+                id="pay-method"
+                [(ngModel)]="formPaymentMethod"
+                name="formPaymentMethod"
+                required
+              >
+                <option value="BankTransfer">Bank Transfer (NEFT/RTGS/IMPS)</option>
+                <option value="UPI">UPI / Net Banking</option>
+                <option value="Cash">Cash on Hand</option>
+                <option value="Cheque">Cheque</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="bank-select">Disbursed From Account *</label>
+              <select
+                id="bank-select"
+                [(ngModel)]="formBankAccountId"
+                name="formBankAccountId"
+                required
+              >
+                @for (b of bankAccounts(); track b.id) {
+                  <option [value]="b.id">{{ b.accountName }} (Balance: ₹{{ (b.currentBalancePaise / 100).toFixed(2) }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="ref-num">UTR / Reference / Cheque #</label>
+              <input
+                id="ref-num"
+                type="text"
+                placeholder="Bank UTR Number"
+                [(ngModel)]="formReferenceNumber"
+                name="formReferenceNumber"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="total-amt">Disbursement Amount (₹) *</label>
+              <input
+                id="total-amt"
+                type="number"
+                step="0.01"
+                min="0.01"
+                [(ngModel)]="formTotalAmount"
+                name="formTotalAmount"
+                (input)="autoAllocate()"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="narration">Payment Remarks / Narration</label>
+            <input
+              id="narration"
+              type="text"
+              placeholder="e.g. Cleared component bills for Nov"
+              [(ngModel)]="formNarration"
+              name="formNarration"
+            />
+          </div>
+
+          <!-- Allocation Sub-Grid -->
+          <div class="allocation-section">
+            <div class="alloc-header">
+              <h4>Purchase Bill Settlement Distribution</h4>
+              <button type="button" class="btn btn-secondary btn-sm" (click)="autoAllocate()">
+                Auto-Distribute (FIFO)
+              </button>
+            </div>
+
+            @if (openApItems().length === 0) {
+              <p class="text-muted text-sm">No open bills for this supplier. Full disbursement will be recorded as unallocated supplier advance.</p>
+            } @else {
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Settle?</th>
+                    <th>Supplier Bill / Ref #</th>
+                    <th>Due Date</th>
+                    <th class="text-right">Outstanding Liability</th>
+                    <th class="text-right">Allocate (Paise)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of openApItems(); track row.apItemId) {
+                    <tr>
+                      <td>
+                        <input type="checkbox" [(ngModel)]="row.isSelected" [name]="'sel_' + row.apItemId" />
+                      </td>
+                      <td class="font-mono">{{ row.billNumber }}</td>
+                      <td>{{ row.dueDate }}</td>
+                      <td class="text-right">₹{{ formatPaise(row.outstandingPaise) }}</td>
+                      <td class="text-right">
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          [max]="row.outstandingPaise"
+                          [(ngModel)]="row.allocatedPaise"
+                          [name]="'alloc_' + row.apItemId"
+                          class="alloc-input text-right"
+                          (input)="row.isSelected = row.allocatedPaise > 0"
+                        />
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+
+            <div class="alloc-summary">
+              <div>Total Disbursed: <strong>₹{{ (formTotalAmount || 0).toFixed(2) }}</strong></div>
+              <div>Total Allocated: <strong class="text-success">₹{{ (calculateAllocatedPaise() / 100).toFixed(2) }}</strong></div>
+              <div>Supplier Advance: <strong class="text-warn">₹{{ (calculateUnallocatedPaise() / 100).toFixed(2) }}</strong></div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="showCreateModal = false">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="isCreating() || formTotalAmount <= 0">
+              {{ isCreating() ? 'Posting Payment...' : 'Confirm & Disburse' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Payment Advice & Reversal Modal -->
+  @if (selectedPayment(); as p) {
+    <div class="modal-backdrop" (click)="selectedPayment.set(null)">
+      <div class="modal-card modal-lg print-card" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <div>
+            <h3>Payment Advice: {{ p.paymentNumber }}</h3>
+            <p class="modal-subtitle">Journal Voucher: {{ p.voucherNumber }}</p>
+          </div>
+          <button type="button" class="close-btn" (click)="selectedPayment.set(null)">✕</button>
+        </header>
+
+        <div class="receipt-print-body">
+          <div class="receipt-header-row">
+            <div>
+              <p><strong>Supplier:</strong> {{ p.supplierName }}</p>
+              <p><strong>Payment Date:</strong> {{ p.paymentDate }}</p>
+            </div>
+            <div>
+              <p><strong>Payment Method:</strong> {{ p.paymentMethod }}</p>
+              <p><strong>Reference / UTR:</strong> {{ p.referenceNumber || 'N/A' }}</p>
+            </div>
+            <div>
+              <p><strong>Paid From:</strong> {{ p.bankCashAccountName }}</p>
+              <p><strong>Status:</strong> {{ p.status }}</p>
+            </div>
+          </div>
+
+          <div class="receipt-amount-banner">
+            <span class="label">Total Amount Disbursed:</span>
+            <span class="val">₹{{ formatPaise(p.totalAmountPaise) }}</span>
+          </div>
+
+          @if (p.allocations.length > 0) {
+            <h5>Bill Settlement Allocations</h5>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Supplier Bill #</th>
+                  <th>Allocation Date</th>
+                  <th class="text-right">Settled Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of p.allocations; track a.id) {
+                  <tr>
+                    <td class="font-mono">{{ a.documentNumber }}</td>
+                    <td>{{ a.allocationDate }}</td>
+                    <td class="text-right">₹{{ formatPaise(a.allocatedAmountPaise) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          @if (p.unallocatedAmountPaise > 0) {
+            <div class="advance-box">
+              <span>Unallocated Supplier Advance:</span>
+              <strong>₹{{ formatPaise(p.unallocatedAmountPaise) }}</strong>
+            </div>
+          }
+
+          <p class="receipt-narration"><strong>Narration:</strong> {{ p.narration }}</p>
+        </div>
+
+        <div class="modal-footer">
+          @if (p.status === 'SUBMITTED') {
+            <div class="cancel-group">
+              <input
+                type="text"
+                placeholder="Reason for payment reversal"
+                [(ngModel)]="cancelReason"
+                class="cancel-input"
+              />
+              <button
+                type="button"
+                class="btn btn-danger btn-sm"
+                [disabled]="isCancelling() || !cancelReason"
+                (click)="confirmCancelPayment()"
+              >
+                {{ isCancelling() ? 'Reversing...' : 'Reverse Payment' }}
+              </button>
+            </div>
+          }
+          <div class="action-buttons">
+            <button type="button" class="btn btn-secondary" (click)="printPaymentAdvice()">🖨️ Print Advice</button>
+            <button type="button" class="btn btn-secondary" (click)="selectedPayment.set(null)">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

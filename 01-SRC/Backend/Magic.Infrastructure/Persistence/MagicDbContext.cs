@@ -91,6 +91,18 @@ public sealed class MagicDbContext(DbContextOptions<MagicDbContext> options) : D
     public DbSet<CashierSessionRecord> CashierSessions => Set<CashierSessionRecord>();
     public DbSet<CashMovementRecord> CashMovements => Set<CashMovementRecord>();
 
+    // Financial Management & Treasury schema (Phase E)
+    public DbSet<BankCashAccountRecord> BankCashAccounts => Set<BankCashAccountRecord>();
+    public DbSet<CustomerReceiptRecord> CustomerReceipts => Set<CustomerReceiptRecord>();
+    public DbSet<CustomerReceiptAllocationRecord> CustomerReceiptAllocations => Set<CustomerReceiptAllocationRecord>();
+    public DbSet<SupplierInvoiceRecord> SupplierInvoices => Set<SupplierInvoiceRecord>();
+    public DbSet<SupplierInvoiceLineRecord> SupplierInvoiceLines => Set<SupplierInvoiceLineRecord>();
+    public DbSet<SupplierPaymentRecord> SupplierPayments => Set<SupplierPaymentRecord>();
+    public DbSet<SupplierPaymentAllocationRecord> SupplierPaymentAllocations => Set<SupplierPaymentAllocationRecord>();
+    public DbSet<TreasuryTransactionRecord> TreasuryTransactions => Set<TreasuryTransactionRecord>();
+    public DbSet<BankStatementRecord> BankStatements => Set<BankStatementRecord>();
+    public DbSet<BankStatementLineRecord> BankStatementLines => Set<BankStatementLineRecord>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         ArgumentNullException.ThrowIfNull(configurationBuilder);

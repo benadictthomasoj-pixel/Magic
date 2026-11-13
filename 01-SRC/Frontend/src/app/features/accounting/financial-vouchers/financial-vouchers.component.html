@@ -1,0 +1,184 @@
+<div class="workspace-container">
+  <div class="workspace-header">
+    <div>
+      <h1 class="page-title">Financial Vouchers Explorer</h1>
+      <p class="page-subtitle">Unified register of balanced double-entry vouchers: Receipts, Payments, Contra, Purchases & Sales</p>
+    </div>
+  </div>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert" [ngClass]="msg.type === 'ok' ? 'alert-success' : 'alert-error'">
+      <span>{{ msg.text }}</span>
+      <button class="alert-close" (click)="actionMessage.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- Filters Card -->
+  <div class="filters-card">
+    <div class="filter-group">
+      <label>Voucher Type</label>
+      <select [(ngModel)]="filterType" (change)="loadVouchers()">
+        <option value="">All Voucher Types</option>
+        <option value="Receipt">Receipt Voucher</option>
+        <option value="Payment">Payment Voucher</option>
+        <option value="Contra">Contra Voucher</option>
+        <option value="Purchase">Purchase Voucher</option>
+        <option value="Sales">Sales Voucher</option>
+        <option value="Journal">Journal Voucher</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Status</label>
+      <select [(ngModel)]="filterStatus" (change)="loadVouchers()">
+        <option value="">All Statuses</option>
+        <option value="Draft">Draft</option>
+        <option value="Posted">Posted</option>
+        <option value="Reversed">Reversed</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>From Date</label>
+      <input type="date" [(ngModel)]="filterFromDate" (change)="loadVouchers()" />
+    </div>
+    <div class="filter-group">
+      <label>To Date</label>
+      <input type="date" [(ngModel)]="filterToDate" (change)="loadVouchers()" />
+    </div>
+    <div class="filter-group flex-1">
+      <label>Search Narration / Number</label>
+      <input type="text" [(ngModel)]="filterSearch" placeholder="Type voucher number, narration..." (keyup.enter)="loadVouchers()" />
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-primary btn-sm mr-2" (click)="loadVouchers()">Apply</button>
+      <button class="btn btn-outline btn-sm" (click)="filterType = ''; filterStatus = ''; filterSearch = ''; filterFromDate = ''; filterToDate = ''; loadVouchers()">
+        Reset
+      </button>
+    </div>
+  </div>
+
+  <!-- Vouchers Table -->
+  <div class="table-container">
+    @if (loading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading financial journal vouchers...</p>
+      </div>
+    } @else if (vouchers().length === 0) {
+      <div class="empty-state">
+        <h3>No Vouchers Found</h3>
+        <p>Adjust your search criteria or create receipts, payments, bills or contra transfers.</p>
+      </div>
+    } @else {
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Voucher #</th>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Lines</th>
+            <th>Narration</th>
+            <th>Reference</th>
+            <th class="text-right">Total Debit / Credit</th>
+            <th>Status</th>
+            <th class="text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (v of vouchers(); track v.id) {
+            <tr>
+              <td class="font-mono font-bold">{{ v.voucherNumber }}</td>
+              <td>{{ v.voucherDate }}</td>
+              <td>
+                <span class="badge" [ngClass]="'badge-' + v.voucherType.toLowerCase()">
+                  {{ v.voucherType }}
+                </span>
+              </td>
+              <td>{{ v.linesCount }} lines</td>
+              <td>
+                <span class="narration-text" [title]="v.narration">{{ v.narration }}</span>
+              </td>
+              <td class="font-mono text-sm">{{ v.referenceNumber || '—' }}</td>
+              <td class="text-right font-mono font-bold">{{ formatPaise(v.totalDebitPaise) }}</td>
+              <td>
+                <span class="status-pill" [ngClass]="'status-' + v.status.toLowerCase()">{{ v.status }}</span>
+              </td>
+              <td class="text-center">
+                <button class="btn btn-sm btn-outline" (click)="selectVoucher(v)">View Details</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+
+  <!-- Voucher Detail Drawer Modal -->
+  @if (selectedVoucher(); as v) {
+    <div class="modal-backdrop">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-header">
+          <div>
+            <h2>Voucher {{ v.voucherNumber }} ({{ v.voucherType }})</h2>
+            <span class="modal-sub">{{ v.voucherDate }} &bull; Period: {{ v.periodCode }} &bull; Status: {{ v.status }}</span>
+          </div>
+          <button class="close-btn" (click)="closeDrawer()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="voucher-meta-box">
+            <div class="meta-item">
+              <span class="meta-label">Narration:</span>
+              <span class="meta-val">{{ v.narration }}</span>
+            </div>
+            @if (v.referenceNumber) {
+              <div class="meta-item">
+                <span class="meta-label">Reference #:</span>
+                <span class="meta-val font-mono">{{ v.referenceNumber }}</span>
+              </div>
+            }
+          </div>
+
+          <h3 class="lines-title">Balanced Journal Lines</h3>
+          <table class="lines-table">
+            <thead>
+              <tr>
+                <th>Account Code</th>
+                <th>Account Name</th>
+                <th>Narration</th>
+                <th class="text-right">Debit (₹)</th>
+                <th class="text-right">Credit (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of v.lines; track l.id) {
+                <tr>
+                  <td class="font-mono font-bold">{{ l.accountCode }}</td>
+                  <td>{{ l.accountName }}</td>
+                  <td class="text-sm text-muted">{{ l.narration || '—' }}</td>
+                  <td class="text-right font-mono">{{ l.debitPaise > 0 ? formatPaise(l.debitPaise) : '—' }}</td>
+                  <td class="text-right font-mono">{{ l.creditPaise > 0 ? formatPaise(l.creditPaise) : '—' }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3" class="text-right font-bold">Total (Double-Entry Balanced):</td>
+                <td class="text-right font-mono font-bold">{{ formatPaise(v.totalDebitPaise) }}</td>
+                <td class="text-right font-mono font-bold">{{ formatPaise(v.totalCreditPaise) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="modal-footer">
+          @if (v.status === 'Posted') {
+            <button class="btn btn-danger mr-auto" (click)="reverseSelectedVoucher()" [disabled]="isReversing()">
+              {{ isReversing() ? 'Reversing...' : '↩ Reverse Voucher (Companion Compensating Entry)' }}
+            </button>
+          }
+          <button type="button" class="btn btn-secondary" (click)="closeDrawer()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
