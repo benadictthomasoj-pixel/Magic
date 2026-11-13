@@ -1,0 +1,265 @@
+<div class="workspace-container">
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">Payroll Management & Disbursement</h1>
+      <p class="page-subtitle">Salary structure configuration, attendance-adjusted payroll calculation, and GL voucher posting</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="showCalculateModal.set(true)">
+        ⚙️ Run Monthly Payroll Calculation
+      </button>
+    </div>
+  </header>
+
+  <!-- Summary Cards -->
+  @if (summary(); as s) {
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Latest Payroll Run</span>
+        <span class="kpi-value">{{ s.lastPayrollMonth ? s.lastPayrollMonth + '/' + s.lastPayrollYear : '-' }}</span>
+        <span class="kpi-sub">Status: {{ s.lastPayrollStatus || 'None' }}</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Gross Salary Cost</span>
+        <span class="kpi-value">₹{{ formatPaise(s.totalGrossSalariesPaise) }}</span>
+        <span class="kpi-sub">Monthly employee earnings</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Net Salary Payable</span>
+        <span class="kpi-value text-success">₹{{ formatPaise(s.totalNetSalariesPaise) }}</span>
+        <span class="kpi-sub">Disbursements to bank</span>
+      </div>
+      <div class="kpi-card alert">
+        <span class="kpi-label">Pending Disbursement</span>
+        <span class="kpi-value text-warning">{{ s.pendingDisbursementsCount }}</span>
+        <span class="kpi-sub">Cycles awaiting payment</span>
+      </div>
+    </section>
+  }
+
+  <!-- Navigation Tabs -->
+  <nav class="sub-nav-tabs">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'periods'"
+      (click)="setTab('periods')"
+    >
+      📅 Payroll Cycles
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'structures'"
+      (click)="setTab('structures')"
+    >
+      📑 Salary Structures
+    </button>
+    @if (selectedPayslip()) {
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'payslip'"
+        (click)="setTab('payslip')"
+      >
+        📄 Individual Payslip
+      </button>
+    }
+  </nav>
+
+  <!-- Tab 1: Payroll Cycles -->
+  @if (activeTab() === 'periods') {
+    <div class="payroll-split">
+      <!-- Cycles List -->
+      <div class="table-container period-list">
+        <h4 class="section-title">Payroll Periods</h4>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Period</th>
+              <th>Status</th>
+              <th class="text-right">Net Payable</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of periods(); track p.id) {
+              <tr [class.selected]="selectedPeriod()?.id === p.id" (click)="selectPeriod(p)">
+                <td class="font-bold">{{ p.periodMonth }}/{{ p.periodYear }}</td>
+                <td><magic-status-badge [label]="p.status" /></td>
+                <td class="text-right font-mono font-bold">₹{{ formatPaise(p.totalNetPaise) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Selected Cycle Breakdown -->
+      @if (selectedPeriod(); as period) {
+        <div class="period-detail">
+          <div class="detail-header">
+            <div>
+              <h3>Cycle: {{ period.periodMonth }}/{{ period.periodYear }}</h3>
+              <p class="subtitle">{{ period.startDate }} to {{ period.endDate }} · <magic-status-badge [label]="period.status" /></p>
+            </div>
+            <div class="action-buttons">
+              @if (period.status === 'Draft') {
+                <button type="button" class="btn btn-outline" (click)="approvePayroll(period.id)">Approve Calculation</button>
+              }
+              @if (period.status === 'Approved') {
+                <button type="button" class="btn btn-primary" (click)="finalizePayroll(period.id)">Finalize & Post GL Accrual</button>
+              }
+              @if (period.status === 'Finalized') {
+                <button type="button" class="btn btn-success" (click)="openDisburseModal(period.id)">Disburse Salaries</button>
+              }
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th class="text-center">Work Days</th>
+                  <th class="text-center">Present</th>
+                  <th class="text-center">LOP Days</th>
+                  <th class="text-right">Gross Earnings</th>
+                  <th class="text-right">Deductions</th>
+                  <th class="text-right">Net Payable</th>
+                  <th class="text-center">Payslip</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of period.items; track item.id) {
+                  <tr>
+                    <td class="font-bold">{{ item.employeeName }} ({{ item.employeeCode }})</td>
+                    <td class="text-center">{{ item.totalWorkDays }}</td>
+                    <td class="text-center">{{ item.presentDays }}</td>
+                    <td class="text-center font-bold text-danger">{{ item.lopDays }}</td>
+                    <td class="text-right font-mono">₹{{ formatPaise(item.grossEarningsPaise) }}</td>
+                    <td class="text-right font-mono text-warning">₹{{ formatPaise(item.totalDeductionsPaise) }}</td>
+                    <td class="text-right font-mono font-bold text-success">₹{{ formatPaise(item.netPayablePaise) }}</td>
+                    <td class="text-center">
+                      <button type="button" class="btn-xs btn-outline" (click)="viewPayslip(item)">View Slip</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Tab 2: Salary Structures -->
+  @if (activeTab() === 'structures') {
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Structure Name</th>
+            <th>Description</th>
+            <th>Components</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of structures(); track s.id) {
+            <tr>
+              <td class="font-bold">{{ s.name }}</td>
+              <td>{{ s.description || '-' }}</td>
+              <td>
+                @for (c of s.components; track c.id) {
+                  <span class="badge">{{ c.componentName }} ({{ c.componentType }})</span>
+                }
+              </td>
+              <td><span class="badge badge-success">Active</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Tab 3: Payslip Preview -->
+  @if (activeTab() === 'payslip' && selectedPayslip(); as slip) {
+    <div class="payslip-card">
+      <div class="payslip-header">
+        <h2>UNIVERSAL ENTERPRISES LTD</h2>
+        <h4>SALARY SLIP</h4>
+      </div>
+      <div class="payslip-emp-info">
+        <div><strong>Employee:</strong> {{ slip.employeeName }}</div>
+        <div><strong>Code:</strong> {{ slip.employeeCode }}</div>
+        <div><strong>Total Days:</strong> {{ slip.totalWorkDays }}</div>
+        <div><strong>Days Present:</strong> {{ slip.presentDays }}</div>
+        <div><strong>Loss of Pay Days:</strong> {{ slip.lopDays }}</div>
+      </div>
+      <div class="payslip-summary-grid">
+        <div class="slip-box">
+          <span class="lbl">Base Monthly CTC</span>
+          <span class="val">₹{{ formatPaise(slip.baseSalaryPaise) }}</span>
+        </div>
+        <div class="slip-box">
+          <span class="lbl">Gross Earnings</span>
+          <span class="val">₹{{ formatPaise(slip.grossEarningsPaise) }}</span>
+        </div>
+        <div class="slip-box">
+          <span class="lbl">Total Deductions</span>
+          <span class="val text-danger">₹{{ formatPaise(slip.totalDeductionsPaise) }}</span>
+        </div>
+        <div class="slip-box highlight">
+          <span class="lbl">Net Take-Home Pay</span>
+          <span class="val text-success">₹{{ formatPaise(slip.netPayablePaise) }}</span>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Calculate Modal -->
+  @if (showCalculateModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Run Monthly Payroll Calculation</h3>
+        <p class="subtitle">Calculates gross pay, LOP attendance deductions, PF, ESI and TDS for all active employees.</p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Month (1-12) *</label>
+            <input type="number" [(ngModel)]="calcMonth" min="1" max="12" />
+          </div>
+          <div class="form-group">
+            <label>Year *</label>
+            <input type="number" [(ngModel)]="calcYear" min="2020" max="2035" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showCalculateModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="calculatePayroll()">Calculate Payroll</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Disburse Modal -->
+  @if (showDisburseModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Disburse Salaries & Post Payment Voucher</h3>
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Bank Payment Reference *</label>
+            <input type="text" [(ngModel)]="disburseData.paymentReference" placeholder="e.g. NEFT/RTGS Batch Reference" />
+          </div>
+          <div class="form-group">
+            <label>Disbursement Date *</label>
+            <input type="date" [(ngModel)]="disburseData.disbursementDate" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showDisburseModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-success" (click)="disbursePayroll()">Confirm Disbursement</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,325 @@
+<div class="workspace-container">
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">System Management & Platform Operations</h1>
+      <p class="page-subtitle">Production database backups, isolated restore simulation, migration tracking, and platform health</p>
+    </div>
+    <div class="header-actions">
+      @if (activeTab() === 'backups') {
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="runningBackup()"
+          (click)="createBackup()"
+        >
+          {{ runningBackup() ? 'Creating Backup...' : '💾 Create Instant Backup' }}
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner info">
+      <span>ℹ️ {{ msg }}</span>
+    </div>
+  }
+
+  <!-- Sub-Navigation -->
+  <nav class="sub-nav-tabs">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'health'"
+      (click)="setTab('health')"
+    >
+      🛡️ Platform Health
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'backups'"
+      (click)="setTab('backups')"
+    >
+      💾 Database Backups & Restore
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'migrations'"
+      (click)="setTab('migrations')"
+    >
+      🗄️ EF Core Migrations
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'jobs'"
+      (click)="setTab('jobs')"
+    >
+      ⚙️ Background Jobs & Outbox
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'config'"
+      (click)="setTab('config')"
+    >
+      🔧 System Configuration
+    </button>
+  </nav>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <span>Querying platform telemetry...</span>
+    </div>
+  } @else {
+    <!-- Platform Health Tab -->
+    @if (activeTab() === 'health' && health(); as h) {
+      <div class="health-layout">
+        <section class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-label">Application Status</span>
+            <span class="kpi-value text-success">{{ h.applicationStatus }}</span>
+            <span class="kpi-sub">{{ h.environmentName }} Environment</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">API Health</span>
+            <span class="kpi-value text-success">{{ h.apiHealth }}</span>
+            <span class="kpi-sub">Version: {{ h.applicationVersion }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Database Connectivity</span>
+            <span class="kpi-value text-success">{{ h.databaseConnectivity }}</span>
+            <span class="kpi-sub">{{ h.databaseVersion }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Outbox Queue</span>
+            <span class="kpi-value" [class.text-warning]="h.pendingOutboxMessagesCount > 0">
+              {{ h.pendingOutboxMessagesCount }} pending
+            </span>
+            <span class="kpi-sub">{{ h.failedOutboxMessagesCount }} failed messages</span>
+          </div>
+        </section>
+
+        <div class="section-card">
+          <h2 class="section-heading">Platform Diagnostic Summary</h2>
+          <div class="diag-grid">
+            <div class="diag-item">
+              <span class="lbl">Active Background Workers</span>
+              <span class="val">{{ h.activeBackgroundJobsCount }} active services</span>
+            </div>
+            <div class="diag-item">
+              <span class="lbl">Last Verified Backup</span>
+              <span class="val">{{ h.lastBackupAtUtc ? (h.lastBackupAtUtc | date: 'medium') : 'No backups recorded' }}</span>
+            </div>
+            <div class="diag-item">
+              <span class="lbl">Production Guardrails</span>
+              <span class="val"><strong class="text-success">Active</strong> (Direct overwrite prohibited)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Database Backups Tab -->
+    @if (activeTab() === 'backups') {
+      <div class="backups-layout">
+        <div class="alert-banner warning">
+          <span class="alert-icon">🛡️</span>
+          <div class="alert-content">
+            <strong>Isolated Restore Safety Protocol (Section 8.3)</strong>
+            <p>
+              Direct in-place restoration over production databases is strictly prohibited by platform security rules.
+              All restores are verified against isolated scratch database instances with SHA-256 integrity validation.
+            </p>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Backup File Name</th>
+                <th>File Size</th>
+                <th>SHA-256 Checksum</th>
+                <th>Created At (UTC)</th>
+                <th>Verified</th>
+                <th>Safety Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (b of backups(); track b.id) {
+                <tr>
+                  <td><strong>{{ b.fileName }}</strong></td>
+                  <td>{{ (b.fileSizeBytes / 1024).toFixed(1) }} KB</td>
+                  <td><code class="hash-code">{{ b.sha256Checksum }}</code></td>
+                  <td>{{ b.createdAtUtc | date: 'medium' }}</td>
+                  <td>
+                    <span class="badge" [class.success]="b.isVerified">
+                      {{ b.isVerified ? 'Verified' : 'Pending' }}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-secondary"
+                      [disabled]="simulatingRestore()"
+                      (click)="simulateRestore(b.id)"
+                    >
+                      🧪 Run Isolated Restore Test
+                    </button>
+                  </td>
+                </tr>
+              }
+              @if (backups().length === 0) {
+                <tr>
+                  <td colspan="6" class="text-center text-muted">No database backups available. Click "Create Instant Backup" above.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- EF Core Migrations Tab -->
+    @if (activeTab() === 'migrations' && migrations(); as m) {
+      <div class="section-card">
+        <div class="migration-header">
+          <div>
+            <h2 class="section-heading">Database Migration Registry ({{ m.databaseProvider }})</h2>
+            <p class="sub-text">Total migrations applied: {{ m.appliedMigrationsCount }} | Pending: {{ m.pendingMigrationsCount }}</p>
+          </div>
+          <div>
+            <span class="badge success">Schema Fully Aligned</span>
+          </div>
+        </div>
+
+        <div class="migration-list">
+          @for (mig of m.appliedMigrations; track mig) {
+            <div class="migration-row">
+              <span class="mig-icon">✓</span>
+              <code>{{ mig }}</code>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Background Jobs Tab -->
+    @if (activeTab() === 'jobs') {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Worker Job Name</th>
+              <th>Status</th>
+              <th>Execution Interval</th>
+              <th>Last Run (UTC)</th>
+              <th>Next Scheduled</th>
+              <th>Total Processed</th>
+              <th>Failures</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (j of jobs(); track j.jobName) {
+              <tr>
+                <td><strong>{{ j.jobName }}</strong></td>
+                <td><span class="badge success">{{ j.status }}</span></td>
+                <td>{{ j.intervalMinutes }} minutes</td>
+                <td>{{ j.lastRunAtUtc ? (j.lastRunAtUtc | date: 'medium') : 'Running' }}</td>
+                <td>{{ j.nextScheduledAtUtc ? (j.nextScheduledAtUtc | date: 'medium') : 'Continuous' }}</td>
+                <td>{{ j.executionCount }}</td>
+                <td>{{ j.failureCount }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- System Configurations Tab -->
+    @if (activeTab() === 'config') {
+      <div class="section-card">
+        <div class="config-header">
+          <div>
+            <h2 class="section-heading">Platform Runtime Configuration Parameters</h2>
+            <p class="sub-text">Sensitive credentials and encryption keys are strictly masked with ***REDACTED***</p>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Configuration Key</th>
+                <th>Value</th>
+                <th>Classification</th>
+                <th>Description</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (cfg of configurations(); track cfg.key) {
+                <tr>
+                  <td><code>{{ cfg.key }}</code></td>
+                  <td>
+                    @if (cfg.isSecret) {
+                      <code class="redacted-val">{{ cfg.value }}</code>
+                    } @else {
+                      <span>{{ cfg.value }}</span>
+                    }
+                  </td>
+                  <td>
+                    @if (cfg.isSecret) {
+                      <span class="badge danger">Confidential Secret</span>
+                    } @else {
+                      <span class="badge role">Public Config</span>
+                    }
+                  </td>
+                  <td>{{ cfg.description || 'System setting' }}</td>
+                  <td>
+                    @if (!cfg.isSecret) {
+                      <button type="button" class="btn btn-sm btn-secondary" (click)="openEditConfig(cfg)">
+                        Edit
+                      </button>
+                    } @else {
+                      <span class="text-muted text-sm">Protected</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- Edit Config Modal -->
+  @if (showConfigModal()) {
+    <div class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>Edit Configuration Parameter</h3>
+          <button type="button" class="close-btn" (click)="showConfigModal.set(false)">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Configuration Key</label>
+            <input type="text" class="form-input" [value]="configForm.key" disabled />
+          </div>
+          <div class="form-group">
+            <label>Value</label>
+            <input type="text" class="form-input" [(ngModel)]="configForm.value" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="showConfigModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="saveConfig()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

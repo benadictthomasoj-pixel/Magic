@@ -1,0 +1,285 @@
+<div class="workspace-container">
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">Human Resource Management</h1>
+      <p class="page-subtitle">Employee directory, attendance time tracking, and leave workflow administration</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-outline" (click)="showLeaveModal.set(true)">
+        🏖️ Apply Leave
+      </button>
+      <button type="button" class="btn btn-primary" (click)="showNewEmployeeModal.set(true)">
+        👤 Register Employee
+      </button>
+    </div>
+  </header>
+
+  <!-- Summary Cards -->
+  @if (summary(); as s) {
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Total Staff</span>
+        <span class="kpi-value">{{ s.totalEmployees }}</span>
+        <span class="kpi-sub">{{ s.activeEmployees }} active profiles</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Present Today</span>
+        <span class="kpi-value text-success">{{ s.presentToday }}</span>
+        <span class="kpi-sub">Punched in</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">On Leave Today</span>
+        <span class="kpi-value text-warning">{{ s.onLeaveToday }}</span>
+        <span class="kpi-sub">Authorized absences</span>
+      </div>
+      <div class="kpi-card alert">
+        <span class="kpi-label">Pending Leaves</span>
+        <span class="kpi-value text-danger">{{ s.pendingLeaves }}</span>
+        <span class="kpi-sub">Require manager review</span>
+      </div>
+    </section>
+  }
+
+  <!-- Navigation Tabs -->
+  <nav class="sub-nav-tabs">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'employees'"
+      (click)="setTab('employees')"
+    >
+      👥 Staff Directory
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'attendance'"
+      (click)="setTab('attendance')"
+    >
+      ⏱️ Daily Attendance Ledger
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'leaves'"
+      (click)="setTab('leaves')"
+    >
+      🌴 Leave Applications
+    </button>
+  </nav>
+
+  <!-- Tab 1: Staff Directory -->
+  @if (activeTab() === 'employees') {
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Search:</label>
+        <input type="text" [(ngModel)]="searchQuery" (input)="loadEmployees()" placeholder="Search by name, code or email" />
+      </div>
+    </div>
+
+    <div class="table-container">
+      @if (loading()) {
+        <div class="loading-state">Loading staff directory...</div>
+      } @else if (employees().length === 0) {
+        <div class="empty-state">No employee records found.</div>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Emp Code</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Designation</th>
+              <th>Joining Date</th>
+              <th>Status</th>
+              <th class="text-center">Quick Attendance</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (emp of employees(); track emp.id) {
+              <tr>
+                <td class="font-mono font-bold">{{ emp.employeeCode }}</td>
+                <td>{{ emp.firstName }} {{ emp.lastName }}</td>
+                <td>{{ emp.email }}</td>
+                <td>{{ emp.phone || '-' }}</td>
+                <td><span class="badge">{{ emp.designationTitle || 'Staff' }}</span></td>
+                <td>{{ emp.joiningDate }}</td>
+                <td>
+                  <magic-status-badge [label]="emp.status" />
+                </td>
+                <td class="text-center">
+                  <div class="action-buttons">
+                    <button type="button" class="btn-xs btn-success" (click)="punchAttendance(emp.id, 'In')">Punch In</button>
+                    <button type="button" class="btn-xs btn-danger" (click)="punchAttendance(emp.id, 'Out')">Punch Out</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+
+  <!-- Tab 2: Attendance Ledger -->
+  @if (activeTab() === 'attendance') {
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Date:</label>
+        <input type="date" [(ngModel)]="attendanceDate" (change)="loadAttendance()" />
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Emp Code</th>
+            <th>Employee Name</th>
+            <th>Punch In (UTC)</th>
+            <th>Punch Out (UTC)</th>
+            <th>Work Hours</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (att of attendanceList(); track att.id) {
+            <tr>
+              <td class="font-mono">{{ att.employeeCode }}</td>
+              <td class="font-bold">{{ att.employeeName }}</td>
+              <td>{{ att.punchInTimeUtc ? (att.punchInTimeUtc | date:'shortTime') : '-' }}</td>
+              <td>{{ att.punchOutTimeUtc ? (att.punchOutTimeUtc | date:'shortTime') : '-' }}</td>
+              <td class="font-mono">{{ (att.totalWorkMinutes / 60).toFixed(1) }} hrs</td>
+              <td><magic-status-badge [label]="att.status" /></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Tab 3: Leaves -->
+  @if (activeTab() === 'leaves') {
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Leave Type</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Days</th>
+            <th>Reason</th>
+            <th>Status</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (l of leaveApplications(); track l.id) {
+            <tr>
+              <td class="font-bold">{{ l.employeeName }} ({{ l.employeeCode }})</td>
+              <td><span class="badge">{{ l.leaveTypeName }}</span></td>
+              <td>{{ l.startDate }}</td>
+              <td>{{ l.endDate }}</td>
+              <td class="font-bold">{{ l.numberOfDays }}</td>
+              <td>{{ l.reason }}</td>
+              <td><magic-status-badge [label]="l.status" /></td>
+              <td class="text-center">
+                @if (l.status === 'Pending') {
+                  <div class="action-buttons">
+                    <button type="button" class="btn-xs btn-success" (click)="approveLeave(l.id)">Approve</button>
+                    <button type="button" class="btn-xs btn-danger" (click)="rejectLeave(l.id)">Reject</button>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Register Employee Modal -->
+  @if (showNewEmployeeModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Register New Employee</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Employee Code *</label>
+            <input type="text" [(ngModel)]="newEmployee.employeeCode" />
+          </div>
+          <div class="form-group">
+            <label>Joining Date *</label>
+            <input type="date" [(ngModel)]="newEmployee.joiningDate" />
+          </div>
+          <div class="form-group">
+            <label>First Name *</label>
+            <input type="text" [(ngModel)]="newEmployee.firstName" />
+          </div>
+          <div class="form-group">
+            <label>Last Name</label>
+            <input type="text" [(ngModel)]="newEmployee.lastName" />
+          </div>
+          <div class="form-group">
+            <label>Email *</label>
+            <input type="email" [(ngModel)]="newEmployee.email" />
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="tel" [(ngModel)]="newEmployee.phone" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showNewEmployeeModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="submitEmployee()">Register Employee</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Apply Leave Modal -->
+  @if (showLeaveModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Apply for Employee Leave</h3>
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Employee *</label>
+            <select [(ngModel)]="newLeave.employeeId">
+              <option value="">Select Employee</option>
+              @for (e of employees(); track e.id) {
+                <option [value]="e.id">{{ e.firstName }} {{ e.lastName }} ({{ e.employeeCode }})</option>
+              }
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>Leave Type *</label>
+            <select [(ngModel)]="newLeave.leaveTypeId">
+              @for (t of leaveTypes(); track t.id) {
+                <option [value]="t.id">{{ t.name }} ({{ t.daysAllowedPerYear }} days/yr)</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Start Date *</label>
+            <input type="date" [(ngModel)]="newLeave.startDate" />
+          </div>
+          <div class="form-group">
+            <label>End Date *</label>
+            <input type="date" [(ngModel)]="newLeave.endDate" />
+          </div>
+          <div class="form-group full-width">
+            <label>Reason *</label>
+            <textarea [(ngModel)]="newLeave.reason" rows="2" placeholder="Brief reason for leave request"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showLeaveModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="submitLeave()">Submit Application</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

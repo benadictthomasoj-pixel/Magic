@@ -116,7 +116,65 @@ public sealed class SecurityDatabaseSeeder(
             ("admin:users:manage", "Admin", "Create, edit, and assign roles to users"),
             ("admin:roles:manage", "Admin", "Manage custom roles and permission assignments"),
             ("admin:terminals:manage", "Admin", "Register and authorize client hardware terminals"),
-            ("admin:audit:view", "Admin", "View tamper-evident security audit trail")
+            ("admin:audit:view", "Admin", "View tamper-evident security audit trail"),
+
+            // Phase F: Expense Management (Module 11)
+            ("expenses:view", "Expenses", "View expense records, categories, and payment statuses"),
+            ("expenses:create", "Expenses", "Record operational expenses"),
+            ("expenses:approve", "Expenses", "Approve or reject pending operational expenses"),
+            ("expenses:pay", "Expenses", "Disburse expense payments and post accounting vouchers"),
+            ("expenses:pettycash:manage", "Expenses", "Manage petty cash floats, replenishments, and reconciliations"),
+
+            // Phase F: Human Resource Management (Module 12)
+            ("hr:employees:view", "HR", "View employee directory, designations, and contact info"),
+            ("hr:employees:manage", "HR", "Register, update, and manage employee profiles and lifecycle"),
+            ("hr:attendance:record", "HR", "Record daily punch-in/out and work hours"),
+            ("hr:attendance:correct", "HR", "Authorize attendance corrections with audit notes"),
+            ("hr:leave:apply", "HR", "Submit leave applications"),
+            ("hr:leave:approve", "HR", "Approve or reject employee leave requests"),
+
+            // Phase F: Payroll Management (Module 13)
+            ("payroll:structures:manage", "Payroll", "Configure salary structures, allowances, and statutory deduction rules"),
+            ("payroll:process", "Payroll", "Calculate and preview monthly payroll runs"),
+            ("payroll:approve", "Payroll", "Authorize monthly payroll calculation"),
+            ("payroll:finalize", "Payroll", "Finalize payroll and post accrual vouchers to General Ledger"),
+            ("payroll:disburse", "Payroll", "Record bank disbursement references and post payment vouchers"),
+            ("payroll:payslip:view", "Payroll", "Access individual employee salary slips"),
+
+            // Phase F: Marketing & Growth (Module 14)
+            ("marketing:segments:manage", "Marketing", "Define customer spending and purchasing segments"),
+            ("marketing:campaigns:manage", "Marketing", "Create marketing campaigns and budget allocations"),
+            ("marketing:coupons:manage", "Marketing", "Configure promotional coupons and redemption limits"),
+            ("marketing:loyalty:manage", "Marketing", "Manage customer loyalty program and point adjustments"),
+
+            // Phase F: Advanced Order Management (Module 15)
+            ("orders:view", "Orders", "View sales orders, backorders, and fulfillment status"),
+            ("orders:create", "Orders", "Create sales orders with pricing, discounts, and addresses"),
+            ("orders:approve", "Orders", "Confirm sales orders and commit inventory"),
+            ("orders:fulfill", "Orders", "Dispatch and fulfill sales orders"),
+            ("orders:cancel", "Orders", "Cancel open orders and backorders"),
+
+            // Phase F: Service Management (Module 16)
+            ("service:catalog:manage", "Services", "Manage service repair catalog and standard labor rates"),
+            ("service:requests:view", "Services", "View service desk tickets and repair progress"),
+            ("service:requests:manage", "Services", "Manage service requests, inspections, and technician assignment"),
+            ("service:quotations:manage", "Services", "Draft and approve service repair quotations"),
+            ("service:parts:consume", "Services", "Consume spare parts from inventory for repair work"),
+            ("service:billing:create", "Services", "Convert completed service work into sales tax invoices"),
+
+            // Phase G: Enterprise Intelligence & System Management (Modules 17-21)
+            ("reports:view", "Reports", "View executive dashboards and advanced analytics"),
+            ("reports:export", "Reports", "Export business and financial reports"),
+            ("branches:view", "Branches", "View company branches and terminal configurations"),
+            ("branches:manage", "Branches", "Manage multi-branch setups, warehouses, and transfers"),
+            ("administration:users:manage", "Administration", "Manage users, roles, and branch assignments"),
+            ("administration:approvals:manage", "Administration", "Configure workflows and approve requests"),
+            ("administration:audit:view", "Administration", "View system audit logs and security monitoring"),
+            ("automation:rules:manage", "Automation", "Configure event-driven automation rules"),
+            ("automation:assistant:use", "Automation", "Query AI business assistant with data grounding"),
+            ("system:status:view", "SystemManagement", "View platform operational health and diagnostics"),
+            ("system:backups:manage", "SystemManagement", "Manage database backups and restore safety"),
+            ("system:config:manage", "SystemManagement", "Manage company and system configurations")
         };
 
         var newPermissions = new List<PermissionRecord>();
@@ -147,6 +205,46 @@ public sealed class SecurityDatabaseSeeder(
             {
                 dbContext.ChangeTracker.Clear();
             }
+        }
+
+        // 1.1 Seed Default Company & Branch
+        if (!await dbContext.Companies.AnyAsync(c => c.Id == DefaultCompanyId, cancellationToken))
+        {
+            dbContext.Companies.Add(new CompanyRecord
+            {
+                Id = DefaultCompanyId,
+                LegalName = "MAGIC Universal Enterprises Ltd",
+                TradeName = "MAGIC Retail & Solutions",
+                Gstin = "29AAAAA0000A1Z5",
+                Pan = "AAAAA0000A",
+                Address = "100 Innovation Boulevard, Tech Park, Bangalore 560001",
+                Phone = "+91 80 4000 1000",
+                Email = "admin@magic-erp.local",
+                CurrencyCode = "INR",
+                FiscalYearStartMonth = 4,
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow
+            });
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        if (!await dbContext.Branches.AnyAsync(b => b.Id == DefaultBranchId, cancellationToken))
+        {
+            dbContext.Branches.Add(new BranchRecord
+            {
+                Id = DefaultBranchId,
+                CompanyId = DefaultCompanyId,
+                BranchCode = "MAIN",
+                BranchName = "Flagship Central Store",
+                Address = "100 Innovation Boulevard, Ground Floor, Bangalore 560001",
+                Phone = "+91 80 4000 1001",
+                Email = "central@magic-erp.local",
+                Gstin = "29AAAAA0000A1Z5",
+                BranchManager = "General Manager",
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow
+            });
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
 
         var allPermissions = await dbContext.Permissions.ToListAsync(cancellationToken);

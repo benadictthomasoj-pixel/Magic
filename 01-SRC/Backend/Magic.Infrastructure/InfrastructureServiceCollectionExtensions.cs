@@ -103,6 +103,22 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<Magic.Application.Finance.Services.IBankReconciliationService, Magic.Infrastructure.Finance.Services.BankReconciliationService>();
         services.AddScoped<Magic.Application.Finance.Services.IFinancialReportingService, Magic.Infrastructure.Finance.Services.FinancialReportingService>();
 
+        // Extended Business Operations Services (Phase F)
+        services.AddScoped<Magic.Application.Expenses.Services.IExpenseService, Magic.Infrastructure.Expenses.Services.ExpenseService>();
+        services.AddScoped<Magic.Application.Hr.Services.IHrService, Magic.Infrastructure.Hr.Services.HrService>();
+        services.AddScoped<Magic.Application.Payroll.Services.IPayrollService, Magic.Infrastructure.Payroll.Services.PayrollService>();
+        services.AddScoped<Magic.Application.Marketing.Services.IMarketingService, Magic.Infrastructure.Marketing.Services.MarketingService>();
+        services.AddScoped<Magic.Application.Orders.Services.IOrderService, Magic.Infrastructure.Orders.Services.OrderService>();
+        services.AddScoped<Magic.Application.Services.Services.IServiceDeskService, Magic.Infrastructure.Services.Services.ServiceDeskService>();
+
+        // Enterprise Intelligence & System Management Services (Phase G)
+        services.AddScoped<Magic.Application.Reports.Services.IReportService, Magic.Infrastructure.Reports.Services.ReportService>();
+        services.AddScoped<Magic.Application.Branches.Services.IBranchManagementService, Magic.Infrastructure.Branches.Services.BranchManagementService>();
+        services.AddScoped<Magic.Application.Administration.Services.IEnterpriseAdministrationService, Magic.Infrastructure.Administration.Services.EnterpriseAdministrationService>();
+        services.AddScoped<Magic.Application.Automation.Services.IAiAssistantProvider, Magic.Infrastructure.Automation.Services.GroundedAiAssistantProvider>();
+        services.AddScoped<Magic.Application.Automation.Services.IAutomationService, Magic.Infrastructure.Automation.Services.AutomationService>();
+        services.AddScoped<Magic.Application.SystemManagement.Services.ISystemManagementService, Magic.Infrastructure.SystemManagement.Services.SystemManagementService>();
+
         // Scoped request security/branch/terminal context
         services.AddScoped<MutableRequestContext>();
         services.AddScoped<IRequestContextSetter>(sp => sp.GetRequiredService<MutableRequestContext>());

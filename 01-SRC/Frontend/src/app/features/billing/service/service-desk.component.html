@@ -1,0 +1,308 @@
+<div class="workspace-container">
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">Service Desk & Repair Management</h1>
+      <p class="page-subtitle">Equipment intake, repair quotations, spare parts consumption, and integrated sales billing</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="showNewRequestModal.set(true)">
+        🛠️ New Service Ticket
+      </button>
+    </div>
+  </header>
+
+  <!-- Summary Cards -->
+  @if (summary(); as s) {
+    <section class="kpi-grid">
+      <div class="kpi-card alert">
+        <span class="kpi-label">Open Tickets</span>
+        <span class="kpi-value text-primary">{{ s.openRequests }}</span>
+        <span class="kpi-sub">Active job cards</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">In Progress</span>
+        <span class="kpi-value text-warning">{{ s.inProgressRequests }}</span>
+        <span class="kpi-sub">Under technician service</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Waiting for Parts</span>
+        <span class="kpi-value text-danger">{{ s.waitingForPartsRequests }}</span>
+        <span class="kpi-sub">Awaiting inventory issue</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Completed Repairs</span>
+        <span class="kpi-value text-success">{{ s.completedRequests }}</span>
+        <span class="kpi-sub">Ready for billing / delivery</span>
+      </div>
+    </section>
+  }
+
+  <!-- Navigation Tabs -->
+  <nav class="sub-nav-tabs">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'requests'"
+      (click)="setTab('requests')"
+    >
+      🛠️ Service Tickets
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'catalog'"
+      (click)="setTab('catalog')"
+    >
+      📑 Standard Service Catalog
+    </button>
+  </nav>
+
+  <!-- Tab 1: Requests -->
+  @if (activeTab() === 'requests') {
+    <div class="service-split">
+      <!-- Request List -->
+      <div class="table-container service-list">
+        <div class="filter-bar">
+          <select [(ngModel)]="filterStatus" (change)="loadRequests()">
+            <option value="">All Statuses</option>
+            <option value="Received">Received</option>
+            <option value="InProgress">InProgress</option>
+            <option value="WaitingForParts">WaitingForParts</option>
+            <option value="Completed">Completed</option>
+            <option value="Delivered">Delivered</option>
+          </select>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ticket #</th>
+              <th>Customer</th>
+              <th>Status</th>
+              <th>Priority</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of requests(); track r.id) {
+              <tr [class.selected]="selectedRequest()?.id === r.id" (click)="selectRequest(r)">
+                <td class="font-mono font-bold">{{ r.requestNumber }}</td>
+                <td>{{ r.customerName }}</td>
+                <td><magic-status-badge [label]="r.status" /></td>
+                <td><span class="badge" [class.badge-danger]="r.priority === 'High'">{{ r.priority }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Selected Request Details -->
+      @if (selectedRequest(); as req) {
+        <div class="service-detail">
+          <div class="detail-header">
+            <div>
+              <h3>Ticket {{ req.requestNumber }} · {{ req.itemDescription }}</h3>
+              <p class="subtitle">{{ req.customerName }} · S/N: {{ req.serialNumber || 'N/A' }} · <magic-status-badge [label]="req.status" /></p>
+              <p class="issue-text"><strong>Issue:</strong> {{ req.reportedIssue }}</p>
+            </div>
+            <div class="action-buttons">
+              @if (req.status === 'Received') {
+                <button type="button" class="btn btn-outline" (click)="updateStatus(req.id, 'InProgress')">Start Repair</button>
+              }
+              @if (req.status === 'InProgress') {
+                <button type="button" class="btn btn-outline" (click)="showPartModal.set(true)">Consume Part</button>
+                <button type="button" class="btn btn-outline" (click)="showQuoteModal.set(true)">Create Quote</button>
+                <button type="button" class="btn btn-primary" (click)="updateStatus(req.id, 'Completed')">Mark Completed</button>
+              }
+              @if (req.status === 'Completed') {
+                <button type="button" class="btn btn-success" (click)="invoiceRequest(req)">Generate Tax Invoice & Deliver</button>
+              }
+            </div>
+          </div>
+
+          <!-- Quotations Section -->
+          @if (req.quotations && req.quotations.length > 0) {
+            <div class="table-container">
+              <h4 class="section-title">Quotations</h4>
+              @for (q of req.quotations; track q.id) {
+                <div class="quote-box">
+                  <div class="quote-header">
+                    <span class="font-bold">{{ q.quotationNumber }}</span>
+                    <span class="badge">{{ q.status }}</span>
+                    <span class="font-mono font-bold">Total: ₹{{ formatPaise(q.totalAmountPaise) }}</span>
+                    @if (q.status === 'Draft') {
+                      <button type="button" class="btn-xs btn-success" (click)="approveQuotation(q.id)">Customer Approved</button>
+                    }
+                  </div>
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Type</th>
+                        <th>Item Description</th>
+                        <th>Unit Rate</th>
+                        <th class="text-right">Line Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (ql of q.lines; track ql.id) {
+                        <tr>
+                          <td><span class="badge">{{ ql.lineType }}</span></td>
+                          <td>{{ ql.description }}</td>
+                          <td class="font-mono">₹{{ formatPaise(ql.unitRatePaise) }}</td>
+                          <td class="text-right font-mono font-bold">₹{{ formatPaise(ql.lineTotalPaise) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Parts Consumed Section -->
+          @if (req.partsConsumed && req.partsConsumed.length > 0) {
+            <div class="table-container">
+              <h4 class="section-title">Spare Parts Consumed from Stock</h4>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Part Code</th>
+                    <th>Part Name</th>
+                    <th>Warehouse</th>
+                    <th class="text-center">Qty Consumed</th>
+                    <th class="text-right">Unit Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of req.partsConsumed; track p.id) {
+                    <tr>
+                      <td class="font-mono">{{ p.productCode }}</td>
+                      <td class="font-bold">{{ p.productName }}</td>
+                      <td>{{ p.warehouseName }}</td>
+                      <td class="text-center font-bold">{{ p.quantity }}</td>
+                      <td class="text-right font-mono">₹{{ formatPaise(p.unitCostPaise) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Tab 2: Standard Catalog -->
+  @if (activeTab() === 'catalog') {
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Service Code</th>
+            <th>Service Name</th>
+            <th>Description</th>
+            <th class="text-center">Est. Hours</th>
+            <th class="text-right">Standard Labor Rate</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (cat of catalog(); track cat.id) {
+            <tr>
+              <td class="font-mono font-bold">{{ cat.code }}</td>
+              <td>{{ cat.name }}</td>
+              <td>{{ cat.description || '-' }}</td>
+              <td class="text-center font-mono">{{ cat.estimatedHours }}h</td>
+              <td class="text-right font-mono font-bold">₹{{ formatPaise(cat.standardLaborRatePaise) }}</td>
+              <td><span class="badge badge-success">Active</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- New Ticket Modal -->
+  @if (showNewRequestModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Create Service Ticket</h3>
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Item Description *</label>
+            <input type="text" [(ngModel)]="newRequest.itemDescription" />
+          </div>
+          <div class="form-group">
+            <label>Serial Number</label>
+            <input type="text" [(ngModel)]="newRequest.serialNumber" />
+          </div>
+          <div class="form-group">
+            <label>Priority</label>
+            <select [(ngModel)]="newRequest.priority">
+              <option value="Normal">Normal</option>
+              <option value="High">High</option>
+              <option value="Urgent">Urgent</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>Reported Issue *</label>
+            <textarea [(ngModel)]="newRequest.reportedIssue" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showNewRequestModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="submitRequest()">Create Job Ticket</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- New Quote Modal -->
+  @if (showQuoteModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Draft Repair Quotation</h3>
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Labor Description</label>
+            <input type="text" [(ngModel)]="newQuote.laborDescription" />
+          </div>
+          <div class="form-group">
+            <label>Labor Rate (₹)</label>
+            <input type="number" [(ngModel)]="newQuote.laborRateRupees" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Part Rate (₹)</label>
+            <input type="number" [(ngModel)]="newQuote.partRateRupees" min="0" />
+          </div>
+          <div class="form-group full-width">
+            <label>Part Description</label>
+            <input type="text" [(ngModel)]="newQuote.partDescription" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showQuoteModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="submitQuotation()">Create Quotation</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Consume Part Modal -->
+  @if (showPartModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Issue Spare Part from Inventory</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Quantity *</label>
+            <input type="number" [(ngModel)]="partData.quantity" min="1" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showPartModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="submitConsumePart()">Issue Part</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

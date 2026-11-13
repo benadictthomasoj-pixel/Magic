@@ -1,0 +1,264 @@
+<div class="workspace-container">
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">Direct Operating Expenses</h1>
+      <p class="page-subtitle">Track operational expenditures, petty cash floats, approvals, and double-entry postings</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-outline" (click)="showNewPettyCashModal.set(true)">
+        🏦 New Petty Cash Float
+      </button>
+      <button type="button" class="btn btn-primary" (click)="showNewExpenseModal.set(true)">
+        ➕ Record New Expense
+      </button>
+    </div>
+  </header>
+
+  <!-- Summary KPI Cards -->
+  @if (summary(); as s) {
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Total Expenses</span>
+        <span class="kpi-value">₹{{ formatPaise(s.totalExpensesPaise) }}</span>
+        <span class="kpi-sub">Total logged: {{ s.totalExpensesCount }}</span>
+      </div>
+      <div class="kpi-card alert">
+        <span class="kpi-label">Pending Approval</span>
+        <span class="kpi-value text-warning">₹{{ formatPaise(s.pendingApprovalPaise) }}</span>
+        <span class="kpi-sub">{{ s.pendingApprovalCount }} vouchers awaiting review</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Paid / Settled</span>
+        <span class="kpi-value text-success">₹{{ formatPaise(s.paidExpensesPaise) }}</span>
+        <span class="kpi-sub">Vouchers posted to General Ledger</span>
+      </div>
+    </section>
+  }
+
+  <!-- Navigation Tabs -->
+  <nav class="sub-nav-tabs">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'expenses'"
+      (click)="setTab('expenses')"
+    >
+      📋 Expense Register
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'petty-cash'"
+      (click)="setTab('petty-cash')"
+    >
+      💵 Petty Cash Accounts
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'categories'"
+      (click)="setTab('categories')"
+    >
+      🏷️ Expense Categories
+    </button>
+  </nav>
+
+  <!-- Tab 1: Expense Register -->
+  @if (activeTab() === 'expenses') {
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label for="status-filter">Status:</label>
+        <select id="status-filter" [(ngModel)]="filterStatus" (change)="loadExpenses()">
+          <option value="">All Statuses</option>
+          <option value="Draft">Draft</option>
+          <option value="Approved">Approved</option>
+          <option value="Paid">Paid</option>
+          <option value="Rejected">Rejected</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="cat-filter">Category:</label>
+        <select id="cat-filter" [(ngModel)]="filterCategoryId" (change)="loadExpenses()">
+          <option value="">All Categories</option>
+          @for (c of categories(); track c.id) {
+            <option [value]="c.id">{{ c.name }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="table-container">
+      @if (loading()) {
+        <div class="loading-state">Loading expenses...</div>
+      } @else if (expenses().length === 0) {
+        <div class="empty-state">No expense vouchers found matching the current filters.</div>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Voucher #</th>
+              <th>Date</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th class="text-right">Amount</th>
+              <th>Payment Method</th>
+              <th>Status</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of expenses(); track item.id) {
+              <tr>
+                <td class="font-mono">{{ item.expenseNumber }}</td>
+                <td>{{ item.expenseDate }}</td>
+                <td><span class="badge">{{ item.expenseCategoryName }}</span></td>
+                <td>{{ item.description }}</td>
+                <td class="text-right font-mono font-bold">₹{{ formatPaise(item.totalAmountPaise) }}</td>
+                <td>{{ item.paymentMethod }}</td>
+                <td>
+                  <magic-status-badge [label]="item.status" />
+                </td>
+                <td class="text-center">
+                  <div class="action-buttons">
+                    @if (item.status === 'Draft') {
+                      <button type="button" class="btn-xs btn-success" (click)="approveExpense(item.id)">Approve</button>
+                      <button type="button" class="btn-xs btn-danger" (click)="rejectExpense(item.id)">Reject</button>
+                    }
+                    @if (item.status === 'Approved') {
+                      <button type="button" class="btn-xs btn-primary" (click)="payExpense(item.id)">Pay & Post</button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+
+  <!-- Tab 2: Petty Cash Accounts -->
+  @if (activeTab() === 'petty-cash') {
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Account Name</th>
+            <th>Custodian</th>
+            <th class="text-right">Float Limit</th>
+            <th class="text-right">Current Balance</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (acc of pettyCashAccounts(); track acc.id) {
+            <tr>
+              <td class="font-bold">{{ acc.accountName }}</td>
+              <td>{{ acc.custodianUserName }}</td>
+              <td class="text-right font-mono">₹{{ formatPaise(acc.floatLimitPaise) }}</td>
+              <td class="text-right font-mono font-bold">₹{{ formatPaise(acc.currentBalancePaise) }}</td>
+              <td>
+                <span class="badge" [class.badge-success]="acc.isActive">Active</span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Tab 3: Categories -->
+  @if (activeTab() === 'categories') {
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Default GL Account</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (cat of categories(); track cat.id) {
+            <tr>
+              <td class="font-mono font-bold">{{ cat.code }}</td>
+              <td>{{ cat.name }}</td>
+              <td>{{ cat.description || '-' }}</td>
+              <td>{{ cat.defaultGlAccountName || '5290 - General Operational Expenses' }}</td>
+              <td><span class="badge badge-success">Active</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- New Expense Modal -->
+  @if (showNewExpenseModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Record Operating Expense</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Category *</label>
+            <select [(ngModel)]="newExpense.expenseCategoryId">
+              @for (c of categories(); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Expense Date *</label>
+            <input type="date" [(ngModel)]="newExpense.expenseDate" />
+          </div>
+          <div class="form-group">
+            <label>Amount (₹) *</label>
+            <input type="number" [(ngModel)]="newExpense.amountRupees" min="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>Payment Method</label>
+            <select [(ngModel)]="newExpense.paymentMethod">
+              <option value="Cash">Cash</option>
+              <option value="PettyCash">Petty Cash</option>
+              <option value="BankTransfer">Bank Transfer</option>
+              <option value="Upi">UPI</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>Description *</label>
+            <textarea [(ngModel)]="newExpense.description" rows="3" placeholder="Explain the operational purpose of this expense"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showNewExpenseModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="submitExpense()">Submit Expense</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- New Petty Cash Modal -->
+  @if (showNewPettyCashModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Create Petty Cash Float</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Account Name *</label>
+            <input type="text" [(ngModel)]="newPettyCash.accountName" placeholder="e.g. Front Desk Float" />
+          </div>
+          <div class="form-group">
+            <label>Float Limit (₹) *</label>
+            <input type="number" [(ngModel)]="newPettyCash.floatLimitRupees" min="0" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showNewPettyCashModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="submitPettyCash()">Create Float</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

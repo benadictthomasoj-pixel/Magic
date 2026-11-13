@@ -1,0 +1,236 @@
+<div class="workspace-container">
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">Advanced Order Management</h1>
+      <p class="page-subtitle">Multi-channel sales orders, backorder allocation, fulfillment dispatch, and automated billing</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="showNewOrderModal.set(true)">
+        📦 Create Sales Order
+      </button>
+    </div>
+  </header>
+
+  <!-- Summary Cards -->
+  @if (summary(); as s) {
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Total Orders</span>
+        <span class="kpi-value">{{ s.totalOrders }}</span>
+        <span class="kpi-sub">Lifetime orders</span>
+      </div>
+      <div class="kpi-card alert">
+        <span class="kpi-label">Pending Confirmation</span>
+        <span class="kpi-value text-warning">{{ s.pendingOrders }}</span>
+        <span class="kpi-sub">Draft orders awaiting stock</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Fulfilled Orders</span>
+        <span class="kpi-value text-success">{{ s.fulfilledOrders }}</span>
+        <span class="kpi-sub">Dispatched & invoiced</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Active Backorders</span>
+        <span class="kpi-value text-danger">{{ s.totalBackorders }}</span>
+        <span class="kpi-sub">Pending supplier restock</span>
+      </div>
+    </section>
+  }
+
+  <!-- Navigation Tabs -->
+  <nav class="sub-nav-tabs">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'orders'"
+      (click)="setTab('orders')"
+    >
+      📋 Sales Orders
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'backorders'"
+      (click)="setTab('backorders')"
+    >
+      ⏳ Backorders Register
+    </button>
+  </nav>
+
+  <!-- Tab 1: Orders -->
+  @if (activeTab() === 'orders') {
+    <div class="order-split">
+      <!-- Order List -->
+      <div class="table-container order-list">
+        <div class="filter-bar">
+          <select [(ngModel)]="filterStatus" (change)="loadOrders()">
+            <option value="">All Statuses</option>
+            <option value="Draft">Draft</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="PartiallyFulfilled">Partially Fulfilled</option>
+            <option value="Fulfilled">Fulfilled</option>
+            <option value="Invoiced">Invoiced</option>
+          </select>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Order #</th>
+              <th>Customer</th>
+              <th>Status</th>
+              <th class="text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (o of orders(); track o.id) {
+              <tr [class.selected]="selectedOrder()?.id === o.id" (click)="selectOrder(o)">
+                <td class="font-mono font-bold">{{ o.orderNumber }}</td>
+                <td>{{ o.customerName }}</td>
+                <td><magic-status-badge [label]="o.status" /></td>
+                <td class="text-right font-mono font-bold">₹{{ formatPaise(o.totalAmountPaise) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Selected Order Details -->
+      @if (selectedOrder(); as ord) {
+        <div class="order-detail">
+          <div class="detail-header">
+            <div>
+              <h3>Order {{ ord.orderNumber }}</h3>
+              <p class="subtitle">{{ ord.customerName }} · Date: {{ ord.orderDate }} · <magic-status-badge [label]="ord.status" /></p>
+            </div>
+            <div class="action-buttons">
+              @if (ord.status === 'Draft') {
+                <button type="button" class="btn btn-outline" (click)="confirmOrder(ord.id)">Confirm Order</button>
+              }
+              @if (ord.status === 'Confirmed' || ord.status === 'PartiallyFulfilled') {
+                <button type="button" class="btn btn-primary" (click)="openFulfillModal(ord)">Fulfill & Dispatch</button>
+              }
+              @if (ord.status === 'Fulfilled') {
+                <button type="button" class="btn btn-success" (click)="convertToInvoice(ord)">Generate Sales Invoice</button>
+              }
+            </div>
+          </div>
+
+          <div class="table-container">
+            <h4 class="section-title">Order Items</h4>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th class="text-center">Ordered Qty</th>
+                  <th class="text-center">Fulfilled</th>
+                  <th class="text-center">Backordered</th>
+                  <th class="text-right">Unit Price</th>
+                  <th class="text-right">Line Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of ord.lines; track line.id) {
+                  <tr>
+                    <td class="font-bold">{{ line.productName }} ({{ line.productCode }})</td>
+                    <td class="text-center">{{ line.quantity }}</td>
+                    <td class="text-center text-success font-bold">{{ line.fulfilledQuantity }}</td>
+                    <td class="text-center text-danger font-bold">{{ line.backorderQuantity }}</td>
+                    <td class="text-right font-mono">₹{{ formatPaise(line.unitPricePaise) }}</td>
+                    <td class="text-right font-mono font-bold">₹{{ formatPaise(line.lineTotalPaise) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Tab 2: Backorders -->
+  @if (activeTab() === 'backorders') {
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Order #</th>
+            <th>Product</th>
+            <th class="text-center">Pending Restock Qty</th>
+            <th>Restock Target Date</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (bo of backorders(); track bo.id) {
+            <tr>
+              <td class="font-mono font-bold">{{ bo.orderNumber }}</td>
+              <td>{{ bo.productName }} ({{ bo.productCode }})</td>
+              <td class="text-center font-bold text-danger">{{ bo.pendingQuantity }}</td>
+              <td>{{ bo.expectedRestockDate || 'Pending PO Receipt' }}</td>
+              <td><magic-status-badge [label]="bo.status" /></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- New Order Modal -->
+  @if (showNewOrderModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Create Sales Order</h3>
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Shipping Address *</label>
+            <input type="text" [(ngModel)]="newOrder.shippingAddress" />
+          </div>
+          <div class="form-group">
+            <label>Order Date *</label>
+            <input type="date" [(ngModel)]="newOrder.orderDate" />
+          </div>
+          <div class="form-group">
+            <label>Order Quantity *</label>
+            <input type="number" [(ngModel)]="newOrder.quantity" min="1" />
+          </div>
+          <div class="form-group">
+            <label>Unit Price (₹) *</label>
+            <input type="number" [(ngModel)]="newOrder.unitPriceRupees" min="0" />
+          </div>
+          <div class="form-group">
+            <label>GST Rate (%)</label>
+            <input type="number" [(ngModel)]="newOrder.taxRatePercent" min="0" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showNewOrderModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="submitOrder()">Save Sales Order</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Fulfill Modal -->
+  @if (showFulfillModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Dispatch & Fulfill Order</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Carrier Name *</label>
+            <input type="text" [(ngModel)]="fulfillData.carrierName" />
+          </div>
+          <div class="form-group">
+            <label>Tracking Number *</label>
+            <input type="text" [(ngModel)]="fulfillData.trackingNumber" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showFulfillModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-success" (click)="fulfillOrder()">Confirm Dispatch</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

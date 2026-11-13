@@ -103,6 +103,75 @@ public sealed class MagicDbContext(DbContextOptions<MagicDbContext> options) : D
     public DbSet<BankStatementRecord> BankStatements => Set<BankStatementRecord>();
     public DbSet<BankStatementLineRecord> BankStatementLines => Set<BankStatementLineRecord>();
 
+    // Expense Management schema (Phase F - Module 11)
+    public DbSet<ExpenseCategoryRecord> ExpenseCategories => Set<ExpenseCategoryRecord>();
+    public DbSet<ExpenseRecord> Expenses => Set<ExpenseRecord>();
+    public DbSet<PettyCashAccountRecord> PettyCashAccounts => Set<PettyCashAccountRecord>();
+    public DbSet<PettyCashTransactionRecord> PettyCashTransactions => Set<PettyCashTransactionRecord>();
+
+    // Human Resource Management schema (Phase F - Module 12)
+    public DbSet<DesignationRecord> Designations => Set<DesignationRecord>();
+    public DbSet<EmployeeRecord> Employees => Set<EmployeeRecord>();
+    public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
+    public DbSet<LeaveTypeRecord> LeaveTypes => Set<LeaveTypeRecord>();
+    public DbSet<LeaveBalanceRecord> LeaveBalances => Set<LeaveBalanceRecord>();
+    public DbSet<LeaveApplicationRecord> LeaveApplications => Set<LeaveApplicationRecord>();
+
+    // Payroll Management schema (Phase F - Module 13)
+    public DbSet<SalaryStructureRecord> SalaryStructures => Set<SalaryStructureRecord>();
+    public DbSet<SalaryStructureComponentRecord> SalaryStructureComponents => Set<SalaryStructureComponentRecord>();
+    public DbSet<EmployeeSalaryAssignmentRecord> EmployeeSalaryAssignments => Set<EmployeeSalaryAssignmentRecord>();
+    public DbSet<PayrollPeriodRecord> PayrollPeriods => Set<PayrollPeriodRecord>();
+    public DbSet<PayrollItemRecord> PayrollItems => Set<PayrollItemRecord>();
+
+    // Marketing & Customer Growth schema (Phase F - Module 14)
+    public DbSet<CustomerSegmentRecord> CustomerSegments => Set<CustomerSegmentRecord>();
+    public DbSet<CampaignRecord> Campaigns => Set<CampaignRecord>();
+    public DbSet<PromotionCouponRecord> PromotionCoupons => Set<PromotionCouponRecord>();
+    public DbSet<CouponRedemptionRecord> CouponRedemptions => Set<CouponRedemptionRecord>();
+    public DbSet<LoyaltyProgramRecord> LoyaltyPrograms => Set<LoyaltyProgramRecord>();
+    public DbSet<LoyaltyTransactionRecord> LoyaltyTransactions => Set<LoyaltyTransactionRecord>();
+
+    // Advanced Order Management schema (Phase F - Module 15)
+    public DbSet<SalesOrderRecord> SalesOrders => Set<SalesOrderRecord>();
+    public DbSet<SalesOrderLineRecord> SalesOrderLines => Set<SalesOrderLineRecord>();
+    public DbSet<OrderFulfillmentRecord> OrderFulfillments => Set<OrderFulfillmentRecord>();
+    public DbSet<OrderFulfillmentLineRecord> OrderFulfillmentLines => Set<OrderFulfillmentLineRecord>();
+    public DbSet<BackorderRecord> Backorders => Set<BackorderRecord>();
+
+    // Service Management schema (Phase F - Module 16)
+    public DbSet<ServiceCatalogRecord> ServiceCatalogs => Set<ServiceCatalogRecord>();
+    public DbSet<ServiceRequestRecord> ServiceRequests => Set<ServiceRequestRecord>();
+    public DbSet<ServiceQuotationRecord> ServiceQuotations => Set<ServiceQuotationRecord>();
+    public DbSet<ServiceQuotationLineRecord> ServiceQuotationLines => Set<ServiceQuotationLineRecord>();
+    public DbSet<ServicePartConsumptionRecord> ServicePartConsumptions => Set<ServicePartConsumptionRecord>();
+    public DbSet<ServiceInvoiceLinkRecord> ServiceInvoiceLinks => Set<ServiceInvoiceLinkRecord>();
+
+    // Multi-Branch & Multi-Terminal schema (Phase G - Module 18)
+    public DbSet<CompanyRecord> Companies => Set<CompanyRecord>();
+    public DbSet<BranchRecord> Branches => Set<BranchRecord>();
+    public DbSet<TerminalRegistrationRecord> TerminalRegistrations => Set<TerminalRegistrationRecord>();
+    public DbSet<InterBranchTransferRequestRecord> InterBranchTransfers => Set<InterBranchTransferRequestRecord>();
+    public DbSet<InterBranchTransferLineRecord> InterBranchTransferLines => Set<InterBranchTransferLineRecord>();
+
+    // Enterprise Administration schema (Phase G - Module 19)
+    public DbSet<ApprovalWorkflowRecord> ApprovalWorkflows => Set<ApprovalWorkflowRecord>();
+    public DbSet<ApprovalRequestRecord> ApprovalRequests => Set<ApprovalRequestRecord>();
+    public DbSet<ApprovalActionRecord> ApprovalActions => Set<ApprovalActionRecord>();
+
+    // Automation & AI Assistant schema (Phase G - Module 20)
+    public DbSet<AutomationRuleRecord> AutomationRules => Set<AutomationRuleRecord>();
+    public DbSet<AutomationExecutionRecord> AutomationExecutions => Set<AutomationExecutionRecord>();
+    public DbSet<NotificationRecord> Notifications => Set<NotificationRecord>();
+
+    // System Management & Platform Operations schema (Phase G - Module 21)
+    public DbSet<BackupRecord> BackupRecords => Set<BackupRecord>();
+    public DbSet<SystemConfigurationRecord> SystemConfigurations => Set<SystemConfigurationRecord>();
+
+    // Advanced Business Intelligence & Reporting schema (Phase G - Module 17)
+    public DbSet<ReportDefinitionRecord> ReportDefinitions => Set<ReportDefinitionRecord>();
+    public DbSet<ReportExportLogRecord> ReportExportLogs => Set<ReportExportLogRecord>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         ArgumentNullException.ThrowIfNull(configurationBuilder);

@@ -1,0 +1,394 @@
+<div class="workspace-container">
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">Multi-Branch & POS Terminal Management</h1>
+      <p class="page-subtitle">Configure enterprise branches, POS terminal authorizations, and inter-branch inventory transfers</p>
+    </div>
+    <div class="header-actions">
+      @if (activeTab() === 'branches') {
+        <button type="button" class="btn btn-primary" (click)="showBranchModal.set(true)">
+          ➕ Add New Branch
+        </button>
+      }
+      @if (activeTab() === 'terminals') {
+        <button type="button" class="btn btn-primary" (click)="showTerminalModal.set(true)">
+          🖥️ Register New Terminal
+        </button>
+      }
+      @if (activeTab() === 'transfers') {
+        <button type="button" class="btn btn-primary" (click)="showTransferModal.set(true)">
+          🚚 Request Stock Transfer
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner info">
+      <span>ℹ️ {{ msg }}</span>
+    </div>
+  }
+
+  <!-- Sub-Navigation -->
+  <nav class="sub-nav-tabs">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'branches'"
+      (click)="setTab('branches')"
+    >
+      🏢 Branches Registry
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'terminals'"
+      (click)="setTab('terminals')"
+    >
+      🖥️ Registered POS Terminals
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'transfers'"
+      (click)="setTab('transfers')"
+    >
+      🚚 Inter-Branch Stock Transfers
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'company'"
+      (click)="setTab('company')"
+    >
+      🏛️ Company Profile
+    </button>
+  </nav>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <span>Loading branch infrastructure...</span>
+    </div>
+  } @else {
+    <!-- Branches Tab -->
+    @if (activeTab() === 'branches') {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Branch Code</th>
+              <th>Branch Name</th>
+              <th>Address / Location</th>
+              <th>GSTIN</th>
+              <th>Manager</th>
+              <th>Warehouses</th>
+              <th>Terminals</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (b of branches(); track b.id) {
+              <tr>
+                <td><code>{{ b.branchCode }}</code></td>
+                <td><strong>{{ b.branchName }}</strong></td>
+                <td>{{ b.address }}</td>
+                <td>{{ b.gstin || '—' }}</td>
+                <td>{{ b.branchManager || 'Not Assigned' }}</td>
+                <td><span class="count-badge">{{ b.warehouseCount }}</span></td>
+                <td><span class="count-badge">{{ b.terminalCount }}</span></td>
+                <td>
+                  <span class="badge" [class.success]="b.isActive">
+                    {{ b.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+              </tr>
+            }
+            @if (branches().length === 0) {
+              <tr>
+                <td colspan="8" class="text-center text-muted">No branches found. Register your primary company branch.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- Terminals Tab -->
+    @if (activeTab() === 'terminals') {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Terminal Code</th>
+              <th>Machine Hostname</th>
+              <th>Branch</th>
+              <th>Cashier Assigned</th>
+              <th>Operating System</th>
+              <th>Printer Spec</th>
+              <th>Authorization</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of terminals(); track t.id) {
+              <tr>
+                <td><code>{{ t.terminalCode }}</code></td>
+                <td><strong>{{ t.machineName }}</strong></td>
+                <td>{{ t.branchName }}</td>
+                <td>{{ t.assignedCashierName || 'Open Desk' }}</td>
+                <td>{{ t.operatingSystem || 'macOS' }}</td>
+                <td>{{ t.posPrinterModel }} ({{ t.receiptWidthMm }}mm)</td>
+                <td>
+                  <span class="badge" [class.success]="t.isAuthorized" [class.danger]="!t.isAuthorized">
+                    {{ t.isAuthorized ? 'Authorized' : 'Pending Revocation' }}
+                  </span>
+                </td>
+                <td>
+                  @if (t.isAuthorized) {
+                    <button type="button" class="btn btn-sm btn-outline-danger" (click)="authorizeTerminal(t.id, false)">
+                      Revoke
+                    </button>
+                  } @else {
+                    <button type="button" class="btn btn-sm btn-outline-success" (click)="authorizeTerminal(t.id, true)">
+                      Authorize
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+            @if (terminals().length === 0) {
+              <tr>
+                <td colspan="8" class="text-center text-muted">No POS terminals registered yet.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- Inter-Branch Transfers Tab -->
+    @if (activeTab() === 'transfers') {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Transfer #</th>
+              <th>Originating Branch</th>
+              <th>Destination Branch</th>
+              <th>Notes / Reason</th>
+              <th>Status</th>
+              <th>Requested At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (x of transfers(); track x.id) {
+              <tr>
+                <td><code>{{ x.transferNumber }}</code></td>
+                <td>
+                  <strong>{{ x.sourceBranchName }}</strong>
+                  <div class="sub-text">{{ x.sourceWarehouseName }}</div>
+                </td>
+                <td>
+                  <strong>{{ x.destinationBranchName }}</strong>
+                  <div class="sub-text">{{ x.destinationWarehouseName }}</div>
+                </td>
+                <td>{{ x.notes || 'Routine stock rebalancing' }}</td>
+                <td>
+                  <span class="badge" [class.status-requested]="x.status === 'Requested'" [class.status-approved]="x.status === 'Approved'" [class.status-in-transit]="x.status === 'InTransit'" [class.success]="x.status === 'Received'">
+                    {{ x.status }}
+                  </span>
+                </td>
+                <td>{{ x.createdAtUtc | date: 'short' }}</td>
+                <td class="action-cell">
+                  @if (x.status === 'Requested') {
+                    <button type="button" class="btn btn-sm btn-secondary" (click)="approveTransfer(x.id)">
+                      Approve
+                    </button>
+                  }
+                  @if (x.status === 'Approved') {
+                    <button type="button" class="btn btn-sm btn-primary" (click)="dispatchTransfer(x.id)">
+                      Dispatch
+                    </button>
+                  }
+                  @if (x.status === 'InTransit') {
+                    <button type="button" class="btn btn-sm btn-success" (click)="receiveTransfer(x.id)">
+                      Receive Goods
+                    </button>
+                  }
+                  @if (x.status === 'Received') {
+                    <span class="text-muted text-sm">Completed</span>
+                  }
+                </td>
+              </tr>
+            }
+            @if (transfers().length === 0) {
+              <tr>
+                <td colspan="7" class="text-center text-muted">No inter-branch transfers recorded.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- Company Profile Tab -->
+    @if (activeTab() === 'company' && company(); as c) {
+      <div class="section-card">
+        <h2 class="section-heading">Corporate Tenant Information</h2>
+        <div class="profile-grid">
+          <div class="field-item">
+            <span class="lbl">Legal Entity Name</span>
+            <span class="val">{{ c.legalName }}</span>
+          </div>
+          <div class="field-item">
+            <span class="lbl">Trade / Brand Name</span>
+            <span class="val">{{ c.tradeName }}</span>
+          </div>
+          <div class="field-item">
+            <span class="lbl">GSTIN</span>
+            <span class="val"><code>{{ c.gstin || 'Not Registered' }}</code></span>
+          </div>
+          <div class="field-item">
+            <span class="lbl">Permanent Account Number (PAN)</span>
+            <span class="val"><code>{{ c.pan || 'Not Registered' }}</code></span>
+          </div>
+          <div class="field-item">
+            <span class="lbl">Registered Office Address</span>
+            <span class="val">{{ c.address }}</span>
+          </div>
+          <div class="field-item">
+            <span class="lbl">Base Currency</span>
+            <span class="val"><strong>{{ c.currencyCode }} (₹)</strong></span>
+          </div>
+          <div class="field-item">
+            <span class="lbl">Fiscal Year Start Month</span>
+            <span class="val">Month {{ c.fiscalYearStartMonth }} (April)</span>
+          </div>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- Add Branch Modal -->
+  @if (showBranchModal()) {
+    <div class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>Create New Branch</h3>
+          <button type="button" class="close-btn" (click)="showBranchModal.set(false)">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Branch Code *</label>
+            <input type="text" class="form-input" [(ngModel)]="branchForm.branchCode" placeholder="e.g. BR-BLR-02" />
+          </div>
+          <div class="form-group">
+            <label>Branch Name *</label>
+            <input type="text" class="form-input" [(ngModel)]="branchForm.branchName" placeholder="e.g. Bangalore Koramangala Store" />
+          </div>
+          <div class="form-group">
+            <label>Address *</label>
+            <input type="text" class="form-input" [(ngModel)]="branchForm.address" placeholder="Physical street address" />
+          </div>
+          <div class="form-group">
+            <label>GSTIN</label>
+            <input type="text" class="form-input" [(ngModel)]="branchForm.gstin" placeholder="GSTIN (if state-specific)" />
+          </div>
+          <div class="form-group">
+            <label>Branch Manager</label>
+            <input type="text" class="form-input" [(ngModel)]="branchForm.branchManager" placeholder="Manager full name" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="showBranchModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="createBranch()">Create Branch</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Register Terminal Modal -->
+  @if (showTerminalModal()) {
+    <div class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>Register POS Terminal</h3>
+          <button type="button" class="close-btn" (click)="showTerminalModal.set(false)">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Branch *</label>
+            <select class="form-select" [(ngModel)]="terminalForm.branchId">
+              <option value="">Select Branch</option>
+              @for (b of branches(); track b.id) {
+                <option [value]="b.id">{{ b.branchName }} ({{ b.branchCode }})</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Terminal Code *</label>
+            <input type="text" class="form-input" [(ngModel)]="terminalForm.terminalCode" placeholder="e.g. POS-02" />
+          </div>
+          <div class="form-group">
+            <label>Machine / Host Name *</label>
+            <input type="text" class="form-input" [(ngModel)]="terminalForm.machineName" placeholder="e.g. mac-counter-pos" />
+          </div>
+          <div class="form-group">
+            <label>Assigned Cashier</label>
+            <input type="text" class="form-input" [(ngModel)]="terminalForm.assignedCashierName" placeholder="Cashier Name" />
+          </div>
+          <div class="form-group">
+            <label>Receipt Printer Model</label>
+            <input type="text" class="form-input" [(ngModel)]="terminalForm.posPrinterModel" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="showTerminalModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="registerTerminal()">Register Terminal</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Inter-Branch Transfer Modal -->
+  @if (showTransferModal()) {
+    <div class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>Request Inter-Branch Stock Transfer</h3>
+          <button type="button" class="close-btn" (click)="showTransferModal.set(false)">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Source Branch *</label>
+            <select class="form-select" [(ngModel)]="transferForm.sourceBranchId">
+              <option value="">Select Source Branch</option>
+              @for (b of branches(); track b.id) {
+                <option [value]="b.id">{{ b.branchName }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Destination Branch *</label>
+            <select class="form-select" [(ngModel)]="transferForm.destinationBranchId">
+              <option value="">Select Destination Branch</option>
+              @for (b of branches(); track b.id) {
+                <option [value]="b.id">{{ b.branchName }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Transfer Notes</label>
+            <input type="text" class="form-input" [(ngModel)]="transferForm.notes" placeholder="Reason for inventory movement" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="showTransferModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="requestTransfer()">Submit Transfer</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

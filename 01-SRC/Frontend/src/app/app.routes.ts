@@ -42,6 +42,17 @@ import { TreasuryManagementComponent } from './features/accounting/treasury/trea
 import { BankReconciliationComponent } from './features/accounting/bank-reconciliation/bank-reconciliation.component';
 import { FinancialVouchersComponent } from './features/accounting/financial-vouchers/financial-vouchers.component';
 import { FinancialReportsComponent } from './features/accounting/financial-reports/financial-reports.component';
+import { ExpensesManagementComponent } from './features/billing/expenses/expenses-management.component';
+import { HrManagementComponent } from './features/billing/hr/hr-management.component';
+import { PayrollManagementComponent } from './features/billing/payroll/payroll-management.component';
+import { MarketingManagementComponent } from './features/billing/marketing/marketing-management.component';
+import { OrdersManagementComponent } from './features/billing/orders/orders-management.component';
+import { ServiceDeskComponent } from './features/billing/service/service-desk.component';
+import { EnterpriseReportsComponent } from './features/billing/reports/enterprise-reports.component';
+import { BranchManagementComponent } from './features/billing/branches/branch-management.component';
+import { EnterpriseAdministrationComponent } from './features/billing/administration/enterprise-administration.component';
+import { AutomationAiComponent } from './features/billing/automation/automation-ai.component';
+import { SystemManagementComponent } from './features/billing/system/system-management.component';
 import { ShellComponent } from './layouts/shell/shell.component';
 
 export const routes: Routes = [
@@ -266,24 +277,58 @@ export const routes: Routes = [
       },
       {
         path: 'billing/expenses',
-        component: BillingFeaturePlaceholderComponent,
-        title: 'MAGIC · Expenses',
-        data: {
-          title: 'Direct Operating Expenses',
-          category: 'Expenditure',
-          icon: '📉',
-          description: 'Daily operational expenses (rent, utilities, courier, store supplies), cash vouchers, and petty cash expense recording.',
-          scope: [
-            'Quick expense entry with petty cash and bank payment channels.',
-            'Mapping to Chart of Accounts expense groups (Class 5 - Expenses).',
-            'Vendor receipt attachment and tax deduction capture.',
-          ],
-        },
+        component: ExpensesManagementComponent,
+        title: 'MAGIC · Expenses & Petty Cash',
+      },
+      {
+        path: 'billing/hr',
+        component: HrManagementComponent,
+        title: 'MAGIC · Human Resources',
+      },
+      {
+        path: 'billing/payroll',
+        component: PayrollManagementComponent,
+        title: 'MAGIC · Payroll & Salaries',
+      },
+      {
+        path: 'billing/marketing',
+        component: MarketingManagementComponent,
+        title: 'MAGIC · Marketing & Loyalty',
+      },
+      {
+        path: 'billing/orders',
+        component: OrdersManagementComponent,
+        title: 'MAGIC · Sales Orders & Fulfillment',
+      },
+      {
+        path: 'billing/service',
+        component: ServiceDeskComponent,
+        title: 'MAGIC · Service Desk & Repairs',
       },
       {
         path: 'billing/reports',
-        component: SalesReportsComponent,
-        title: 'MAGIC · Sales Reports & Analytics',
+        component: EnterpriseReportsComponent,
+        title: 'MAGIC · Enterprise Reports & Analytics',
+      },
+      {
+        path: 'billing/branches',
+        component: BranchManagementComponent,
+        title: 'MAGIC · Multi-Branch & Terminals',
+      },
+      {
+        path: 'billing/administration',
+        component: EnterpriseAdministrationComponent,
+        title: 'MAGIC · Enterprise Administration & Governance',
+      },
+      {
+        path: 'billing/automation',
+        component: AutomationAiComponent,
+        title: 'MAGIC · Automation & AI Assistant',
+      },
+      {
+        path: 'billing/system',
+        component: SystemManagementComponent,
+        title: 'MAGIC · System Operations & Backups',
       },
       {
         path: 'billing/cash-closing',

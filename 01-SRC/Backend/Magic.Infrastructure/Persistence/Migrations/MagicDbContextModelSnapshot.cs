@@ -816,6 +816,141 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ApprovalActionRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ActedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("ApprovalRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApproverName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("ApproverUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovalRequestId");
+
+                    b.ToTable("approval_actions", "administration");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ApprovalRequestRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("AmountPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DecidedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReferenceNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestedByUserName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("SourceDocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceModule")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid?>("WorkflowId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkflowId");
+
+                    b.HasIndex("CompanyId", "Status");
+
+                    b.ToTable("approval_requests", "administration");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ApprovalWorkflowRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("MinimumAmountPaise")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("RequiredApprovalsCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "Module", "TransactionType");
+
+                    b.ToTable("approval_workflows", "administration");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ArAllocationRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -927,6 +1062,272 @@ namespace Magic.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("chk_ar_status", "status IN ('OPEN', 'PARTIALLY_PAID', 'PAID')");
                         });
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.AttendanceRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("AttendanceDate")
+                        .HasColumnType("date")
+                        .HasColumnName("attendance_date");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTimeOffset?>("CheckInTimeUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("check_in_time_utc");
+
+                    b.Property<DateTimeOffset?>("CheckOutTimeUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("check_out_time_utc");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<Guid?>("CorrectedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("corrected_by_user_id");
+
+                    b.Property<string>("CorrectionNotes")
+                        .HasColumnType("text")
+                        .HasColumnName("correction_notes");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<bool>("IsCorrected")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_corrected");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Present")
+                        .HasColumnName("status");
+
+                    b.Property<int>("WorkDurationMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("work_duration_minutes");
+
+                    b.HasKey("Id")
+                        .HasName("pk_attendance");
+
+                    b.HasIndex("CorrectedByUserId");
+
+                    b.HasIndex("EmployeeId", "AttendanceDate")
+                        .IsUnique()
+                        .HasDatabaseName("ix_attendance_employee_date");
+
+                    b.ToTable("attendance", "hr");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.AutomationExecutionRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ErrorDetails")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ResultMessage")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("TraceCorrelationId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("TriggeredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RuleId");
+
+                    b.ToTable("automation_executions", "automation");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.AutomationRuleRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActionPayloadJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConditionJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ExecutionCount")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastTriggeredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("TriggerType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "IsActive");
+
+                    b.ToTable("automation_rules", "automation");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BackorderRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateOnly?>("ExpectedRestockDate")
+                        .HasColumnType("date")
+                        .HasColumnName("expected_restock_date");
+
+                    b.Property<decimal>("PendingQuantity")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasColumnName("pending_quantity");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<Guid>("SalesOrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sales_order_id");
+
+                    b.Property<Guid>("SalesOrderLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sales_order_line_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Pending")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_backorders");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SalesOrderId");
+
+                    b.HasIndex("SalesOrderLineId");
+
+                    b.ToTable("backorders", "orders");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BackupRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BackupType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ChecksumSha256")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("InitiatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("InitiatedByUserName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<int>("RetentionDays")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("VerifiedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("backup_records", "system_management");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BankCashAccountRecord", b =>
@@ -1167,6 +1568,60 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.ToTable("bank_statements", "finance");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BranchRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("BranchCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("BranchManager")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BranchName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Gstin")
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "BranchCode")
+                        .IsUnique();
+
+                    b.ToTable("branches", "branches");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BrandRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1221,6 +1676,74 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("brands", "commercial");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CampaignRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("ActualSpendPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("actual_spend_paise");
+
+                    b.Property<long>("AttributedRevenuePaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("attributed_revenue_paise");
+
+                    b.Property<long>("BudgetPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("budget_paise");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Draft")
+                        .HasColumnName("status");
+
+                    b.Property<Guid?>("TargetSegmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_segment_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_campaigns");
+
+                    b.HasIndex("TargetSegmentId");
+
+                    b.ToTable("campaigns", "marketing");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CashMovementRecord", b =>
@@ -1421,6 +1944,103 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("categories", "commercial");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CompanyRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("text");
+
+                    b.Property<int>("FiscalYearStartMonth")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Gstin")
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LegalName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Pan")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TradeName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("companies", "branches");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CouponRedemptionRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CouponId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("coupon_id");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<long>("DiscountAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("discount_amount_paise");
+
+                    b.Property<DateTimeOffset>("RedeemedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("redeemed_at_utc");
+
+                    b.Property<Guid>("SalesInvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sales_invoice_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_coupon_redemptions");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("SalesInvoiceId");
+
+                    b.HasIndex("CouponId", "SalesInvoiceId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_coupon_redemptions_coupon_invoice");
+
+                    b.ToTable("coupon_redemptions", "marketing");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CreditNoteRecord", b =>
@@ -1837,6 +2457,60 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.ToTable("customers", "commercial");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CustomerSegmentRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<long>("MinLifetimeSpendPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("min_lifetime_spend_paise");
+
+                    b.Property<int>("MinOrdersCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("min_orders_count");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("SegmentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("segment_type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_customer_segments");
+
+                    b.ToTable("customer_segments", "marketing");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.DepartmentRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1883,6 +2557,427 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("departments", "commercial");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.DesignationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("code");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("department_id");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("title");
+
+                    b.HasKey("Id")
+                        .HasName("pk_designations");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.HasIndex("CompanyId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_designations_company_code");
+
+                    b.ToTable("designations", "hr");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.EmployeeRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Address")
+                        .HasColumnType("text")
+                        .HasColumnName("address");
+
+                    b.Property<string>("BankAccountNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("bank_account_number");
+
+                    b.Property<string>("BankIfsc")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("bank_ifsc");
+
+                    b.Property<string>("BankName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("bank_name");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("department_id");
+
+                    b.Property<Guid?>("DesignationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("designation_id");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("EmergencyContactName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("emergency_contact_name");
+
+                    b.Property<string>("EmergencyContactPhone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("emergency_contact_phone");
+
+                    b.Property<string>("EmployeeCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("employee_code");
+
+                    b.Property<string>("EmploymentType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("FullTime")
+                        .HasColumnName("employment_type");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("first_name");
+
+                    b.Property<DateOnly>("JoiningDate")
+                        .HasColumnType("date")
+                        .HasColumnName("joining_date");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("last_name");
+
+                    b.Property<Guid?>("LinkedUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("linked_user_id");
+
+                    b.Property<string>("PanNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("pan_number");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("phone");
+
+                    b.Property<Guid?>("ReportingManagerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reporting_manager_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Active")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_employees");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.HasIndex("DesignationId");
+
+                    b.HasIndex("LinkedUserId");
+
+                    b.HasIndex("ReportingManagerId");
+
+                    b.HasIndex("CompanyId", "EmployeeCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_employees_company_code");
+
+                    b.ToTable("employees", "hr");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.EmployeeSalaryAssignmentRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_from");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<long>("MonthlyGrossPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("monthly_gross_paise");
+
+                    b.Property<Guid>("SalaryStructureId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("salary_structure_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_employee_salary_assignments");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("SalaryStructureId");
+
+                    b.ToTable("employee_salary_assignments", "payroll");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ExpenseCategoryRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("code");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("DefaultGlAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("default_gl_account_id");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_expense_categories");
+
+                    b.HasIndex("DefaultGlAccountId");
+
+                    b.HasIndex("CompanyId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_expense_categories_company_code");
+
+                    b.ToTable("expense_categories", "expenses");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ExpenseRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_paise");
+
+                    b.Property<DateTimeOffset?>("ApprovedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("approved_at_utc");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approved_by_user_id");
+
+                    b.Property<string>("AttachmentPath")
+                        .HasColumnType("text")
+                        .HasColumnName("attachment_path");
+
+                    b.Property<Guid?>("BankCashAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bank_cash_account_id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<string>("CostCenter")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("cost_center");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<Guid>("ExpenseCategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("expense_category_id");
+
+                    b.Property<DateOnly>("ExpenseDate")
+                        .HasColumnType("date")
+                        .HasColumnName("expense_date");
+
+                    b.Property<string>("ExpenseNumber")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("expense_number");
+
+                    b.Property<Guid>("GlAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("gl_account_id");
+
+                    b.Property<Guid?>("JournalVoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("journal_voucher_id");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("payment_method");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reference_number");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<Guid?>("ReversalVoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reversal_voucher_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Submitted")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TaxAmountPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("tax_amount_paise");
+
+                    b.Property<long>("TotalAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_amount_paise");
+
+                    b.Property<Guid?>("VendorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vendor_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_expenses");
+
+                    b.HasIndex("BankCashAccountId");
+
+                    b.HasIndex("ExpenseCategoryId");
+
+                    b.HasIndex("GlAccountId");
+
+                    b.HasIndex("JournalVoucherId");
+
+                    b.HasIndex("ReversalVoucherId");
+
+                    b.HasIndex("VendorId");
+
+                    b.HasIndex("CompanyId", "ExpenseNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_expenses_company_number");
+
+                    b.HasIndex("CompanyId", "BranchId", "ExpenseDate")
+                        .HasDatabaseName("ix_expenses_company_branch_date");
+
+                    b.ToTable("expenses", "expenses", t =>
+                        {
+                            t.HasCheckConstraint("chk_expense_amounts", "amount_paise >= 0 AND tax_amount_paise >= 0 AND total_amount_paise = amount_paise + tax_amount_paise");
+                        });
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.GoodsReceiptLineRecord", b =>
@@ -2091,6 +3186,514 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.ToTable("idempotency_records", "platform");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.InterBranchTransferLineRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("DispatchedQuantity")
+                        .HasColumnType("numeric(14,4)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("numeric(14,4)");
+
+                    b.Property<decimal>("ReceivedQuantity")
+                        .HasColumnType("numeric(14,4)");
+
+                    b.Property<Guid>("TransferRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("VariantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransferRequestId");
+
+                    b.ToTable("inter_branch_transfer_lines", "branches");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.InterBranchTransferRequestRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DestinationBranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DestinationWarehouseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SourceBranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SourceWarehouseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("TransferNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "TransferNumber")
+                        .IsUnique();
+
+                    b.ToTable("inter_branch_transfers", "branches");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.LeaveApplicationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ApplicationNumber")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("application_number");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTimeOffset?>("DecisionAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decision_at_utc");
+
+                    b.Property<Guid?>("DecisionByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decision_by_user_id");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<Guid>("LeaveTypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("leave_type_id");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Applied")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("TotalDays")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)")
+                        .HasColumnName("total_days");
+
+                    b.HasKey("Id")
+                        .HasName("pk_leave_applications");
+
+                    b.HasIndex("ApplicationNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_leave_applications_number");
+
+                    b.HasIndex("DecisionByUserId");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("LeaveTypeId");
+
+                    b.ToTable("leave_applications", "hr");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.LeaveBalanceRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("ConsumedDays")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("consumed_days");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<Guid>("FiscalYearId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fiscal_year_id");
+
+                    b.Property<Guid>("LeaveTypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("leave_type_id");
+
+                    b.Property<decimal>("PendingDays")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("pending_days");
+
+                    b.Property<decimal>("TotalDays")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)")
+                        .HasColumnName("total_days");
+
+                    b.HasKey("Id")
+                        .HasName("pk_leave_balances");
+
+                    b.HasIndex("LeaveTypeId");
+
+                    b.HasIndex("EmployeeId", "LeaveTypeId", "FiscalYearId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_leave_balances_employee_type_year");
+
+                    b.ToTable("leave_balances", "hr");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.LeaveTypeRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AnnualDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("annual_days");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("code");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsPaid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_paid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_leave_types");
+
+                    b.HasIndex("CompanyId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_leave_types_company_code");
+
+                    b.ToTable("leave_types", "hr");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.LoyaltyProgramRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<long>("CurrencyValuePerPointPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(100L)
+                        .HasColumnName("currency_value_per_point_paise");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<int>("MinPointsToRedeem")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(100)
+                        .HasColumnName("min_points_to_redeem");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("PointsPerHundredSpent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("points_per_hundred_spent");
+
+                    b.HasKey("Id")
+                        .HasName("pk_loyalty_programs");
+
+                    b.ToTable("loyalty_programs", "marketing");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.LoyaltyTransactionRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("BalanceAfterPoints")
+                        .HasColumnType("integer")
+                        .HasColumnName("balance_after_points");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("integer")
+                        .HasColumnName("points");
+
+                    b.Property<Guid?>("SalesInvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sales_invoice_id");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("transaction_type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_loyalty_transactions");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("SalesInvoiceId");
+
+                    b.ToTable("loyalty_transactions", "marketing");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.NotificationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("ReadAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("TargetUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "IsRead", "CreatedAtUtc");
+
+                    b.ToTable("notifications", "automation");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.OrderFulfillmentLineRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("OrderFulfillmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_fulfillment_id");
+
+                    b.Property<decimal>("QuantityDispatched")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasColumnName("quantity_dispatched");
+
+                    b.Property<Guid>("SalesOrderLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sales_order_line_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_order_fulfillment_lines");
+
+                    b.HasIndex("OrderFulfillmentId");
+
+                    b.HasIndex("SalesOrderLineId");
+
+                    b.ToTable("order_fulfillment_lines", "orders");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.OrderFulfillmentRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CarrierName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("carrier_name");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTimeOffset?>("DeliveredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("delivered_at_utc");
+
+                    b.Property<DateTimeOffset?>("DispatchedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("dispatched_at_utc");
+
+                    b.Property<string>("FulfillmentNumber")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("fulfillment_number");
+
+                    b.Property<Guid>("SalesOrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sales_order_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Preparing")
+                        .HasColumnName("status");
+
+                    b.Property<string>("TrackingNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("tracking_number");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("warehouse_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_order_fulfillments");
+
+                    b.HasIndex("FulfillmentNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_order_fulfillments_number");
+
+                    b.HasIndex("SalesOrderId");
+
+                    b.HasIndex("WarehouseId");
+
+                    b.ToTable("order_fulfillments", "orders");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.OutboxMessageRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2158,6 +3761,230 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.ToTable("outbox_messages", "platform");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PayrollItemRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AllowancesPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("allowances_paise");
+
+                    b.Property<long>("BasicPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("basic_paise");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<long>("EmployerEsiPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("employer_esi_paise");
+
+                    b.Property<long>("EmployerPfPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("employer_pf_paise");
+
+                    b.Property<long>("EsiDeductionPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("esi_deduction_paise");
+
+                    b.Property<long>("GrossSalaryPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("gross_salary_paise");
+
+                    b.Property<long>("HraPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("hra_paise");
+
+                    b.Property<long>("NetSalaryPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("net_salary_paise");
+
+                    b.Property<decimal>("PaidLeaveDays")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)")
+                        .HasColumnName("paid_leave_days");
+
+                    b.Property<string>("PaymentReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("payment_reference");
+
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Pending")
+                        .HasColumnName("payment_status");
+
+                    b.Property<Guid>("PayrollPeriodId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payroll_period_id");
+
+                    b.Property<long>("PfDeductionPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("pf_deduction_paise");
+
+                    b.Property<decimal>("PresentDays")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)")
+                        .HasColumnName("present_days");
+
+                    b.Property<long>("PtDeductionPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("pt_deduction_paise");
+
+                    b.Property<long>("TdsDeductionPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tds_deduction_paise");
+
+                    b.Property<long>("TotalDeductionsPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_deductions_paise");
+
+                    b.Property<decimal>("UnpaidLeaveDays")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)")
+                        .HasColumnName("unpaid_leave_days");
+
+                    b.HasKey("Id")
+                        .HasName("pk_payroll_items");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("PayrollPeriodId", "EmployeeId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_payroll_items_period_employee");
+
+                    b.ToTable("payroll_items", "payroll", t =>
+                        {
+                            t.HasCheckConstraint("chk_item_net_calc", "net_salary_paise = gross_salary_paise - total_deductions_paise");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PayrollPeriodRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approved_by_user_id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("DisbursementVoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("disbursement_voucher_id");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<DateTimeOffset?>("FinalizedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("finalized_at_utc");
+
+                    b.Property<Guid>("FiscalYearId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fiscal_year_id");
+
+                    b.Property<Guid?>("JournalVoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("journal_voucher_id");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("integer")
+                        .HasColumnName("month");
+
+                    b.Property<string>("PeriodName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("period_name");
+
+                    b.Property<Guid>("ProcessedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("processed_by_user_id");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Calculated")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TotalDeductionsPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("total_deductions_paise");
+
+                    b.Property<long>("TotalEmployerContributionsPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("total_employer_contributions_paise");
+
+                    b.Property<long>("TotalGrossPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("total_gross_paise");
+
+                    b.Property<long>("TotalNetPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("total_net_paise");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id")
+                        .HasName("pk_payroll_periods");
+
+                    b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("DisbursementVoucherId");
+
+                    b.HasIndex("FiscalYearId");
+
+                    b.HasIndex("JournalVoucherId");
+
+                    b.HasIndex("ProcessedByUserId");
+
+                    b.HasIndex("CompanyId", "BranchId", "Year", "Month")
+                        .IsUnique()
+                        .HasDatabaseName("ix_payroll_periods_company_branch_month_year");
+
+                    b.ToTable("payroll_periods", "payroll", t =>
+                        {
+                            t.HasCheckConstraint("chk_payroll_net_calc", "total_net_paise = total_gross_paise - total_deductions_paise");
+                        });
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PermissionRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2188,6 +4015,124 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("permissions", "security");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PettyCashAccountRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AccountName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("account_name");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<long>("CurrentBalancePaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("current_balance_paise");
+
+                    b.Property<Guid>("CustodianUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("custodian_user_id");
+
+                    b.Property<long>("FloatLimitPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("float_limit_paise");
+
+                    b.Property<Guid>("GlAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("gl_account_id");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.HasKey("Id")
+                        .HasName("pk_petty_cash_accounts");
+
+                    b.HasIndex("CustodianUserId");
+
+                    b.HasIndex("GlAccountId");
+
+                    b.HasIndex("CompanyId", "BranchId", "AccountName")
+                        .IsUnique()
+                        .HasDatabaseName("ix_petty_cash_company_branch_name");
+
+                    b.ToTable("petty_cash_accounts", "expenses");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PettyCashTransactionRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_paise");
+
+                    b.Property<long>("BalanceAfterPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("balance_after_paise");
+
+                    b.Property<Guid?>("ExpenseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("expense_id");
+
+                    b.Property<Guid?>("JournalVoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("journal_voucher_id");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("PerformedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("performed_by_user_id");
+
+                    b.Property<Guid>("PettyCashAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("petty_cash_account_id");
+
+                    b.Property<DateTimeOffset>("TransactionDateUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("transaction_date_utc");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("transaction_type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_petty_cash_transactions");
+
+                    b.HasIndex("ExpenseId");
+
+                    b.HasIndex("JournalVoucherId");
+
+                    b.HasIndex("PerformedByUserId");
+
+                    b.HasIndex("PettyCashAccountId");
+
+                    b.ToTable("petty_cash_transactions", "expenses");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ProductBarcodeRecord", b =>
@@ -2564,6 +4509,96 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("product_variants", "commercial");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PromotionCouponRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("CampaignId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("campaign_id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("code");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<int>("CurrentUsageCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("current_usage_count");
+
+                    b.Property<string>("DiscountType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("discount_type");
+
+                    b.Property<long>("DiscountValue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("discount_value");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<long>("MaxDiscountAmountPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("max_discount_amount_paise");
+
+                    b.Property<long>("MinOrderAmountPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("min_order_amount_paise");
+
+                    b.Property<int>("UsageLimitPerCustomer")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("usage_limit_per_customer");
+
+                    b.Property<int>("UsageLimitTotal")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1000)
+                        .HasColumnName("usage_limit_total");
+
+                    b.Property<DateTimeOffset>("ValidFrom")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("valid_from");
+
+                    b.Property<DateTimeOffset>("ValidTo")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("valid_to");
+
+                    b.HasKey("Id")
+                        .HasName("pk_promotion_coupons");
+
+                    b.HasIndex("CampaignId");
+
+                    b.HasIndex("CompanyId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_promotion_coupons_company_code");
+
+                    b.ToTable("promotion_coupons", "marketing");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PurchaseOrderLineRecord", b =>
@@ -2994,6 +5029,92 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.ToTable("reorder_rules", "inventory");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ReportDefinitionRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FilterSchemaJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ReportCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "ReportCode")
+                        .IsUnique();
+
+                    b.ToTable("report_definitions", "reporting");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ReportExportLogRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExportFormat")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("ExportedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ExportedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExportedByUserName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FilterParametersJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ReportCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "ExportedAtUtc");
+
+                    b.ToTable("report_export_logs", "reporting");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.RolePermissionRecord", b =>
                 {
                     b.Property<Guid>("RoleId")
@@ -3047,6 +5168,93 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("roles", "security");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalaryStructureComponentRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CalculationType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Fixed")
+                        .HasColumnName("calculation_type");
+
+                    b.Property<string>("ComponentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("component_type");
+
+                    b.Property<decimal>("DefaultValue")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("default_value");
+
+                    b.Property<bool>("IsDeduction")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deduction");
+
+                    b.Property<bool>("IsEmployerContribution")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_employer_contribution");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("SalaryStructureId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("salary_structure_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_salary_structure_components");
+
+                    b.HasIndex("SalaryStructureId");
+
+                    b.ToTable("salary_structure_components", "payroll");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalaryStructureRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_salary_structures");
+
+                    b.ToTable("salary_structures", "payroll");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesInvoiceLineRecord", b =>
@@ -3129,6 +5337,9 @@ namespace Magic.Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AccountingVoucherId")
                         .HasColumnType("uuid");
 
                     b.Property<long>("AmountPaidPaise")
@@ -3214,7 +5425,12 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("WarehouseId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("AccountingVoucherId");
 
                     b.HasIndex("CashierSessionId");
 
@@ -3222,12 +5438,190 @@ namespace Magic.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("InvoiceDateUtc");
 
+                    b.HasIndex("WarehouseId");
+
                     b.HasIndex("CompanyId", "BranchId");
 
                     b.HasIndex("CompanyId", "InvoiceNumber")
                         .IsUnique();
 
                     b.ToTable("sales_invoices", "sales");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesOrderLineRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("DiscountAmountPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("discount_amount_paise");
+
+                    b.Property<decimal>("FulfilledQuantity")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("fulfilled_quantity");
+
+                    b.Property<decimal>("InvoicedQuantity")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("invoiced_quantity");
+
+                    b.Property<long>("LineTotalPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("line_total_paise");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasColumnName("quantity");
+
+                    b.Property<Guid>("SalesOrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sales_order_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Pending")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TaxAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tax_amount_paise");
+
+                    b.Property<decimal>("TaxRatePercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("tax_rate_percent");
+
+                    b.Property<long>("UnitPricePaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unit_price_paise");
+
+                    b.Property<Guid?>("VariantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("variant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_order_lines");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SalesOrderId");
+
+                    b.HasIndex("VariantId");
+
+                    b.ToTable("sales_order_lines", "orders");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesOrderRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset?>("ConfirmedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("confirmed_at_utc");
+
+                    b.Property<Guid?>("ConfirmedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("confirmed_by_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("DeliveryAddress")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("delivery_address");
+
+                    b.Property<DateOnly?>("ExpectedDeliveryDate")
+                        .HasColumnType("date")
+                        .HasColumnName("expected_delivery_date");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<DateOnly>("OrderDate")
+                        .HasColumnType("date")
+                        .HasColumnName("order_date");
+
+                    b.Property<string>("OrderNumber")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("order_number");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)")
+                        .HasDefaultValue("Submitted")
+                        .HasColumnName("status");
+
+                    b.Property<long>("SubtotalPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("subtotal_paise");
+
+                    b.Property<long>("TaxAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tax_amount_paise");
+
+                    b.Property<long>("TotalAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_amount_paise");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("warehouse_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_orders");
+
+                    b.HasIndex("ConfirmedByUserId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("WarehouseId");
+
+                    b.HasIndex("CompanyId", "OrderNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_orders_company_number");
+
+                    b.ToTable("sales_orders", "orders", t =>
+                        {
+                            t.HasCheckConstraint("chk_order_total", "total_amount_paise = subtotal_paise + tax_amount_paise");
+                        });
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesPaymentRecord", b =>
@@ -3462,6 +5856,377 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.HasIndex("CompanyId", "TimestampUtc");
 
                     b.ToTable("audit_events", "security");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ServiceCatalogRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasDefaultValue("Repair")
+                        .HasColumnName("category");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("code");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<int>("EstimatedDurationMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(60)
+                        .HasColumnName("estimated_duration_minutes");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<long>("StandardLaborChargePaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("standard_labor_charge_paise");
+
+                    b.HasKey("Id")
+                        .HasName("pk_service_catalog");
+
+                    b.HasIndex("CompanyId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_service_catalog_company_code");
+
+                    b.ToTable("service_catalog", "services");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ServiceInvoiceLinkRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("InvoicedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("invoiced_at_utc");
+
+                    b.Property<Guid>("SalesInvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sales_invoice_id");
+
+                    b.Property<Guid>("ServiceRequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("service_request_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_service_invoice_links");
+
+                    b.HasIndex("SalesInvoiceId");
+
+                    b.HasIndex("ServiceRequestId", "SalesInvoiceId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_service_invoice_links_req_inv");
+
+                    b.ToTable("service_invoice_links", "services");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ServicePartConsumptionRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("ConsumedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("consumed_at_utc");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasColumnName("quantity");
+
+                    b.Property<Guid>("ServiceRequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("service_request_id");
+
+                    b.Property<Guid?>("StockMovementId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("stock_movement_id");
+
+                    b.Property<long>("UnitCostPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unit_cost_paise");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("warehouse_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_service_part_consumptions");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ServiceRequestId");
+
+                    b.HasIndex("StockMovementId");
+
+                    b.HasIndex("WarehouseId");
+
+                    b.ToTable("service_part_consumptions", "services");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ServiceQuotationLineRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("description");
+
+                    b.Property<long>("LineTotalPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("line_total_paise");
+
+                    b.Property<string>("LineType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Labor")
+                        .HasColumnName("line_type");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasColumnName("quantity");
+
+                    b.Property<Guid>("ServiceQuotationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("service_quotation_id");
+
+                    b.Property<long>("UnitRatePaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unit_rate_paise");
+
+                    b.HasKey("Id")
+                        .HasName("pk_service_quotation_lines");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ServiceQuotationId");
+
+                    b.ToTable("service_quotation_lines", "services");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ServiceQuotationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ApprovedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("approved_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<long>("DiscountPaise")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("discount_paise");
+
+                    b.Property<long>("LaborTotalPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("labor_total_paise");
+
+                    b.Property<long>("PartsTotalPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("parts_total_paise");
+
+                    b.Property<string>("QuotationNumber")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("quotation_number");
+
+                    b.Property<Guid>("ServiceRequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("service_request_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Draft")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TaxAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tax_amount_paise");
+
+                    b.Property<long>("TotalAmountPaise")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_amount_paise");
+
+                    b.Property<DateOnly>("ValidUntil")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_until");
+
+                    b.HasKey("Id")
+                        .HasName("pk_service_quotations");
+
+                    b.HasIndex("QuotationNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_service_quotations_number");
+
+                    b.HasIndex("ServiceRequestId");
+
+                    b.ToTable("service_quotations", "services", t =>
+                        {
+                            t.HasCheckConstraint("chk_quote_total", "total_amount_paise = labor_total_paise + parts_total_paise - discount_paise + tax_amount_paise");
+                        });
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ServiceRequestRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AssignedEmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assigned_employee_id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateTimeOffset?>("DeliveredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("delivered_at_utc");
+
+                    b.Property<string>("ItemDescription")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("item_description");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Medium")
+                        .HasColumnName("priority");
+
+                    b.Property<DateOnly>("ReceivedDate")
+                        .HasColumnType("date")
+                        .HasColumnName("received_date");
+
+                    b.Property<string>("ReportedIssue")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("reported_issue");
+
+                    b.Property<string>("RequestNumber")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("request_number");
+
+                    b.Property<string>("SerialNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("serial_number");
+
+                    b.Property<Guid>("ServiceCatalogId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("service_catalog_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)")
+                        .HasDefaultValue("NewRequest")
+                        .HasColumnName("status");
+
+                    b.Property<DateOnly?>("TargetCompletionDate")
+                        .HasColumnType("date")
+                        .HasColumnName("target_completion_date");
+
+                    b.Property<string>("TechnicianNotes")
+                        .HasColumnType("text")
+                        .HasColumnName("technician_notes");
+
+                    b.HasKey("Id")
+                        .HasName("pk_service_requests");
+
+                    b.HasIndex("AssignedEmployeeId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("ServiceCatalogId");
+
+                    b.HasIndex("CompanyId", "RequestNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_service_requests_company_number");
+
+                    b.ToTable("service_requests", "services");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.StockAdjustmentLineRecord", b =>
@@ -4680,6 +7445,46 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.ToTable("system_audit_logs", "audit");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SystemConfigurationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConfigKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ConfigValue")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "ConfigKey")
+                        .IsUnique();
+
+                    b.ToTable("system_configurations", "system_management");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.TaxCodeRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4775,6 +7580,61 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("terminals", "security");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.TerminalRegistrationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AssignedCashierUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsAuthorized")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastHeartbeatAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MachineName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("OperatingSystem")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PosPrinterModel")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("ReceiptWidthMm")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("RegisteredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TerminalCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id")
+                        .HasName("PK_terminals1");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("CompanyId", "TerminalCode")
+                        .IsUnique();
+
+                    b.ToTable("terminals", "branches");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.TreasuryTransactionRecord", b =>
@@ -5278,6 +8138,83 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("ReversalVoucher");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ApprovalActionRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ApprovalRequestRecord", "ApprovalRequest")
+                        .WithMany("Actions")
+                        .HasForeignKey("ApprovalRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApprovalRequest");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ApprovalRequestRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ApprovalWorkflowRecord", "Workflow")
+                        .WithMany("Requests")
+                        .HasForeignKey("WorkflowId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Workflow");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.AttendanceRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.UserRecord", "CorrectedByUser")
+                        .WithMany()
+                        .HasForeignKey("CorrectedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.EmployeeRecord", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CorrectedByUser");
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.AutomationExecutionRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.AutomationRuleRecord", "Rule")
+                        .WithMany("Executions")
+                        .HasForeignKey("RuleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Rule");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BackorderRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ProductRecord", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesOrderRecord", "SalesOrder")
+                        .WithMany()
+                        .HasForeignKey("SalesOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesOrderLineRecord", "SalesOrderLine")
+                        .WithMany()
+                        .HasForeignKey("SalesOrderLineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SalesOrder");
+
+                    b.Navigation("SalesOrderLine");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BankCashAccountRecord", b =>
                 {
                     b.HasOne("Magic.Domain.Accounting.Entities.Account", "GlAccount")
@@ -5318,6 +8255,27 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("BankAccount");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BranchRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CompanyRecord", "Company")
+                        .WithMany("Branches")
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CampaignRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CustomerSegmentRecord", "TargetSegment")
+                        .WithMany()
+                        .HasForeignKey("TargetSegmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("TargetSegment");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CashMovementRecord", b =>
                 {
                     b.HasOne("Magic.Infrastructure.Persistence.Entities.CashierSessionRecord", "CashierSession")
@@ -5344,6 +8302,33 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("Department");
 
                     b.Navigation("ParentCategory");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CouponRedemptionRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.PromotionCouponRecord", "Coupon")
+                        .WithMany()
+                        .HasForeignKey("CouponId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CustomerRecord", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesInvoiceRecord", "SalesInvoice")
+                        .WithMany()
+                        .HasForeignKey("SalesInvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Coupon");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("SalesInvoice");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CreditNoteRecord", b =>
@@ -5431,6 +8416,124 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("CustomerGroup");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.DesignationRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.DepartmentRecord", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Department");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.EmployeeRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.DepartmentRecord", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.DesignationRecord", "Designation")
+                        .WithMany()
+                        .HasForeignKey("DesignationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.UserRecord", "LinkedUser")
+                        .WithMany()
+                        .HasForeignKey("LinkedUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.EmployeeRecord", "ReportingManager")
+                        .WithMany()
+                        .HasForeignKey("ReportingManagerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Department");
+
+                    b.Navigation("Designation");
+
+                    b.Navigation("LinkedUser");
+
+                    b.Navigation("ReportingManager");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.EmployeeSalaryAssignmentRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.EmployeeRecord", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalaryStructureRecord", "SalaryStructure")
+                        .WithMany()
+                        .HasForeignKey("SalaryStructureId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("SalaryStructure");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ExpenseCategoryRecord", b =>
+                {
+                    b.HasOne("Magic.Domain.Accounting.Entities.Account", "DefaultGlAccount")
+                        .WithMany()
+                        .HasForeignKey("DefaultGlAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DefaultGlAccount");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ExpenseRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.BankCashAccountRecord", "BankCashAccount")
+                        .WithMany()
+                        .HasForeignKey("BankCashAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ExpenseCategoryRecord", "ExpenseCategory")
+                        .WithMany()
+                        .HasForeignKey("ExpenseCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Domain.Accounting.Entities.Account", "GlAccount")
+                        .WithMany()
+                        .HasForeignKey("GlAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Domain.Accounting.Entities.JournalVoucher", "JournalVoucher")
+                        .WithMany()
+                        .HasForeignKey("JournalVoucherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Domain.Accounting.Entities.JournalVoucher", "ReversalVoucher")
+                        .WithMany()
+                        .HasForeignKey("ReversalVoucherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SupplierRecord", "Vendor")
+                        .WithMany()
+                        .HasForeignKey("VendorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("BankCashAccount");
+
+                    b.Navigation("ExpenseCategory");
+
+                    b.Navigation("GlAccount");
+
+                    b.Navigation("JournalVoucher");
+
+                    b.Navigation("ReversalVoucher");
+
+                    b.Navigation("Vendor");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.GoodsReceiptLineRecord", b =>
                 {
                     b.HasOne("Magic.Infrastructure.Persistence.Entities.GoodsReceiptNoteRecord", "GoodsReceiptNote")
@@ -5495,6 +8598,229 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("Supplier");
 
                     b.Navigation("Warehouse");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.InterBranchTransferLineRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.InterBranchTransferRequestRecord", "TransferRequest")
+                        .WithMany("Lines")
+                        .HasForeignKey("TransferRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TransferRequest");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.LeaveApplicationRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.UserRecord", "DecisionByUser")
+                        .WithMany()
+                        .HasForeignKey("DecisionByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.EmployeeRecord", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.LeaveTypeRecord", "LeaveType")
+                        .WithMany()
+                        .HasForeignKey("LeaveTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DecisionByUser");
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("LeaveType");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.LeaveBalanceRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.EmployeeRecord", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.LeaveTypeRecord", "LeaveType")
+                        .WithMany()
+                        .HasForeignKey("LeaveTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("LeaveType");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.LoyaltyTransactionRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CustomerRecord", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesInvoiceRecord", "SalesInvoice")
+                        .WithMany()
+                        .HasForeignKey("SalesInvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("SalesInvoice");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.OrderFulfillmentLineRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.OrderFulfillmentRecord", "OrderFulfillment")
+                        .WithMany("Lines")
+                        .HasForeignKey("OrderFulfillmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesOrderLineRecord", "SalesOrderLine")
+                        .WithMany()
+                        .HasForeignKey("SalesOrderLineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("OrderFulfillment");
+
+                    b.Navigation("SalesOrderLine");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.OrderFulfillmentRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesOrderRecord", "SalesOrder")
+                        .WithMany("Fulfillments")
+                        .HasForeignKey("SalesOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.WarehouseRecord", "Warehouse")
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SalesOrder");
+
+                    b.Navigation("Warehouse");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PayrollItemRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.EmployeeRecord", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.PayrollPeriodRecord", "PayrollPeriod")
+                        .WithMany("Items")
+                        .HasForeignKey("PayrollPeriodId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("PayrollPeriod");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PayrollPeriodRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.UserRecord", "ApprovedByUser")
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Domain.Accounting.Entities.JournalVoucher", "DisbursementVoucher")
+                        .WithMany()
+                        .HasForeignKey("DisbursementVoucherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Domain.Accounting.Entities.FiscalYear", "FiscalYear")
+                        .WithMany()
+                        .HasForeignKey("FiscalYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Domain.Accounting.Entities.JournalVoucher", "JournalVoucher")
+                        .WithMany()
+                        .HasForeignKey("JournalVoucherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.UserRecord", "ProcessedByUser")
+                        .WithMany()
+                        .HasForeignKey("ProcessedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApprovedByUser");
+
+                    b.Navigation("DisbursementVoucher");
+
+                    b.Navigation("FiscalYear");
+
+                    b.Navigation("JournalVoucher");
+
+                    b.Navigation("ProcessedByUser");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PettyCashAccountRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.UserRecord", "CustodianUser")
+                        .WithMany()
+                        .HasForeignKey("CustodianUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Domain.Accounting.Entities.Account", "GlAccount")
+                        .WithMany()
+                        .HasForeignKey("GlAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CustodianUser");
+
+                    b.Navigation("GlAccount");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PettyCashTransactionRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ExpenseRecord", "Expense")
+                        .WithMany()
+                        .HasForeignKey("ExpenseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Domain.Accounting.Entities.JournalVoucher", "JournalVoucher")
+                        .WithMany()
+                        .HasForeignKey("JournalVoucherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.UserRecord", "PerformedByUser")
+                        .WithMany()
+                        .HasForeignKey("PerformedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.PettyCashAccountRecord", "PettyCashAccount")
+                        .WithMany()
+                        .HasForeignKey("PettyCashAccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Expense");
+
+                    b.Navigation("JournalVoucher");
+
+                    b.Navigation("PerformedByUser");
+
+                    b.Navigation("PettyCashAccount");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ProductBarcodeRecord", b =>
@@ -5627,6 +8953,16 @@ namespace Magic.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PromotionCouponRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CampaignRecord", "Campaign")
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Campaign");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PurchaseOrderLineRecord", b =>
@@ -5802,6 +9138,17 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalaryStructureComponentRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalaryStructureRecord", "SalaryStructure")
+                        .WithMany("Components")
+                        .HasForeignKey("SalaryStructureId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SalaryStructure");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesInvoiceLineRecord", b =>
                 {
                     b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesInvoiceRecord", "Invoice")
@@ -5836,6 +9183,58 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("CashierSession");
 
                     b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesOrderLineRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ProductRecord", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesOrderRecord", "SalesOrder")
+                        .WithMany("Lines")
+                        .HasForeignKey("SalesOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ProductVariantRecord", "Variant")
+                        .WithMany()
+                        .HasForeignKey("VariantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SalesOrder");
+
+                    b.Navigation("Variant");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesOrderRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.UserRecord", "ConfirmedByUser")
+                        .WithMany()
+                        .HasForeignKey("ConfirmedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CustomerRecord", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.WarehouseRecord", "Warehouse")
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ConfirmedByUser");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Warehouse");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesPaymentRecord", b =>
@@ -5906,6 +9305,114 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("Customer");
 
                     b.Navigation("Invoice");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ServiceInvoiceLinkRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.SalesInvoiceRecord", "SalesInvoice")
+                        .WithMany()
+                        .HasForeignKey("SalesInvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ServiceRequestRecord", "ServiceRequest")
+                        .WithMany()
+                        .HasForeignKey("ServiceRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SalesInvoice");
+
+                    b.Navigation("ServiceRequest");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ServicePartConsumptionRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ProductRecord", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ServiceRequestRecord", "ServiceRequest")
+                        .WithMany("ConsumedParts")
+                        .HasForeignKey("ServiceRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.StockMovementRecord", "StockMovement")
+                        .WithMany()
+                        .HasForeignKey("StockMovementId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.WarehouseRecord", "Warehouse")
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("ServiceRequest");
+
+                    b.Navigation("StockMovement");
+
+                    b.Navigation("Warehouse");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ServiceQuotationLineRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ProductRecord", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ServiceQuotationRecord", "ServiceQuotation")
+                        .WithMany("Lines")
+                        .HasForeignKey("ServiceQuotationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("ServiceQuotation");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ServiceQuotationRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ServiceRequestRecord", "ServiceRequest")
+                        .WithMany("Quotations")
+                        .HasForeignKey("ServiceRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ServiceRequest");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ServiceRequestRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.EmployeeRecord", "AssignedEmployee")
+                        .WithMany()
+                        .HasForeignKey("AssignedEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.CustomerRecord", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.ServiceCatalogRecord", "ServiceCatalog")
+                        .WithMany()
+                        .HasForeignKey("ServiceCatalogId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssignedEmployee");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("ServiceCatalog");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.StockAdjustmentLineRecord", b =>
@@ -6244,6 +9751,17 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("Voucher");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.TerminalRegistrationRecord", b =>
+                {
+                    b.HasOne("Magic.Infrastructure.Persistence.Entities.BranchRecord", "Branch")
+                        .WithMany("Terminals")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.TreasuryTransactionRecord", b =>
                 {
                     b.HasOne("Magic.Infrastructure.Persistence.Entities.BankCashAccountRecord", "DestinationAccount")
@@ -6326,9 +9844,29 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("Lines");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ApprovalRequestRecord", b =>
+                {
+                    b.Navigation("Actions");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ApprovalWorkflowRecord", b =>
+                {
+                    b.Navigation("Requests");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.AutomationRuleRecord", b =>
+                {
+                    b.Navigation("Executions");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BankStatementRecord", b =>
                 {
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BranchRecord", b =>
+                {
+                    b.Navigation("Terminals");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.BrandRecord", b =>
@@ -6350,6 +9888,11 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("Children");
 
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CompanyRecord", b =>
+                {
+                    b.Navigation("Branches");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.CustomerGroupRecord", b =>
@@ -6377,6 +9920,21 @@ namespace Magic.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.GoodsReceiptNoteRecord", b =>
                 {
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.InterBranchTransferRequestRecord", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.OrderFulfillmentRecord", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PayrollPeriodRecord", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.PermissionRecord", b =>
@@ -6412,6 +9970,11 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("UserRoles");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalaryStructureRecord", b =>
+                {
+                    b.Navigation("Components");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesInvoiceRecord", b =>
                 {
                     b.Navigation("Lines");
@@ -6421,9 +9984,28 @@ namespace Magic.Infrastructure.Persistence.Migrations
                     b.Navigation("Returns");
                 });
 
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesOrderRecord", b =>
+                {
+                    b.Navigation("Fulfillments");
+
+                    b.Navigation("Lines");
+                });
+
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.SalesReturnRecord", b =>
                 {
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ServiceQuotationRecord", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.ServiceRequestRecord", b =>
+                {
+                    b.Navigation("ConsumedParts");
+
+                    b.Navigation("Quotations");
                 });
 
             modelBuilder.Entity("Magic.Infrastructure.Persistence.Entities.StockAdjustmentRecord", b =>

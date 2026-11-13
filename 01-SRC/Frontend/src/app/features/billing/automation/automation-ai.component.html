@@ -1,0 +1,299 @@
+<div class="workspace-container">
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">Enterprise Automation & AI Business Assistant</h1>
+      <p class="page-subtitle">Data-grounded generative assistant, automated business event rules, and enterprise notification center</p>
+    </div>
+    <div class="header-actions">
+      @if (activeTab() === 'rules') {
+        <button type="button" class="btn btn-primary" (click)="showRuleModal.set(true)">
+          ➕ Create Automation Rule
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner info">
+      <span>ℹ️ {{ msg }}</span>
+    </div>
+  }
+
+  <!-- Sub-Navigation -->
+  <nav class="sub-nav-tabs">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'ai-assistant'"
+      (click)="setTab('ai-assistant')"
+    >
+      🤖 AI Business Assistant
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'rules'"
+      (click)="setTab('rules')"
+    >
+      ⚡ Event-Driven Automation Rules
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'notifications'"
+      (click)="setTab('notifications')"
+    >
+      🔔 Notification Center
+    </button>
+  </nav>
+
+  <!-- AI Business Assistant Tab -->
+  @if (activeTab() === 'ai-assistant') {
+    <div class="ai-assistant-container">
+      <div class="ai-prompt-box">
+        <label for="aiPrompt" class="prompt-label">Ask MAGIC AI about operations, sales, stock, and financials</label>
+        <div class="input-row">
+          <input
+            id="aiPrompt"
+            type="text"
+            class="form-input ai-input"
+            [(ngModel)]="naturalLanguagePrompt"
+            placeholder="e.g. Summarize today's sales and revenue across all active branches"
+            (keyup.enter)="askAi()"
+          />
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="askingAi() || !naturalLanguagePrompt.trim()"
+            (click)="askAi()"
+          >
+            {{ askingAi() ? 'Analyzing...' : 'Ask Assistant' }}
+          </button>
+        </div>
+
+        <div class="suggested-chips">
+          <span class="chips-title">Suggested Inquiries:</span>
+          <button
+            type="button"
+            class="chip-btn"
+            (click)="askAi('Summarize today\'s sales and revenue across all active branches')"
+          >
+            📊 Today's Sales Summary
+          </button>
+          <button
+            type="button"
+            class="chip-btn"
+            (click)="askAi('Identify top 5 low stock products needing immediate reorder')"
+          >
+            📦 Low Stock Alert Items
+          </button>
+          <button
+            type="button"
+            class="chip-btn"
+            (click)="askAi('Show outstanding receivables aging beyond 30 days')"
+          >
+            💰 Customer Receivables Aging
+          </button>
+          <button
+            type="button"
+            class="chip-btn"
+            (click)="askAi('Review pending approvals and highlight high value items')"
+          >
+            ⚖️ Pending Approvals
+          </button>
+        </div>
+      </div>
+
+      <!-- AI Response Output -->
+      @if (askingAi()) {
+        <div class="ai-loading">
+          <div class="ai-pulse"></div>
+          <span>Querying operational data sources safely within tenant boundaries...</span>
+        </div>
+      } @else if (aiResponse(); as resp) {
+        <div class="ai-response-card">
+          <div class="response-header">
+            <div class="badge-row">
+              <span class="badge source">{{ resp.sourceModule }} Subsystem</span>
+              <span class="badge period">{{ resp.reportingPeriod }}</span>
+            </div>
+            <span class="timestamp">Generated: {{ resp.generatedAtUtc | date: 'mediumTime' }}</span>
+          </div>
+
+          <div class="response-body">
+            <p class="answer-text">{{ resp.answer }}</p>
+          </div>
+
+          @if (resp.drilldowns.length > 0) {
+            <div class="drilldowns-section">
+              <h4>Key Data Points & System Navigation</h4>
+              <div class="drilldown-grid">
+                @for (d of resp.drilldowns; track d.label) {
+                  <div class="drilldown-item" (click)="navigateToDrilldown(d.routeUrl)">
+                    <span class="d-label">{{ d.label }}</span>
+                    <span class="d-val">{{ d.value }}</span>
+                    @if (d.routeUrl) {
+                      <span class="d-link">View in Module →</span>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          @if (resp.recommendedActions.length > 0) {
+            <div class="recommendations-section">
+              <h4>Recommended Operational Next Steps</h4>
+              <ul class="rec-list">
+                @for (action of resp.recommendedActions; track action) {
+                  <li>{{ action }}</li>
+                }
+              </ul>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Automation Rules Tab -->
+  @if (activeTab() === 'rules') {
+    @if (loading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <span>Loading automation rules...</span>
+      </div>
+    } @else {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Rule Name</th>
+              <th>Trigger Type</th>
+              <th>Condition Logic</th>
+              <th>Action Handler</th>
+              <th>Execution Count</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (rule of rules(); track rule.id) {
+              <tr>
+                <td><strong>{{ rule.name }}</strong></td>
+                <td><code>{{ rule.triggerType }}</code></td>
+                <td><code>{{ rule.conditionJson }}</code></td>
+                <td><span class="badge role">{{ rule.actionType }}</span></td>
+                <td>{{ rule.executionCount }} times</td>
+                <td>
+                  <span class="badge" [class.success]="rule.isActive">
+                    {{ rule.isActive ? 'Active' : 'Disabled' }}
+                  </span>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-sm btn-secondary" (click)="executeRule(rule.id)">
+                    ⚡ Test Trigger
+                  </button>
+                </td>
+              </tr>
+            }
+            @if (rules().length === 0) {
+              <tr>
+                <td colspan="7" class="text-center text-muted">No automation rules configured.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- Notifications Tab -->
+  @if (activeTab() === 'notifications') {
+    <div class="notifications-container">
+      <div class="notification-list">
+        @for (n of notifications(); track n.id) {
+          <div class="notification-card" [class.unread]="!n.isRead">
+            <div class="n-icon">
+              @if (n.priority === 'High' || n.priority === 'Critical') {
+                🚨
+              } @else {
+                🔔
+              }
+            </div>
+            <div class="n-content">
+              <div class="n-header">
+                <span class="n-title">{{ n.title }}</span>
+                <span class="n-time">{{ n.createdAtUtc | date: 'short' }}</span>
+              </div>
+              <p class="n-message">{{ n.message }}</p>
+              <div class="n-tags">
+                <span class="badge role">{{ n.category }}</span>
+                <span class="badge" [class.danger]="n.priority === 'High'" [class.status-requested]="n.priority === 'Medium'">
+                  {{ n.priority }} Priority
+                </span>
+              </div>
+            </div>
+            @if (!n.isRead) {
+              <button type="button" class="btn btn-sm btn-outline-secondary" (click)="markNotificationRead(n.id)">
+                Mark Read
+              </button>
+            }
+          </div>
+        }
+        @if (notifications().length === 0) {
+          <div class="empty-state">
+            <span>No notifications at this time. All systems normal.</span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Create Rule Modal -->
+  @if (showRuleModal()) {
+    <div class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>Create Automation Rule</h3>
+          <button type="button" class="close-btn" (click)="showRuleModal.set(false)">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Rule Name *</label>
+            <input type="text" class="form-input" [(ngModel)]="ruleForm.name" placeholder="e.g. Notify On Low Stock" />
+          </div>
+          <div class="form-group">
+            <label>Trigger Event *</label>
+            <select class="form-select" [(ngModel)]="ruleForm.triggerType">
+              <option value="LowStockDetected">Low Stock Detected (Inventory)</option>
+              <option value="InvoiceOverdue">Customer Invoice Overdue (Sales)</option>
+              <option value="HighValueOrderCreated">High Value Order Created (Orders)</option>
+              <option value="ShiftShortageDetected">Cashier Shift Shortage (POS)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Condition Filter (JSON) *</label>
+            <input type="text" class="form-input" [(ngModel)]="ruleForm.conditionJson" />
+          </div>
+          <div class="form-group">
+            <label>Action Type *</label>
+            <select class="form-select" [(ngModel)]="ruleForm.actionType">
+              <option value="CreateNotification">Generate In-App Notification</option>
+              <option value="RequireApproval">Escalate For Multi-Tier Approval</option>
+              <option value="CreateServiceTicket">Open Internal Service Ticket</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Action Payload (JSON)</label>
+            <input type="text" class="form-input" [(ngModel)]="ruleForm.actionPayloadJson" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="showRuleModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="createRule()">Save Rule</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

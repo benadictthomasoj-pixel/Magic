@@ -133,6 +133,49 @@ public static partial class AccountingDatabaseSeeder
                     }
                     await dbContext.SaveChangesAsync();
                 }
+
+                // Phase F Accounts Seeding
+                var grpBankCash = await dbContext.AccountGroups.FirstOrDefaultAsync(g => g.CompanyId == companyId && g.Code == "1110");
+                if (grpBankCash != null && !await dbContext.Accounts.AnyAsync(a => a.CompanyId == companyId && a.Code == "1115"))
+                {
+                    dbContext.Accounts.Add(new Account(companyId, branchId, grpBankCash.Id, "1115", "Petty Cash Float Account", AccountRootClass.Asset, systemUserId, isControlAccount: true, controlAccountType: "CashControl"));
+                }
+
+                var grpCurrLiab = await dbContext.AccountGroups.FirstOrDefaultAsync(g => g.CompanyId == companyId && g.Code == "2100");
+                if (grpCurrLiab != null)
+                {
+                    if (!await dbContext.Accounts.AnyAsync(a => a.CompanyId == companyId && a.Code == "2130"))
+                        dbContext.Accounts.Add(new Account(companyId, branchId, grpCurrLiab.Id, "2130", "Net Salaries Payable", AccountRootClass.Liability, systemUserId));
+                    if (!await dbContext.Accounts.AnyAsync(a => a.CompanyId == companyId && a.Code == "2131"))
+                        dbContext.Accounts.Add(new Account(companyId, branchId, grpCurrLiab.Id, "2131", "Employee PF Deduction Payable", AccountRootClass.Liability, systemUserId));
+                    if (!await dbContext.Accounts.AnyAsync(a => a.CompanyId == companyId && a.Code == "2132"))
+                        dbContext.Accounts.Add(new Account(companyId, branchId, grpCurrLiab.Id, "2132", "Employer PF Contribution Payable", AccountRootClass.Liability, systemUserId));
+                    if (!await dbContext.Accounts.AnyAsync(a => a.CompanyId == companyId && a.Code == "2133"))
+                        dbContext.Accounts.Add(new Account(companyId, branchId, grpCurrLiab.Id, "2133", "ESI Dues Payable", AccountRootClass.Liability, systemUserId));
+                    if (!await dbContext.Accounts.AnyAsync(a => a.CompanyId == companyId && a.Code == "2134"))
+                        dbContext.Accounts.Add(new Account(companyId, branchId, grpCurrLiab.Id, "2134", "Professional Tax Payable", AccountRootClass.Liability, systemUserId));
+                    if (!await dbContext.Accounts.AnyAsync(a => a.CompanyId == companyId && a.Code == "2135"))
+                        dbContext.Accounts.Add(new Account(companyId, branchId, grpCurrLiab.Id, "2135", "TDS (Salaries) Payable", AccountRootClass.Liability, systemUserId));
+                }
+
+                var grpSales = await dbContext.AccountGroups.FirstOrDefaultAsync(g => g.CompanyId == companyId && g.Code == "4100");
+                if (grpSales != null && !await dbContext.Accounts.AnyAsync(a => a.CompanyId == companyId && a.Code == "4102"))
+                {
+                    dbContext.Accounts.Add(new Account(companyId, branchId, grpSales.Id, "4102", "Service & Labor Revenue", AccountRootClass.Revenue, systemUserId));
+                }
+
+                var grpAdminExp = await dbContext.AccountGroups.FirstOrDefaultAsync(g => g.CompanyId == companyId && g.Code == "5200");
+                if (grpAdminExp != null)
+                {
+                    if (!await dbContext.Accounts.AnyAsync(a => a.CompanyId == companyId && a.Code == "5210"))
+                        dbContext.Accounts.Add(new Account(companyId, branchId, grpAdminExp.Id, "5210", "Staff Salaries & Wages", AccountRootClass.Expense, systemUserId));
+                    if (!await dbContext.Accounts.AnyAsync(a => a.CompanyId == companyId && a.Code == "5211"))
+                        dbContext.Accounts.Add(new Account(companyId, branchId, grpAdminExp.Id, "5211", "Employer Statutory Contributions", AccountRootClass.Expense, systemUserId));
+                    if (!await dbContext.Accounts.AnyAsync(a => a.CompanyId == companyId && a.Code == "5290"))
+                        dbContext.Accounts.Add(new Account(companyId, branchId, grpAdminExp.Id, "5290", "Petty Cash Discrepancy / Loss", AccountRootClass.Expense, systemUserId));
+                }
+
+                await dbContext.SaveChangesAsync();
             }
         }
         catch (DbUpdateException)

@@ -1,0 +1,416 @@
+<div class="workspace-container">
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">Enterprise Administration & Security Governance</h1>
+      <p class="page-subtitle">Multi-tier approval workflows, role permissions matrix, user administration, and immutable audit logs</p>
+    </div>
+    <div class="header-actions">
+      @if (activeTab() === 'users') {
+        <button type="button" class="btn btn-primary" (click)="showUserModal.set(true)">
+          ➕ Create User
+        </button>
+      }
+      @if (activeTab() === 'approvals') {
+        <button type="button" class="btn btn-primary" (click)="showWorkflowModal.set(true)">
+          ⚙️ Define Approval Threshold
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner info">
+      <span>ℹ️ {{ msg }}</span>
+    </div>
+  }
+
+  <!-- Sub-Navigation -->
+  <nav class="sub-nav-tabs">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'users'"
+      (click)="setTab('users')"
+    >
+      👤 Users & Access
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'approvals'"
+      (click)="setTab('approvals')"
+    >
+      ⚖️ Approvals & Workflows
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'roles'"
+      (click)="setTab('roles')"
+    >
+      🛡️ Roles & Permissions
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'audit'"
+      (click)="setTab('audit')"
+    >
+      📜 Security Audit Trail
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'metrics'"
+      (click)="setTab('metrics')"
+    >
+      📊 Security Metrics
+    </button>
+  </nav>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <span>Loading administration records...</span>
+    </div>
+  } @else {
+    <!-- Users Tab -->
+    @if (activeTab() === 'users') {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Display Name</th>
+              <th>Email</th>
+              <th>Assigned Roles</th>
+              <th>Failed Logins</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of users(); track u.id) {
+              <tr>
+                <td><code>{{ u.username }}</code></td>
+                <td><strong>{{ u.displayName }}</strong></td>
+                <td>{{ u.email }}</td>
+                <td>
+                  <div class="badge-list">
+                    @for (r of u.roles; track r) {
+                      <span class="badge role">{{ r }}</span>
+                    }
+                  </div>
+                </td>
+                <td>{{ u.failedLoginAttempts }}</td>
+                <td>
+                  @if (u.isLockedOut) {
+                    <span class="badge danger">Locked Out</span>
+                  } @else {
+                    <span class="badge success">Active</span>
+                  }
+                </td>
+                <td>
+                  @if (u.isLockedOut) {
+                    <button type="button" class="btn btn-sm btn-outline-success" (click)="toggleLockout(u.id, false)">
+                      Unlock
+                    </button>
+                  } @else {
+                    <button type="button" class="btn btn-sm btn-outline-danger" (click)="toggleLockout(u.id, true)">
+                      Lock
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- Approvals Tab -->
+    @if (activeTab() === 'approvals') {
+      <div class="approvals-layout">
+        <!-- Workflows Defined -->
+        <div class="section-card">
+          <h2 class="section-heading">Active Approval Thresholds</h2>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Module</th>
+                  <th>Transaction Type</th>
+                  <th>Min Amount Threshold (₹)</th>
+                  <th>Approvals Required</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (w of workflows(); track w.id) {
+                  <tr>
+                    <td><strong>{{ w.module }}</strong></td>
+                    <td><code>{{ w.transactionType }}</code></td>
+                    <td class="font-mono">₹{{ formatPaise(w.minimumAmountPaise) }}</td>
+                    <td>{{ w.requiredApprovalsCount }}</td>
+                    <td><span class="badge success">Active</span></td>
+                  </tr>
+                }
+                @if (workflows().length === 0) {
+                  <tr>
+                    <td colspan="5" class="text-center text-muted">No approval thresholds configured.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pending Approval Requests -->
+        <div class="section-card">
+          <h2 class="section-heading">Pending Approval Requests (Separation of Duties Enforced)</h2>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Ref Number</th>
+                  <th>Module</th>
+                  <th>Branch</th>
+                  <th>Requested By</th>
+                  <th>Amount (₹)</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (req of approvalRequests(); track req.id) {
+                  <tr>
+                    <td><code>{{ req.referenceNumber }}</code></td>
+                    <td><strong>{{ req.sourceModule }}</strong></td>
+                    <td>{{ req.branchName }}</td>
+                    <td>{{ req.requestedByUserName }}</td>
+                    <td class="font-mono"><strong>₹{{ formatPaise(req.amountPaise) }}</strong></td>
+                    <td>
+                      <span class="badge" [class.status-requested]="req.status === 'Pending'" [class.success]="req.status === 'Approved'" [class.danger]="req.status === 'Rejected'">
+                        {{ req.status }}
+                      </span>
+                    </td>
+                    <td>
+                      @if (req.status === 'Pending') {
+                        <div class="btn-group">
+                          <button type="button" class="btn btn-sm btn-success" (click)="openActionModal(req.id, 'Approved')">
+                            Approve
+                          </button>
+                          <button type="button" class="btn btn-sm btn-outline-danger" (click)="openActionModal(req.id, 'Rejected')">
+                            Reject
+                          </button>
+                        </div>
+                      } @else {
+                        <span class="text-muted text-sm">Decided</span>
+                      }
+                    </td>
+                  </tr>
+                }
+                @if (approvalRequests().length === 0) {
+                  <tr>
+                    <td colspan="7" class="text-center text-muted">No pending approvals at this time.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Roles & Permissions Tab -->
+    @if (activeTab() === 'roles') {
+      <div class="roles-grid">
+        @for (role of roles(); track role.id) {
+          <div class="role-card">
+            <div class="role-card-header">
+              <h3>{{ role.name }}</h3>
+              <code>{{ role.code }}</code>
+            </div>
+            <p class="role-desc">{{ role.description || 'System security role' }}</p>
+            <div class="permissions-container">
+              <span class="lbl">Assigned Permissions ({{ role.permissions.length }}):</span>
+              <div class="perm-badges">
+                @for (p of role.permissions; track p) {
+                  <span class="badge perm"><code>{{ p }}</code></span>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Audit Trail Tab -->
+    @if (activeTab() === 'audit') {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Timestamp (UTC)</th>
+              <th>Event Type</th>
+              <th>User</th>
+              <th>IP Address</th>
+              <th>Details & Correlation</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (log of auditLogs(); track log.id) {
+              <tr>
+                <td class="font-mono">{{ log.timestampUtc | date: 'medium' }}</td>
+                <td><span class="badge role">{{ log.eventType }}</span></td>
+                <td><strong>{{ log.username || 'System' }}</strong></td>
+                <td><code>{{ log.ipAddress || '127.0.0.1' }}</code></td>
+                <td>{{ log.details }}</td>
+              </tr>
+            }
+            @if (auditLogs().length === 0) {
+              <tr>
+                <td colspan="5" class="text-center text-muted">No audit events logged.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- Security Metrics Tab -->
+    @if (activeTab() === 'metrics' && securityMetrics(); as sm) {
+      <section class="kpi-grid">
+        <div class="kpi-card">
+          <span class="kpi-label">Active Users</span>
+          <span class="kpi-value text-success">{{ sm.totalActiveUsers }}</span>
+          <span class="kpi-sub">Authorized credentials</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Locked Out Users</span>
+          <span class="kpi-value" [class.text-danger]="sm.lockedOutUsersCount > 0">{{ sm.lockedOutUsersCount }}</span>
+          <span class="kpi-sub">Excessive failed logins</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Failed Logins (24h)</span>
+          <span class="kpi-value text-warning">{{ sm.failedLoginsLast24Hours }}</span>
+          <span class="kpi-sub">Threat monitoring</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Active Sessions</span>
+          <span class="kpi-value text-primary">{{ sm.activeSessionsCount }}</span>
+          <span class="kpi-sub">Valid JWT bearer tokens</span>
+        </div>
+      </section>
+    }
+  }
+
+  <!-- Create User Modal -->
+  @if (showUserModal()) {
+    <div class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>Create New Enterprise User</h3>
+          <button type="button" class="close-btn" (click)="showUserModal.set(false)">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Username *</label>
+            <input type="text" class="form-input" [(ngModel)]="userForm.username" placeholder="e.g. john.doe" />
+          </div>
+          <div class="form-group">
+            <label>Display Name *</label>
+            <input type="text" class="form-input" [(ngModel)]="userForm.displayName" placeholder="e.g. John Doe" />
+          </div>
+          <div class="form-group">
+            <label>Email *</label>
+            <input type="email" class="form-input" [(ngModel)]="userForm.email" placeholder="john@enterprise.com" />
+          </div>
+          <div class="form-group">
+            <label>Temporary Password *</label>
+            <input type="password" class="form-input" [(ngModel)]="userForm.password" placeholder="At least 8 chars" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="showUserModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="createUser()">Create User</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Create Workflow Modal -->
+  @if (showWorkflowModal()) {
+    <div class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>Define Approval Threshold</h3>
+          <button type="button" class="close-btn" (click)="showWorkflowModal.set(false)">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Module *</label>
+            <select class="form-select" [(ngModel)]="workflowForm.module">
+              <option value="Procurement">Procurement</option>
+              <option value="Expenses">Operating Expenses</option>
+              <option value="Payroll">Payroll</option>
+              <option value="Commercial">Commercial Sales</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Transaction Type *</label>
+            <select class="form-select" [(ngModel)]="workflowForm.transactionType">
+              <option value="PurchaseOrder">Purchase Order</option>
+              <option value="ExpenseClaim">Expense Claim</option>
+              <option value="SalaryAdjustment">Salary Adjustment</option>
+              <option value="CreditLimitIncrease">Credit Limit Increase</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Minimum Amount Threshold (₹) *</label>
+            <input type="number" class="form-input" [(ngModel)]="workflowForm.minimumAmountRupees" />
+          </div>
+          <div class="form-group">
+            <label>Required Sign-Off Approvals *</label>
+            <input type="number" class="form-input" [(ngModel)]="workflowForm.requiredApprovalsCount" min="1" max="5" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="showWorkflowModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="createWorkflow()">Save Rule</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Action Modal (Approve / Reject) -->
+  @if (showActionModal()) {
+    <div class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>Confirm {{ actionType }}</h3>
+          <button type="button" class="close-btn" (click)="showActionModal.set(false)">✕</button>
+        </div>
+        <div class="modal-body">
+          <p>Please enter review justification or compliance sign-off notes:</p>
+          <div class="form-group">
+            <label>Notes / Reason</label>
+            <textarea class="form-input" rows="3" [(ngModel)]="actionReason" placeholder="Review remarks..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="showActionModal.set(false)">Cancel</button>
+          <button
+            type="button"
+            class="btn"
+            [class.btn-success]="actionType === 'Approved'"
+            [class.btn-outline-danger]="actionType === 'Rejected'"
+            (click)="submitApprovalAction()"
+          >
+            Confirm {{ actionType }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

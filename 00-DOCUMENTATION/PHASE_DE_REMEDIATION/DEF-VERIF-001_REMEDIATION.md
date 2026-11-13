@@ -98,3 +98,4 @@ Added `R6_DEF_VERIF_001_Historical_Statement_Matches_Are_Excluded_From_Workspace
 
 ## 4. Conclusion & Sign-Off
 `DEF-VERIF-001` is completely resolved. The bank reconciliation workspace now cleanly excludes historically matched ledger entries, matches function consistently across multiple statements, duplicate matches are rejected by defense-in-depth database checks, and all backend and frontend regression suites pass with 100% success.
+

@@ -1,0 +1,250 @@
+<div class="workspace-container">
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">Marketing & Customer Growth</h1>
+      <p class="page-subtitle">Campaign budgeting, promotional coupon management, and automated customer loyalty tracking</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-outline" (click)="showNewCouponModal.set(true)">
+        🎟️ Generate Coupon
+      </button>
+      <button type="button" class="btn btn-primary" (click)="showNewCampaignModal.set(true)">
+        📢 Launch Campaign
+      </button>
+    </div>
+  </header>
+
+  <!-- Summary Cards -->
+  @if (summary(); as s) {
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Active Campaigns</span>
+        <span class="kpi-value">{{ s.totalActiveCampaigns }}</span>
+        <span class="kpi-sub">Promotional initiatives</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Active Coupons</span>
+        <span class="kpi-value text-success">{{ s.totalActiveCoupons }}</span>
+        <span class="kpi-sub">Valid at POS billing</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Loyalty Members</span>
+        <span class="kpi-value">{{ s.totalLoyaltyMembers }}</span>
+        <span class="kpi-sub">Enrolled customers</span>
+      </div>
+      <div class="kpi-card alert">
+        <span class="kpi-label">Total Redemptions</span>
+        <span class="kpi-value text-primary">₹{{ formatPaise(s.totalRedemptionsPaise) }}</span>
+        <span class="kpi-sub">Discount value delivered</span>
+      </div>
+    </section>
+  }
+
+  <!-- Navigation Tabs -->
+  <nav class="sub-nav-tabs">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'campaigns'"
+      (click)="setTab('campaigns')"
+    >
+      📢 Marketing Campaigns
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'coupons'"
+      (click)="setTab('coupons')"
+    >
+      🎟️ Coupons & Promotions
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'segments'"
+      (click)="setTab('segments')"
+    >
+      🎯 Customer Segments
+    </button>
+  </nav>
+
+  <!-- Tab 1: Campaigns -->
+  @if (activeTab() === 'campaigns') {
+    <div class="table-container">
+      @if (loading()) {
+        <div class="loading-state">Loading campaigns...</div>
+      } @else if (campaigns().length === 0) {
+        <div class="empty-state">No marketing campaigns registered.</div>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Campaign Name</th>
+              <th>Channel</th>
+              <th>Duration</th>
+              <th class="text-right">Budget</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of campaigns(); track c.id) {
+              <tr>
+                <td class="font-bold">{{ c.name }}</td>
+                <td><span class="badge">{{ c.channel }}</span></td>
+                <td>{{ c.startDate }} to {{ c.endDate }}</td>
+                <td class="text-right font-mono font-bold">₹{{ formatPaise(c.budgetPaise) }}</td>
+                <td><magic-status-badge [label]="c.status" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+
+  <!-- Tab 2: Coupons -->
+  @if (activeTab() === 'coupons') {
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Coupon Code</th>
+            <th>Type</th>
+            <th>Discount Value</th>
+            <th class="text-right">Min Order</th>
+            <th class="text-center">Usage</th>
+            <th>Validity</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (cpn of coupons(); track cpn.id) {
+            <tr>
+              <td class="font-mono font-bold text-primary">{{ cpn.couponCode }}</td>
+              <td>{{ cpn.discountType }}</td>
+              <td class="font-bold">{{ cpn.discountType === 'Percentage' ? cpn.discountValue + '%' : '₹' + (cpn.discountValue / 100) }}</td>
+              <td class="text-right font-mono">₹{{ formatPaise(cpn.minOrderAmountPaise) }}</td>
+              <td class="text-center font-mono">{{ cpn.currentUsageCount }} / {{ cpn.maxUsageCount }}</td>
+              <td class="font-mono text-secondary">{{ cpn.validFromUtc | date:'mediumDate' }} - {{ cpn.validToUtc | date:'mediumDate' }}</td>
+              <td><span class="badge" [class.badge-success]="cpn.isActive">Active</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Tab 3: Customer Segments -->
+  @if (activeTab() === 'segments') {
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Segment Name</th>
+            <th>Criteria Type</th>
+            <th class="text-right">Min Order Value</th>
+            <th class="text-center">Min Order Count</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (seg of segments(); track seg.id) {
+            <tr>
+              <td class="font-bold">{{ seg.name }}</td>
+              <td><span class="badge">{{ seg.criteriaType }}</span></td>
+              <td class="text-right font-mono">₹{{ formatPaise(seg.minOrderValuePaise) }}</td>
+              <td class="text-center font-mono">{{ seg.minOrderCount }}</td>
+              <td>{{ seg.description || '-' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- New Campaign Modal -->
+  @if (showNewCampaignModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Launch Marketing Campaign</h3>
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Campaign Name *</label>
+            <input type="text" [(ngModel)]="newCampaign.name" placeholder="e.g. Diwali Festive Sale 2026" />
+          </div>
+          <div class="form-group">
+            <label>Channel *</label>
+            <select [(ngModel)]="newCampaign.channel">
+              <option value="SMS">SMS Marketing</option>
+              <option value="WhatsApp">WhatsApp Business</option>
+              <option value="Email">Email Broadcast</option>
+              <option value="InStore">In-Store Display</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Budget (₹) *</label>
+            <input type="number" [(ngModel)]="newCampaign.budgetRupees" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Start Date *</label>
+            <input type="date" [(ngModel)]="newCampaign.startDate" />
+          </div>
+          <div class="form-group">
+            <label>End Date *</label>
+            <input type="date" [(ngModel)]="newCampaign.endDate" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showNewCampaignModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="submitCampaign()">Launch Campaign</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- New Coupon Modal -->
+  @if (showNewCouponModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Generate Promotional Coupon</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Coupon Code *</label>
+            <input type="text" [(ngModel)]="newCoupon.couponCode" placeholder="e.g. FESTIVE20" style="text-transform: uppercase;" />
+          </div>
+          <div class="form-group">
+            <label>Discount Type</label>
+            <select [(ngModel)]="newCoupon.discountType">
+              <option value="Percentage">Percentage (%)</option>
+              <option value="FixedAmount">Fixed Amount (₹)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Discount Value *</label>
+            <input type="number" [(ngModel)]="newCoupon.discountValue" min="1" />
+          </div>
+          <div class="form-group">
+            <label>Min Order Amount (₹)</label>
+            <input type="number" [(ngModel)]="newCoupon.minOrderRupees" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Valid From *</label>
+            <input type="date" [(ngModel)]="newCoupon.validFrom" />
+          </div>
+          <div class="form-group">
+            <label>Valid To *</label>
+            <input type="date" [(ngModel)]="newCoupon.validTo" />
+          </div>
+          <div class="form-group">
+            <label>Max Usages</label>
+            <input type="number" [(ngModel)]="newCoupon.maxUsageCount" min="1" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" (click)="showNewCouponModal.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="submitCoupon()">Save Coupon</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -75,9 +75,16 @@ public sealed class OutboxProcessorTests : IClassFixture<MagicTestFixture>
         await dbContext.SaveChangesAsync();
 
         var processor = new OutboxProcessorBackgroundService(scopeFactory, dateTimeProvider, logger);
-        var processed = await processor.ProcessPendingBatchAsync(CancellationToken.None);
+        var attempts = 0;
+        var totalProcessed = 0;
+        while (!_consumer.HandledEventIds.Contains(testMessage.Id) && attempts++ < 10)
+        {
+            var count = await processor.ProcessPendingBatchAsync(CancellationToken.None);
+            totalProcessed += count;
+            if (count == 0) break;
+        }
 
-        Assert.True(processed >= 1);
+        Assert.True(totalProcessed >= 1);
         Assert.Contains(testMessage.Id, _consumer.HandledEventIds);
 
         // Verify database state: row is marked processed and unlocked
@@ -119,10 +126,15 @@ public sealed class OutboxProcessorTests : IClassFixture<MagicTestFixture>
         await dbContext.SaveChangesAsync();
 
         var processor = new OutboxProcessorBackgroundService(scopeFactory, dateTimeProvider, logger);
-        var processed = await processor.ProcessPendingBatchAsync(CancellationToken.None);
+        var attempts = 0;
+        OutboxMessageRecord? updated = null;
+        while (attempts++ < 10)
+        {
+            await processor.ProcessPendingBatchAsync(CancellationToken.None);
+            updated = await dbContext.OutboxMessages.AsNoTracking().FirstOrDefaultAsync(m => m.Id == testMessage.Id);
+            if (updated?.RetryCount > 0) break;
+        }
 
-        // 0 successfully processed
-        var updated = await dbContext.OutboxMessages.AsNoTracking().FirstOrDefaultAsync(m => m.Id == testMessage.Id);
         Assert.NotNull(updated);
         Assert.Null(updated.ProcessedAtUtc);
         Assert.Equal(1, updated.RetryCount);

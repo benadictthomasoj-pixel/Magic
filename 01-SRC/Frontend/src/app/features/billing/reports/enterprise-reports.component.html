@@ -1,0 +1,306 @@
+<div class="workspace-container">
+  <header class="workspace-header">
+    <div class="header-titles">
+      <h1 class="page-title">Enterprise Business Intelligence & Reports</h1>
+      <p class="page-subtitle">Consolidated operational metrics, cross-branch reporting, and real-time financial reconciliation</p>
+    </div>
+    <div class="header-actions">
+      <button
+        type="button"
+        class="btn btn-outline"
+        [disabled]="exporting() || activeTab() === 'executive'"
+        (click)="exportReport('csv')"
+      >
+        📥 Export CSV
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        [disabled]="exporting() || activeTab() === 'executive'"
+        (click)="exportReport('pdf')"
+      >
+        📄 Export PDF
+      </button>
+    </div>
+  </header>
+
+  @if (exportMessage(); as msg) {
+    <div class="alert-banner info">
+      <span>ℹ️ {{ msg }}</span>
+    </div>
+  }
+
+  <!-- Subsystem Navigation Tabs -->
+  <nav class="sub-nav-tabs">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'executive'"
+      (click)="setTab('executive')"
+    >
+      📊 Executive Dashboard
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'sales'"
+      (click)="setTab('sales')"
+    >
+      🧾 Sales & Revenue
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'procurement'"
+      (click)="setTab('procurement')"
+    >
+      🛒 Purchases & Inbound
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'inventory'"
+      (click)="setTab('inventory')"
+    >
+      📦 Inventory & Stock
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'financial'"
+      (click)="setTab('financial')"
+    >
+      💰 Financial Reconciliation
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'hr'"
+      (click)="setTab('hr')"
+    >
+      👥 HR & Operations
+    </button>
+  </nav>
+
+  <!-- Filter Bar -->
+  <div class="filter-panel">
+    <div class="filter-row">
+      <div class="filter-field">
+        <label for="fromDate">From Date</label>
+        <input type="date" id="fromDate" class="form-input" [(ngModel)]="fromDate" />
+      </div>
+      <div class="filter-field">
+        <label for="toDate">To Date</label>
+        <input type="date" id="toDate" class="form-input" [(ngModel)]="toDate" />
+      </div>
+      @if (activeTab() !== 'executive') {
+        <div class="filter-field">
+          <label for="reportType">Report Query</label>
+          <select id="reportType" class="form-select" [(ngModel)]="currentReportType" (change)="loadReport()">
+            @if (activeTab() === 'sales') {
+              <option value="sales-by-period">Sales By Period (Daily Breakdown)</option>
+              <option value="sales-by-customer">Sales By Customer</option>
+              <option value="sales-by-category">Sales By Product Category</option>
+            }
+            @if (activeTab() === 'procurement') {
+              <option value="purchases-by-supplier">Purchases By Supplier</option>
+            }
+            @if (activeTab() === 'inventory') {
+              <option value="inventory-summary">Current Stock Valuation & Summary</option>
+              <option value="low-stock-alerts">Low Stock Alert Items</option>
+            }
+            @if (activeTab() === 'financial') {
+              <option value="receivables-aging">Accounts Receivable (AR) Aging</option>
+              <option value="payables-aging">Accounts Payable (AP) Aging</option>
+              <option value="gl-reconciliation">General Ledger Reconciliation & Balances</option>
+            }
+            @if (activeTab() === 'hr') {
+              <option value="payroll-summary">Payroll Register & Summary</option>
+              <option value="service-desk-metrics">Service Desk Ticket Summary</option>
+            }
+          </select>
+        </div>
+      }
+      <div class="filter-field filter-actions">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="activeTab() === 'executive' ? loadExecutiveDashboard() : loadReport()"
+          [disabled]="loading()"
+        >
+          🔄 Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content Section -->
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <span>Generating analytical report...</span>
+    </div>
+  } @else {
+    <!-- Executive Dashboard Tab -->
+    @if (activeTab() === 'executive' && dashboard(); as d) {
+      <div class="dashboard-container">
+        <!-- Accounting Decision Notification Banner -->
+        <div class="alert-banner warning">
+          <span class="alert-icon">⚖️</span>
+          <div class="alert-content">
+            <strong>Accounting Architecture Standard: DEC-ACC-002 (Provisional FIFO Valuation)</strong>
+            <p>
+              Inventory valuation and Cost of Goods Sold calculations currently reflect provisional FIFO logic.
+              MWA (Moving Weighted Average) valuation remains under enterprise sign-off.
+              Financial entries are strictly tied to General Ledger journals.
+            </p>
+          </div>
+        </div>
+
+        <section class="kpi-grid">
+          <div class="kpi-card highlight">
+            <span class="kpi-label">Total Gross Sales</span>
+            <span class="kpi-value">₹{{ formatPaise(d.totalSalesPaise) }}</span>
+            <span class="kpi-sub">Net Sales: ₹{{ formatPaise(d.netSalesPaise) }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Total Purchases</span>
+            <span class="kpi-value">₹{{ formatPaise(d.totalPurchasesPaise) }}</span>
+            <span class="kpi-sub">Inbound Goods Received</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Operating Expenses</span>
+            <span class="kpi-value">₹{{ formatPaise(d.operatingExpensesPaise) }}</span>
+            <span class="kpi-sub">Direct & Petty Cash Outflows</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Gross Margin</span>
+            <span class="kpi-value" [class.text-provisional]="d.grossProfitStatus === 'Provisional FIFO'">
+              ₹{{ formatPaise(d.grossProfitPaise) }}
+            </span>
+            <span class="kpi-badge warning">{{ d.grossProfitStatus }}</span>
+          </div>
+        </section>
+
+        <section class="kpi-grid secondary">
+          <div class="kpi-card">
+            <span class="kpi-label">Accounts Receivable (AR)</span>
+            <span class="kpi-value text-primary">₹{{ formatPaise(d.accountsReceivablePaise) }}</span>
+            <span class="kpi-sub">Outstanding Customer Invoices</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Accounts Payable (AP)</span>
+            <span class="kpi-value text-danger">₹{{ formatPaise(d.accountsPayablePaise) }}</span>
+            <span class="kpi-sub">Outstanding Supplier Bills</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Treasury & Bank</span>
+            <span class="kpi-value text-success">₹{{ formatPaise(d.bankBalancesPaise + d.cashPositionPaise) }}</span>
+            <span class="kpi-sub">Cash: ₹{{ formatPaise(d.cashPositionPaise) }} | Bank: ₹{{ formatPaise(d.bankBalancesPaise) }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Low Stock Alerts</span>
+            <span class="kpi-value text-warning">{{ d.lowStockAlertsCount }}</span>
+            <span class="kpi-sub">Total Units On Hand: {{ d.totalInventoryQuantity }}</span>
+          </div>
+        </section>
+
+        <!-- Branch Performance Table -->
+        <div class="section-card">
+          <h2 class="section-heading">Branch Sales & Distribution Breakdown</h2>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Branch Code</th>
+                  <th>Branch Name</th>
+                  <th>Order Count</th>
+                  <th class="text-right">Sales Amount (₹)</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (b of d.branchPerformance; track b.branchId) {
+                  <tr>
+                    <td><code>{{ b.branchCode }}</code></td>
+                    <td><strong>{{ b.branchName }}</strong></td>
+                    <td>{{ b.orderCount }}</td>
+                    <td class="text-right font-mono">₹{{ formatPaise(b.salesPaise) }}</td>
+                  </tr>
+                }
+                @if (d.branchPerformance.length === 0) {
+                  <tr>
+                    <td colspan="4" class="text-center text-muted">No branch transaction data recorded for this period</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Generic Report Data Table Tab -->
+    @if (activeTab() !== 'executive' && reportData(); as r) {
+      <div class="report-view-container">
+        <div class="report-meta-header">
+          <div>
+            <h2 class="report-title">{{ r.reportTitle }}</h2>
+            <p class="report-period">{{ r.periodDescription }} · {{ r.recordCount }} records evaluated</p>
+          </div>
+          <div class="report-totals">
+            <div class="total-badge">
+              <span class="lbl">Total Units:</span>
+              <span class="val">{{ r.totalQuantity }}</span>
+            </div>
+            <div class="total-badge">
+              <span class="lbl">Total Tax:</span>
+              <span class="val">₹{{ formatPaise(r.totalTaxAmountPaise) }}</span>
+            </div>
+            <div class="total-badge highlight">
+              <span class="lbl">Total Amount:</span>
+              <span class="val">₹{{ formatPaise(r.totalAmountPaise) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Record Code</th>
+                <th>Description</th>
+                <th>Category / Classification</th>
+                <th class="text-right">Quantity</th>
+                <th class="text-right">Tax (₹)</th>
+                <th class="text-right">Total Amount (₹)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of r.rows; track row.key) {
+                <tr>
+                  <td><code>{{ row.key }}</code></td>
+                  <td><strong>{{ row.label }}</strong></td>
+                  <td>{{ row.category || '—' }}</td>
+                  <td class="text-right">{{ row.quantity }}</td>
+                  <td class="text-right font-mono">₹{{ formatPaise(row.taxAmountPaise) }}</td>
+                  <td class="text-right font-mono"><strong>₹{{ formatPaise(row.amountPaise) }}</strong></td>
+                  <td>
+                    <span class="badge" [class.success]="row.status === 'Active' || row.status === 'Approved' || row.status === 'Paid'">
+                      {{ row.status || 'Posted' }}
+                    </span>
+                  </td>
+                </tr>
+              }
+              @if (r.rows.length === 0) {
+                <tr>
+                  <td colspan="7" class="text-center text-muted">No records match the selected filters</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+</div>
