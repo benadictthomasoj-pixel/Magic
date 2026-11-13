@@ -111,6 +111,8 @@ public sealed record SalesInvoiceDto
     public required long OutstandingBalancePaise { get; init; }
     public required string PlaceOfSupplyStateCode { get; init; }
     public required string SellerGstin { get; init; }
+    public Guid? WarehouseId { get; init; }
+    public Guid? AccountingVoucherId { get; init; }
     public string? Notes { get; init; }
     public required IReadOnlyList<SalesInvoiceLineDto> Lines { get; init; }
     public required IReadOnlyList<SalesPaymentDto> Payments { get; init; }
@@ -178,6 +180,7 @@ public sealed record CreateSalesReturnRequest
 {
     public required Guid InvoiceId { get; init; }
     public required string ReasonCode { get; init; } // Defective, WrongItem, CustomerCancelled, Other
+    public string? RefundMethod { get; init; } // Cash, Card, UPI, CreditNote
     public string? Notes { get; init; }
     public required IReadOnlyList<CreateSalesReturnLineRequest> Lines { get; init; }
 }

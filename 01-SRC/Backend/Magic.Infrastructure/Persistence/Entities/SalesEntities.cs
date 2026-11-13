@@ -30,6 +30,8 @@ public sealed class SalesInvoiceRecord
     public string? CustomerGstin { get; set; }
     public required string SellerGstin { get; set; }
     public string? Notes { get; set; }
+    public Guid? WarehouseId { get; set; }
+    public Guid? AccountingVoucherId { get; set; }
     public int ConcurrencyVersion { get; set; } = 1;
     public DateTimeOffset CreatedAtUtc { get; set; }
     public DateTimeOffset? UpdatedAtUtc { get; set; }

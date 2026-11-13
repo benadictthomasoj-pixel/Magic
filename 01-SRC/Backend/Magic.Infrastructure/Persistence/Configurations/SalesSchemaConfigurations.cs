@@ -18,11 +18,16 @@ public sealed class SalesInvoiceConfiguration : IEntityTypeConfiguration<SalesIn
         builder.Property(i => i.Notes).HasMaxLength(500);
         builder.Property(i => i.ConcurrencyVersion).IsConcurrencyToken();
 
+        builder.Property(i => i.WarehouseId);
+        builder.Property(i => i.AccountingVoucherId);
+
         builder.HasIndex(i => new { i.CompanyId, i.InvoiceNumber }).IsUnique();
         builder.HasIndex(i => new { i.CompanyId, i.BranchId });
         builder.HasIndex(i => i.InvoiceDateUtc);
         builder.HasIndex(i => i.CustomerId);
         builder.HasIndex(i => i.CashierSessionId);
+        builder.HasIndex(i => i.WarehouseId);
+        builder.HasIndex(i => i.AccountingVoucherId);
 
         builder.HasOne(i => i.Customer)
             .WithMany()

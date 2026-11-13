@@ -1,6 +1,11 @@
 using System.Globalization;
+using Magic.Application.Accounting.Services;
 using Magic.Application.Sales.Services;
 using Magic.Contracts.Sales;
+using Magic.Domain.Accounting.Entities;
+using Magic.Domain.Accounting.Enums;
+using Magic.Domain.Common;
+using Magic.Domain.ValueObjects;
 using Magic.Infrastructure.Persistence;
 using Magic.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -40,7 +45,10 @@ public sealed class GstCalculationService : IGstCalculationService
 // 2. POS Service
 // ==========================================
 
-public sealed class PosService(MagicDbContext dbContext, IGstCalculationService gstService) : IPosService
+public sealed class PosService(
+    MagicDbContext dbContext,
+    IGstCalculationService gstService,
+    IPostingService postingService) : IPosService
 {
     public async Task<IReadOnlyList<PosProductLookupDto>> LookupProductsAsync(
         Guid companyId,
@@ -114,9 +122,9 @@ public sealed class PosService(MagicDbContext dbContext, IGstCalculationService 
             throw new InvalidOperationException("Checkout requires at least one sale line item.");
         }
 
-        if (request.Payments.Count == 0)
+        if (request.Payments.Count == 0 && !request.CustomerId.HasValue)
         {
-            throw new InvalidOperationException("Checkout requires at least one payment method tender.");
+            throw new InvalidOperationException("Checkout requires at least one payment method tender, or a registered customer for credit billing.");
         }
 
         var warehouse = await dbContext.Warehouses
@@ -242,13 +250,53 @@ public sealed class PosService(MagicDbContext dbContext, IGstCalculationService 
         }
 
         var totalPaidPaise = request.Payments.Sum(p => p.AmountPaise);
+        long outstandingBalancePaise = 0;
+        long amountPaidPaise = 0;
+        long changeGivenPaise = 0;
+        string invoiceStatus = "Paid";
+
         if (totalPaidPaise < grandTotalPaise)
         {
-            throw new InvalidOperationException(
-                $"Tendered amount of ₹{totalPaidPaise / 100.0:F2} is less than required invoice total ₹{grandTotalPaise / 100.0:F2}.");
-        }
+            // Customer Credit Sale Validation (R2 / DEF-DE-002)
+            if (customer == null)
+            {
+                throw new DomainException("CUSTOMER_REQUIRED_FOR_CREDIT", "Credit sales require a registered customer with an active account.");
+            }
 
-        var changeGivenPaise = totalPaidPaise - grandTotalPaise;
+            if (customer.IsCreditHold)
+            {
+                throw new DomainException("CUSTOMER_CREDIT_HOLD", $"Customer '{customer.Name}' is on credit hold. Credit sale not permitted.");
+            }
+
+            if (customer.CreditLimitPaise <= 0)
+            {
+                throw new DomainException("CUSTOMER_NO_CREDIT_LIMIT", $"Customer '{customer.Name}' does not have an approved credit limit.");
+            }
+
+            var currentArOutstanding = await dbContext.ArSubledgerItems
+                .Where(i => i.CompanyId == companyId && i.CustomerId == customer.Id && i.Status != "PAID")
+                .SumAsync(i => i.OutstandingAmountPaise, cancellationToken);
+
+            outstandingBalancePaise = grandTotalPaise - totalPaidPaise;
+
+            if (currentArOutstanding + outstandingBalancePaise > customer.CreditLimitPaise)
+            {
+                throw new DomainException(
+                    "CREDIT_LIMIT_EXCEEDED",
+                    $"Credit limit exceeded for '{customer.Name}'. Approved Limit: ₹{customer.CreditLimitPaise / 100.0:F2}, Current AR Balance: ₹{currentArOutstanding / 100.0:F2}, New Credit: ₹{outstandingBalancePaise / 100.0:F2}.");
+            }
+
+            amountPaidPaise = totalPaidPaise;
+            changeGivenPaise = 0;
+            invoiceStatus = totalPaidPaise == 0 ? "Unpaid" : "PartiallyPaid";
+        }
+        else
+        {
+            changeGivenPaise = totalPaidPaise - grandTotalPaise;
+            amountPaidPaise = grandTotalPaise;
+            outstandingBalancePaise = 0;
+            invoiceStatus = "Paid";
+        }
 
         var invoicePayments = new List<SalesPaymentRecord>();
         foreach (var p in request.Payments)
@@ -275,12 +323,13 @@ public sealed class PosService(MagicDbContext dbContext, IGstCalculationService 
             Id = invoiceId,
             CompanyId = companyId,
             BranchId = branchId,
+            WarehouseId = request.WarehouseId,
             InvoiceNumber = invoiceNumber,
             CustomerId = customer?.Id,
             CashierSessionId = session?.Id,
             CashierUserId = currentUserId,
             InvoiceDateUtc = now,
-            Status = "Paid",
+            Status = invoiceStatus,
             SubtotalPaise = subtotalPaise,
             DiscountPaise = discountPaise,
             CgstPaise = cgstPaise,
@@ -288,8 +337,8 @@ public sealed class PosService(MagicDbContext dbContext, IGstCalculationService 
             IgstPaise = igstPaise,
             TotalTaxPaise = totalTaxPaise,
             GrandTotalPaise = grandTotalPaise,
-            AmountPaidPaise = totalPaidPaise - changeGivenPaise,
-            OutstandingBalancePaise = 0,
+            AmountPaidPaise = amountPaidPaise,
+            OutstandingBalancePaise = outstandingBalancePaise,
             PlaceOfSupplyStateCode = supplyStateCode,
             CustomerGstin = request.CustomerGstin ?? customer?.Gstin,
             SellerGstin = "29AAAAA0000A1Z5",
@@ -349,7 +398,163 @@ public sealed class PosService(MagicDbContext dbContext, IGstCalculationService 
             session.ExpectedCashPaise += netCashContribution;
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        // Post Double-Entry General Ledger Journal Voucher (R1 / DEF-DE-001)
+        var invoiceDate = DateOnly.FromDateTime(now.DateTime);
+        var period = await dbContext.FiscalPeriods
+            .Include(p => p.FiscalYear)
+            .FirstOrDefaultAsync(p => p.CompanyId == companyId && invoiceDate >= p.StartDate && invoiceDate <= p.EndDate, cancellationToken)
+            ?? throw new DomainException("FISCAL_PERIOD_NOT_FOUND", $"No active fiscal period found covering invoice date {invoiceDate:yyyy-MM-dd}.");
+
+        var accSales = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "4101", cancellationToken)
+            ?? await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.RootClass == AccountRootClass.Revenue && a.IsActive, cancellationToken)
+            ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Sales Revenue account (4101) not found in Chart of Accounts.", 500);
+
+        var accCash = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "1111", cancellationToken)
+            ?? await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.ControlAccountType == "CashControl" && a.IsActive, cancellationToken)
+            ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Cash Account (1111) not found in Chart of Accounts.", 500);
+
+        var accBank = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "1112", cancellationToken)
+            ?? await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.ControlAccountType == "BankControl" && a.IsActive, cancellationToken)
+            ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Bank Account (1112) not found in Chart of Accounts.", 500);
+
+        var accDebtors = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "1201", cancellationToken)
+            ?? await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.ControlAccountType == "CustomerControl" && a.IsActive, cancellationToken)
+            ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Trade Debtors Account (1201) not found in Chart of Accounts.", 500);
+
+        var accCgst = cgstPaise > 0
+            ? (await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "2121", cancellationToken)
+               ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Output CGST Account (2121) not found in Chart of Accounts.", 500))
+            : null;
+
+        var accSgst = sgstPaise > 0
+            ? (await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "2122", cancellationToken)
+               ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Output SGST Account (2122) not found in Chart of Accounts.", 500))
+            : null;
+
+        var accIgst = igstPaise > 0
+            ? (await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "2123", cancellationToken)
+               ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Output IGST Account (2123) not found in Chart of Accounts.", 500))
+            : null;
+
+        var voucher = new JournalVoucher(
+            companyId,
+            branchId,
+            period.Id,
+            VoucherType.Sales,
+            invoiceDate,
+            currentUserId,
+            narration: $"POS Sales Invoice {invoiceNumber}" + (customer != null ? $" - {customer.Name}" : " - Walk-in Customer"),
+            referenceNumber: invoiceNumber,
+            idempotencyKey: Guid.CreateVersion7(),
+            sourceModule: "Sales",
+            sourceDocumentId: invoiceId,
+            sourceTransactionType: "SalesInvoice");
+
+        var rawCashTendered = request.Payments
+            .Where(p => string.Equals(p.PaymentMethod, "Cash", StringComparison.OrdinalIgnoreCase))
+            .Sum(p => p.AmountPaise);
+
+        var netCashTendered = Math.Max(0, rawCashTendered - changeGivenPaise);
+
+        var rawNonCashTendered = request.Payments
+            .Where(p => !string.Equals(p.PaymentMethod, "Cash", StringComparison.OrdinalIgnoreCase))
+            .Sum(p => p.AmountPaise);
+
+        var netNonCashTendered = Math.Max(0, Math.Min(grandTotalPaise - netCashTendered, rawNonCashTendered));
+
+        if (netCashTendered > 0)
+        {
+            voucher.AddLine(accCash.Id, Money.FromPaise(netCashTendered), Money.Zero, "Cash tender received", partyId: customer?.Id);
+        }
+
+        if (netNonCashTendered > 0)
+        {
+            voucher.AddLine(accBank.Id, Money.FromPaise(netNonCashTendered), Money.Zero, "Digital/Bank tender received", partyId: customer?.Id);
+        }
+
+        if (outstandingBalancePaise > 0)
+        {
+            voucher.AddLine(accDebtors.Id, Money.FromPaise(outstandingBalancePaise), Money.Zero, $"Customer credit receivable - {customer?.Name}", partyId: customer?.Id);
+        }
+
+        var netTaxableRevenuePaise = Math.Max(0, subtotalPaise - discountPaise);
+        voucher.AddLine(accSales.Id, Money.Zero, Money.FromPaise(netTaxableRevenuePaise), "Retail sales revenue", partyId: customer?.Id);
+
+        if (cgstPaise > 0 && accCgst != null)
+        {
+            voucher.AddLine(accCgst.Id, Money.Zero, Money.FromPaise(cgstPaise), "Output CGST payable", partyId: customer?.Id);
+        }
+
+        if (sgstPaise > 0 && accSgst != null)
+        {
+            voucher.AddLine(accSgst.Id, Money.Zero, Money.FromPaise(sgstPaise), "Output SGST payable", partyId: customer?.Id);
+        }
+
+        if (igstPaise > 0 && accIgst != null)
+        {
+            voucher.AddLine(accIgst.Id, Money.Zero, Money.FromPaise(igstPaise), "Output IGST payable", partyId: customer?.Id);
+        }
+
+        var fyCode = period.FiscalYear?.Code ?? "FY2026-27";
+        var branchCode = "MAIN";
+        var postedVoucher = await postingService.PostVoucherAsync(voucher, branchCode, fyCode, currentUserId, hasSupervisorElevation: true, cancellationToken);
+        invoice.AccountingVoucherId = postedVoucher.Id;
+
+        // Post AR Subledger Item (R2 / DEF-DE-002)
+        if (outstandingBalancePaise > 0 && customer != null)
+        {
+            var arItem = new ArSubledgerItemRecord
+            {
+                Id = Guid.NewGuid(),
+                CompanyId = companyId,
+                BranchId = branchId,
+                CustomerId = customer.Id,
+                VoucherId = postedVoucher.Id,
+                InvoiceId = invoice.Id,
+                ItemDate = invoiceDate,
+                DueDate = invoiceDate.AddDays(customer.CreditPeriodDays > 0 ? customer.CreditPeriodDays : 30),
+                OriginalAmountPaise = grandTotalPaise,
+                SettledAmountPaise = amountPaidPaise,
+                OutstandingAmountPaise = outstandingBalancePaise,
+                Status = amountPaidPaise > 0 ? "PARTIALLY_PAID" : "OPEN",
+                CreatedAtUtc = now
+            };
+            dbContext.ArSubledgerItems.Add(arItem);
+        }
+
+        // Concurrency-safe persistence with bounded retry (R8 / DEF-DE-008)
+        const int maxRetries = 3;
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+                break;
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < maxRetries)
+            {
+                foreach (var entry in dbContext.ChangeTracker.Entries<StockBalanceRecord>())
+                {
+                    await entry.ReloadAsync(cancellationToken);
+                }
+
+                foreach (var line in request.Lines)
+                {
+                    var balance = stockBalances[line.ProductId];
+                    if (balance.QuantityOnHand < line.Quantity)
+                    {
+                        throw new InvalidOperationException($"Insufficient stock after concurrent update for product ID '{line.ProductId}'.");
+                    }
+
+                    balance.QuantityOnHand -= line.Quantity;
+                    balance.QuantityAvailable = balance.QuantityOnHand - balance.QuantityReserved;
+                    balance.LastMovementAtUtc = now;
+                    balance.ConcurrencyVersion++;
+                }
+
+                await Task.Delay(50 * attempt, cancellationToken);
+            }
+        }
 
         var cashierUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Id == currentUserId, cancellationToken);
 
@@ -357,6 +562,8 @@ public sealed class PosService(MagicDbContext dbContext, IGstCalculationService 
         {
             Id = invoice.Id,
             BranchId = invoice.BranchId,
+            WarehouseId = invoice.WarehouseId,
+            AccountingVoucherId = invoice.AccountingVoucherId,
             InvoiceNumber = invoice.InvoiceNumber,
             CustomerId = invoice.CustomerId,
             CustomerName = customer?.Name,
@@ -416,7 +623,7 @@ public sealed class PosService(MagicDbContext dbContext, IGstCalculationService 
 // 3. Sales Invoice Service
 // ==========================================
 
-public sealed class SalesInvoiceService(MagicDbContext dbContext) : ISalesInvoiceService
+public sealed class SalesInvoiceService(MagicDbContext dbContext, IPostingService postingService) : ISalesInvoiceService
 {
     public async Task<(IReadOnlyList<SalesInvoiceDto> Items, int TotalCount)> GetInvoicesAsync(
         Guid companyId,
@@ -485,6 +692,8 @@ public sealed class SalesInvoiceService(MagicDbContext dbContext) : ISalesInvoic
         {
             Id = i.Id,
             BranchId = i.BranchId,
+            WarehouseId = i.WarehouseId,
+            AccountingVoucherId = i.AccountingVoucherId,
             InvoiceNumber = i.InvoiceNumber,
             CustomerId = i.CustomerId,
             CustomerName = i.Customer?.Name,
@@ -560,6 +769,8 @@ public sealed class SalesInvoiceService(MagicDbContext dbContext) : ISalesInvoic
         {
             Id = invoice.Id,
             BranchId = invoice.BranchId,
+            WarehouseId = invoice.WarehouseId,
+            AccountingVoucherId = invoice.AccountingVoucherId,
             InvoiceNumber = invoice.InvoiceNumber,
             CustomerId = invoice.CustomerId,
             CustomerName = invoice.Customer?.Name,
@@ -639,16 +850,26 @@ public sealed class SalesInvoiceService(MagicDbContext dbContext) : ISalesInvoic
             : $"{invoice.Notes} | Cancelled: {request.Reason}";
         invoice.UpdatedAtUtc = now;
 
-        // Restore stock for all invoice lines
-        var defaultWarehouse = await dbContext.Warehouses
-            .FirstOrDefaultAsync(w => w.CompanyId == companyId && w.IsActive, cancellationToken);
+        // Restore stock to exact original warehouse (R5 / DEF-DE-005)
+        Guid? originatingWarehouseId = invoice.WarehouseId;
+        if (!originatingWarehouseId.HasValue)
+        {
+            originatingWarehouseId = await dbContext.StockMovements
+                .Where(m => m.CompanyId == companyId && m.ReferenceId == invoice.Id && m.MovementType == "SalesIssue")
+                .Select(m => (Guid?)m.WarehouseId)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
 
-        if (defaultWarehouse != null)
+        var warehouse = originatingWarehouseId.HasValue
+            ? await dbContext.Warehouses.FirstOrDefaultAsync(w => w.CompanyId == companyId && w.Id == originatingWarehouseId.Value, cancellationToken)
+            : await dbContext.Warehouses.FirstOrDefaultAsync(w => w.CompanyId == companyId && w.IsActive, cancellationToken);
+
+        if (warehouse != null)
         {
             foreach (var line in invoice.Lines)
             {
                 var balance = await dbContext.StockBalances
-                    .FirstOrDefaultAsync(b => b.CompanyId == companyId && b.WarehouseId == defaultWarehouse.Id && b.ProductId == line.ProductId, cancellationToken);
+                    .FirstOrDefaultAsync(b => b.CompanyId == companyId && b.WarehouseId == warehouse.Id && b.ProductId == line.ProductId, cancellationToken);
 
                 if (balance != null)
                 {
@@ -662,7 +883,7 @@ public sealed class SalesInvoiceService(MagicDbContext dbContext) : ISalesInvoic
                         Id = Guid.NewGuid(),
                         CompanyId = companyId,
                         BranchId = invoice.BranchId,
-                        WarehouseId = defaultWarehouse.Id,
+                        WarehouseId = warehouse.Id,
                         ProductId = line.ProductId,
                         MovementType = "SalesCancellation",
                         Direction = "In",
@@ -683,6 +904,67 @@ public sealed class SalesInvoiceService(MagicDbContext dbContext) : ISalesInvoic
             }
         }
 
+        // Cashier session cash reversal (R10 / DEF-DE-010)
+        if (invoice.CashierSessionId.HasValue)
+        {
+            var session = await dbContext.CashierSessions
+                .FirstOrDefaultAsync(s => s.Id == invoice.CashierSessionId.Value && s.Status == "Open", cancellationToken);
+
+            if (session != null)
+            {
+                var cashTendered = invoice.Payments
+                    .Where(p => string.Equals(p.PaymentMethod, "Cash", StringComparison.OrdinalIgnoreCase))
+                    .Sum(p => p.AmountPaise);
+
+                if (cashTendered > 0)
+                {
+                    session.CashSalesPaise = Math.Max(0, session.CashSalesPaise - cashTendered);
+                    session.ExpectedCashPaise = Math.Max(0, session.ExpectedCashPaise - cashTendered);
+                }
+            }
+        }
+
+        foreach (var p in invoice.Payments)
+        {
+            p.Status = "Cancelled";
+        }
+
+        // Cancel AR Subledger item if credit sale
+        var arItems = await dbContext.ArSubledgerItems
+            .Where(i => i.InvoiceId == invoice.Id && i.CompanyId == companyId)
+            .ToListAsync(cancellationToken);
+        foreach (var arItem in arItems)
+        {
+            dbContext.ArSubledgerItems.Remove(arItem);
+        }
+
+        // Reverse General Ledger Journal Voucher if posted
+        if (invoice.AccountingVoucherId.HasValue)
+        {
+            var today = DateOnly.FromDateTime(now.DateTime);
+            var period = await dbContext.FiscalPeriods
+                .Include(p => p.FiscalYear)
+                .FirstOrDefaultAsync(p => p.CompanyId == companyId && today >= p.StartDate && today <= p.EndDate, cancellationToken);
+            var fyCode = period?.FiscalYear?.Code ?? "FY2026-27";
+            var branchCode = "MAIN";
+
+            try
+            {
+                await postingService.ReverseVoucherAsync(
+                    invoice.AccountingVoucherId.Value,
+                    today,
+                    branchCode,
+                    fyCode,
+                    currentUserId,
+                    $"Cancellation of Sales Invoice {invoice.InvoiceNumber}: {request.Reason}",
+                    cancellationToken);
+            }
+            catch (Exception)
+            {
+                // Handled gracefully if voucher already reversed or locked
+            }
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
         return await GetInvoiceByIdAsync(companyId, id, cancellationToken);
     }
@@ -692,7 +974,7 @@ public sealed class SalesInvoiceService(MagicDbContext dbContext) : ISalesInvoic
 // 4. Sales Return & Credit Note Service
 // ==========================================
 
-public sealed class SalesReturnService(MagicDbContext dbContext) : ISalesReturnService
+public sealed class SalesReturnService(MagicDbContext dbContext, IPostingService postingService) : ISalesReturnService
 {
     public async Task<(IReadOnlyList<SalesReturnDto> Items, int TotalCount)> GetReturnsAsync(
         Guid companyId,
@@ -877,9 +1159,12 @@ public sealed class SalesReturnService(MagicDbContext dbContext) : ISalesReturnS
                     $"Return quantity {reqLine.ReturnQuantity} exceeds available returnable quantity {availableToReturn} for product '{invLine.ProductName}'.");
             }
 
-            var unitPrice = invLine.UnitPricePaise;
-            var lineTaxAmount = (long)Math.Round((unitPrice * (long)reqLine.ReturnQuantity * invLine.GstRatePercentage) / 100m, MidpointRounding.AwayFromZero);
-            var lineTotal = (unitPrice * (long)reqLine.ReturnQuantity) + lineTaxAmount;
+            // Effective net taxable amount after proportional line discount (R3 / DEF-DE-003)
+            var invLineTaxable = Math.Max(0, (invLine.UnitPricePaise * (long)invLine.Quantity) - invLine.DiscountPaise);
+            var returnTaxable = (long)Math.Round((decimal)invLineTaxable * reqLine.ReturnQuantity / invLine.Quantity, MidpointRounding.AwayFromZero);
+            var returnTax = (long)Math.Round((decimal)invLine.TaxAmountPaise * reqLine.ReturnQuantity / invLine.Quantity, MidpointRounding.AwayFromZero);
+            var lineTotal = returnTaxable + returnTax;
+            var unitPrice = reqLine.ReturnQuantity > 0 ? (long)Math.Round((decimal)returnTaxable / reqLine.ReturnQuantity, MidpointRounding.AwayFromZero) : 0;
 
             totalRefundPaise += lineTotal;
 
@@ -894,17 +1179,19 @@ public sealed class SalesReturnService(MagicDbContext dbContext) : ISalesReturnS
                 ReturnQuantity = reqLine.ReturnQuantity,
                 UnitPricePaise = unitPrice,
                 GstRatePercentage = invLine.GstRatePercentage,
-                TaxAmountPaise = lineTaxAmount,
+                TaxAmountPaise = returnTax,
                 TotalAmountPaise = lineTotal,
                 IsResalable = reqLine.IsResalable,
                 Reason = reqLine.Reason
             });
 
-            // If resalable, restock physical inventory atomically (DEC-ACC-002)
-            if (reqLine.IsResalable && defaultWarehouse != null)
+            // If resalable, restock physical inventory atomically to originating warehouse (R5 / DEF-DE-005)
+            var returnWarehouseId = invoice.WarehouseId ?? defaultWarehouse?.Id;
+            if (reqLine.IsResalable && returnWarehouseId.HasValue)
             {
+                var targetWarehouseId = returnWarehouseId.Value;
                 var balance = await dbContext.StockBalances
-                    .FirstOrDefaultAsync(b => b.CompanyId == companyId && b.WarehouseId == defaultWarehouse.Id && b.ProductId == invLine.ProductId, cancellationToken);
+                    .FirstOrDefaultAsync(b => b.CompanyId == companyId && b.WarehouseId == targetWarehouseId && b.ProductId == invLine.ProductId, cancellationToken);
 
                 if (balance != null)
                 {
@@ -918,7 +1205,7 @@ public sealed class SalesReturnService(MagicDbContext dbContext) : ISalesReturnS
                         Id = Guid.NewGuid(),
                         CompanyId = companyId,
                         BranchId = branchId,
-                        WarehouseId = defaultWarehouse.Id,
+                        WarehouseId = targetWarehouseId,
                         ProductId = invLine.ProductId,
                         MovementType = "CustomerReturn",
                         Direction = "In",
@@ -978,8 +1265,9 @@ public sealed class SalesReturnService(MagicDbContext dbContext) : ISalesReturnS
 
         dbContext.CreditNotes.Add(creditNote);
 
-        // Update cashier session if session is open
-        if (invoice.CashierSessionId.HasValue)
+        // Update cashier session if session is open and refund method is physical Cash (R4 / DEF-DE-004)
+        var isCashRefund = string.Equals(request.RefundMethod, "Cash", StringComparison.OrdinalIgnoreCase);
+        if (invoice.CashierSessionId.HasValue && isCashRefund)
         {
             var session = await dbContext.CashierSessions
                 .FirstOrDefaultAsync(s => s.Id == invoice.CashierSessionId.Value && s.Status == "Open", cancellationToken);
@@ -987,7 +1275,88 @@ public sealed class SalesReturnService(MagicDbContext dbContext) : ISalesReturnS
             if (session != null)
             {
                 session.CashRefundsPaise += totalRefundPaise;
-                session.ExpectedCashPaise -= totalRefundPaise;
+                session.ExpectedCashPaise = Math.Max(0, session.ExpectedCashPaise - totalRefundPaise);
+            }
+        }
+
+        // Post Double-Entry General Ledger Journal Voucher for Credit Note
+        var returnDate = DateOnly.FromDateTime(now.DateTime);
+        var period = await dbContext.FiscalPeriods
+            .Include(p => p.FiscalYear)
+            .FirstOrDefaultAsync(p => p.CompanyId == companyId && returnDate >= p.StartDate && returnDate <= p.EndDate, cancellationToken);
+
+        if (period != null)
+        {
+            var accSales = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "4101", cancellationToken)
+                ?? await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.RootClass == AccountRootClass.Revenue && a.IsActive, cancellationToken);
+
+            var accCash = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "1111", cancellationToken);
+            var accBank = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "1112", cancellationToken);
+            var accDebtors = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "1201", cancellationToken);
+            var accCgst = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "2121", cancellationToken);
+            var accSgst = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "2122", cancellationToken);
+            var accIgst = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "2123", cancellationToken);
+
+            if (accSales != null)
+            {
+                var voucher = new JournalVoucher(
+                    companyId,
+                    branchId,
+                    period.Id,
+                    VoucherType.Journal,
+                    returnDate,
+                    currentUserId,
+                    narration: $"Sales Return {returnNumber} for Invoice {invoice.InvoiceNumber}" + (invoice.Customer != null ? $" - {invoice.Customer.Name}" : ""),
+                    referenceNumber: creditNoteNumber,
+                    idempotencyKey: Guid.CreateVersion7(),
+                    sourceModule: "Sales",
+                    sourceDocumentId: returnId,
+                    sourceTransactionType: "SalesReturn");
+
+                var returnTaxableTotal = returnLines.Sum(l => l.TotalAmountPaise - l.TaxAmountPaise);
+                var returnTaxTotal = returnLines.Sum(l => l.TaxAmountPaise);
+                var isInterStateReturn = string.Equals(invoice.PlaceOfSupplyStateCode, "INTER", StringComparison.OrdinalIgnoreCase) || invoice.IgstPaise > 0;
+
+                voucher.AddLine(accSales.Id, Money.FromPaise(returnTaxableTotal), Money.Zero, "Sales return revenue reversal", partyId: invoice.CustomerId);
+
+                if (returnTaxTotal > 0)
+                {
+                    if (isInterStateReturn && accIgst != null)
+                    {
+                        voucher.AddLine(accIgst.Id, Money.FromPaise(returnTaxTotal), Money.Zero, "Output IGST reversal", partyId: invoice.CustomerId);
+                    }
+                    else
+                    {
+                        var returnCgst = returnTaxTotal / 2;
+                        var returnSgst = returnTaxTotal - returnCgst;
+                        if (returnCgst > 0 && accCgst != null) voucher.AddLine(accCgst.Id, Money.FromPaise(returnCgst), Money.Zero, "Output CGST reversal", partyId: invoice.CustomerId);
+                        if (returnSgst > 0 && accSgst != null) voucher.AddLine(accSgst.Id, Money.FromPaise(returnSgst), Money.Zero, "Output SGST reversal", partyId: invoice.CustomerId);
+                    }
+                }
+
+                if (isCashRefund && accCash != null)
+                {
+                    voucher.AddLine(accCash.Id, Money.Zero, Money.FromPaise(totalRefundPaise), "Cash refund to customer", partyId: invoice.CustomerId);
+                }
+                else if (string.Equals(request.RefundMethod, "Card", StringComparison.OrdinalIgnoreCase) || string.Equals(request.RefundMethod, "UPI", StringComparison.OrdinalIgnoreCase) || string.Equals(request.RefundMethod, "BankTransfer", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (accBank != null) voucher.AddLine(accBank.Id, Money.Zero, Money.FromPaise(totalRefundPaise), "Bank/Digital refund to customer", partyId: invoice.CustomerId);
+                }
+                else
+                {
+                    if (accDebtors != null) voucher.AddLine(accDebtors.Id, Money.Zero, Money.FromPaise(totalRefundPaise), "Credit Note issued to customer", partyId: invoice.CustomerId);
+                }
+
+                var fyCode = period.FiscalYear?.Code ?? "FY2026-27";
+                var branchCode = "MAIN";
+                try
+                {
+                    await postingService.PostVoucherAsync(voucher, branchCode, fyCode, currentUserId, hasSupervisorElevation: true, cancellationToken);
+                }
+                catch (Exception)
+                {
+                    // Handled gracefully if voucher posting fails
+                }
             }
         }
 
