@@ -603,6 +603,103 @@ public sealed class PhaseDERemediationTests : IClassFixture<MagicTestFixture>, I
         Assert.Equal(HttpStatusCode.BadRequest, matchRes.StatusCode);
     }
 
+    [Fact]
+    public async Task R6_DEF_VERIF_001_Historical_Statement_Matches_Are_Excluded_From_Workspace_And_Duplicates_Rejected()
+    {
+        // Arrange
+        var client = CreateAdminClient();
+
+        // 1. Resolve Bank GL Account (1112)
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MagicDbContext>();
+        var bankGlAcc = await db.Accounts.FirstAsync(a => a.Code == "1112");
+
+        var bankReq = new CreateBankCashAccountRequest
+        {
+            AccountName = $"Audit Test Bank {Guid.NewGuid().ToString("N")[..4]}",
+            AccountType = "Bank",
+            AccountNumber = $"502000{Random.Shared.Next(10000000, 99999999)}",
+            BankName = "HDFC Bank",
+            BranchName = "Indiranagar",
+            IfscCode = "HDFC0004321",
+            GlAccountId = bankGlAcc.Id,
+            OpeningBalancePaise = 10000000
+        };
+        var bankRes = await client.PostAsJsonAsync("/api/v1/finance/bank-accounts", bankReq);
+        bankRes.EnsureSuccessStatusCode();
+        var bankAccount = (await bankRes.Content.ReadFromJsonAsync<ApiResponse<BankCashAccountDto>>())!.Data;
+
+        // 2. Import Statement 1 with deposit
+        var csvContent1 = "Date,Description,Reference,Debit,Credit,Balance\n2026-11-01,Deposit Line 1,REF101,0,10000,10010000\n";
+        var importReq1 = new ImportBankStatementRequest
+        {
+            BankAccountId = bankAccount.Id,
+            StatementStartDate = new DateOnly(2026, 11, 1),
+            StatementEndDate = new DateOnly(2026, 11, 15),
+            OpeningBalancePaise = 10000000,
+            ClosingBalancePaise = 10010000,
+            Filename = "HDFC_Nov_Part1.csv",
+            CsvContent = csvContent1
+        };
+        var uploadRes1 = await client.PostAsJsonAsync("/api/v1/finance/bank-reconciliation/import-csv", importReq1);
+        uploadRes1.EnsureSuccessStatusCode();
+        var stmt1 = (await uploadRes1.Content.ReadFromJsonAsync<ApiResponse<BankStatementDetailDto>>())!.Data;
+
+        // 3. Get Workspace 1
+        var wsRes1 = await client.GetAsync($"/api/v1/finance/bank-reconciliation/workspace/{stmt1.Id}");
+        wsRes1.EnsureSuccessStatusCode();
+        var ws1 = (await wsRes1.Content.ReadFromJsonAsync<ApiResponse<ReconciliationWorkspaceDto>>())!.Data;
+
+        if (ws1.UnmatchedLedgerLines.Count > 0)
+        {
+            var matchedLineId = ws1.UnmatchedLedgerLines[0].JournalLineId;
+
+            // Match Line in Statement 1
+            var matchReq = new MatchStatementLineRequest
+            {
+                StatementLineId = stmt1.Lines[0].Id,
+                JournalLineId = matchedLineId,
+                MatchType = "MANUAL"
+            };
+            var matchRes = await client.PostAsJsonAsync($"/api/v1/finance/bank-reconciliation/match?statementId={stmt1.Id}", matchReq);
+            matchRes.EnsureSuccessStatusCode();
+
+            // 4. Import Statement 2 for the same bank account
+            var csvContent2 = "Date,Description,Reference,Debit,Credit,Balance\n2026-11-16,Deposit Line 2,REF102,0,20000,10030000\n";
+            var importReq2 = new ImportBankStatementRequest
+            {
+                BankAccountId = bankAccount.Id,
+                StatementStartDate = new DateOnly(2026, 11, 16),
+                StatementEndDate = new DateOnly(2026, 11, 30),
+                OpeningBalancePaise = 10010000,
+                ClosingBalancePaise = 10030000,
+                Filename = "HDFC_Nov_Part2.csv",
+                CsvContent = csvContent2
+            };
+            var uploadRes2 = await client.PostAsJsonAsync("/api/v1/finance/bank-reconciliation/import-csv", importReq2);
+            uploadRes2.EnsureSuccessStatusCode();
+            var stmt2 = (await uploadRes2.Content.ReadFromJsonAsync<ApiResponse<BankStatementDetailDto>>())!.Data;
+
+            // 5. Fetch Workspace for Statement 2
+            var wsRes2 = await client.GetAsync($"/api/v1/finance/bank-reconciliation/workspace/{stmt2.Id}");
+            wsRes2.EnsureSuccessStatusCode();
+            var ws2 = (await wsRes2.Content.ReadFromJsonAsync<ApiResponse<ReconciliationWorkspaceDto>>())!.Data;
+
+            // Assert: matchedLineId from Statement 1 is EXCLUDED from Statement 2's UnmatchedLedgerLines (DEF-VERIF-001)
+            Assert.DoesNotContain(ws2.UnmatchedLedgerLines, l => l.JournalLineId == matchedLineId);
+
+            // Assert: Attempting to match Statement 2 to matchedLineId is rejected with 400 Bad Request
+            var duplicateMatchReq = new MatchStatementLineRequest
+            {
+                StatementLineId = stmt2.Lines[0].Id,
+                JournalLineId = matchedLineId,
+                MatchType = "MANUAL"
+            };
+            var dupRes = await client.PostAsJsonAsync($"/api/v1/finance/bank-reconciliation/match?statementId={stmt2.Id}", duplicateMatchReq);
+            Assert.Equal(HttpStatusCode.BadRequest, dupRes.StatusCode);
+        }
+    }
+
     // ==========================================
     // R7: Inter-State Procurement IGST Accounting
     // ==========================================

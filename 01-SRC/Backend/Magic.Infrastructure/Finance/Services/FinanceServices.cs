@@ -1957,10 +1957,11 @@ public sealed class BankReconciliationService(
 
         var bankAccount = statement.BankAccount!;
 
-        // Internal Ledger lines for bank account's GL Account
-        var matchedVoucherLineIds = statement.Lines
-            .Where(l => l.MatchedVoucherLineId.HasValue)
+        // Internal Ledger lines for bank account's GL Account: exclude all lines matched across any statement for this company (DEF-VERIF-001)
+        var matchedVoucherLineIds = (await dbContext.BankStatementLines
+            .Where(l => l.Statement!.CompanyId == companyId && l.MatchedVoucherLineId.HasValue)
             .Select(l => l.MatchedVoucherLineId!.Value)
+            .ToListAsync(cancellationToken))
             .ToHashSet();
 
         var ledgerLines = await dbContext.JournalLines
