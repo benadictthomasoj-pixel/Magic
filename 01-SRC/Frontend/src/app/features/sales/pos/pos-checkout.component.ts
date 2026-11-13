@@ -230,6 +230,10 @@ export class PosCheckoutComponent implements OnInit {
   }
 
   get isPaymentValid(): boolean {
+    if (this.selectedCustomerId && this.totalTenderedPaise < this.grandTotalPaise) {
+      // Customer Credit Sale permitted for registered customers
+      return true;
+    }
     return this.totalTenderedPaise >= this.grandTotalPaise;
   }
 

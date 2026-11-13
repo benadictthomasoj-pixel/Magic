@@ -119,4 +119,30 @@ describe('PosCheckoutComponent', () => {
     expect(component.cart.length).toBe(0);
     expect(component.grandTotalPaise).toBe(0);
   });
+
+  it('should permit checkout with partial or zero tender when a credit customer is selected', () => {
+    const product: PosProductLookupDto = {
+      id: 'p-4',
+      sku: 'SKU-CREDIT',
+      name: 'Credit Item',
+      categoryName: 'General',
+      unitOfMeasure: 'PCS',
+      sellingPricePaise: 100000,
+      gstRatePercentage: 0,
+      quantityOnHand: 10,
+      quantityAvailable: 10,
+    };
+
+    component.addToCart(product);
+    component.openPaymentModal();
+    component.cashTenderPaise = 20000; // partial tender: ₹200 out of ₹1,000
+
+    // Without customer selected -> payment is invalid
+    component.selectedCustomerId = '';
+    expect(component.isPaymentValid).toBe(false);
+
+    // With customer selected -> credit sale permitted
+    component.selectedCustomerId = 'cust-123';
+    expect(component.isPaymentValid).toBe(true);
+  });
 });
