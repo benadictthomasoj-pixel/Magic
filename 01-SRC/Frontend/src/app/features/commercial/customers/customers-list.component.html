@@ -1,0 +1,564 @@
+<div class="commercial-page-container">
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Billing & Parties / Customers</div>
+      <h1 class="page-title">Customer Directory & Accounts</h1>
+      <p class="page-subtitle">Commercial B2B and retail customer profiles, statutory GSTIN validation, and credit governance.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="openCreate()">
+        <span class="btn-icon">+</span> Add Customer
+      </button>
+    </div>
+  </header>
+
+  <!-- Notification Banner -->
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type" role="alert">
+      <span class="alert-icon">{{ msg.type === 'ok' ? '✓' : '✕' }}</span>
+      <div class="alert-text">{{ msg.text }}</div>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <!-- Filter Toolbar -->
+  <div class="card filter-toolbar">
+    <div class="search-box">
+      <input
+        type="text"
+        [(ngModel)]="filterSearch"
+        (input)="onSearchChange()"
+        placeholder="Search by customer name, phone, GSTIN, or customer code..."
+        class="form-control"
+      />
+    </div>
+    <div class="filter-controls">
+      <select [(ngModel)]="filterCustomerType" (change)="onSearchChange()" class="form-control">
+        <option [ngValue]="undefined">All Customer Types</option>
+        <option [ngValue]="1">Individual</option>
+        <option [ngValue]="2">Retail</option>
+        <option [ngValue]="3">Wholesale</option>
+        <option [ngValue]="4">B2B Corporate</option>
+      </select>
+
+      <select [(ngModel)]="filterGstType" (change)="onSearchChange()" class="form-control">
+        <option [ngValue]="undefined">All GST Types</option>
+        <option [ngValue]="1">Registered</option>
+        <option [ngValue]="2">Unregistered</option>
+        <option [ngValue]="3">Composition</option>
+      </select>
+
+      <select [(ngModel)]="filterActive" (change)="onSearchChange()" class="form-control">
+        <option [ngValue]="undefined">All Statuses</option>
+        <option [ngValue]="true">Active Only</option>
+        <option [ngValue]="false">Inactive Only</option>
+      </select>
+
+      <button type="button" class="btn btn-secondary" (click)="loadCustomers()">Refresh</button>
+    </div>
+  </div>
+
+  <!-- Customers Table -->
+  <div class="card table-card">
+    @if (loading()) {
+      <div class="loading-state">Loading customer records from PostgreSQL...</div>
+    } @else if (customers().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <h3>No Customers Found</h3>
+        <p>No party matches your search filters, or no customers have been registered yet.</p>
+        <button type="button" class="btn btn-outline" (click)="openCreate()">Add First Customer</button>
+      </div>
+    } @else {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Customer Name</th>
+              <th>Type</th>
+              <th>GSTIN (Format Validated)</th>
+              <th>Phone / Contact</th>
+              <th>City / State</th>
+              <th class="text-right">Credit Limit</th>
+              <th>Status</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of customers(); track c.id) {
+              <tr>
+                <td class="font-mono font-bold">{{ c.customerCode }}</td>
+                <td>
+                  <a href="javascript:void(0)" (click)="viewCustomer(c)" class="customer-link font-bold">
+                    {{ c.name }}
+                  </a>
+                  @if (c.contactPerson) {
+                    <div class="text-xs text-muted">Attn: {{ c.contactPerson }}</div>
+                  }
+                </td>
+                <td><span class="badge badge-type">{{ getCustomerTypeLabel(c.customerType) }}</span></td>
+                <td class="font-mono text-xs">{{ c.gstin || 'Unregistered' }}</td>
+                <td>
+                  <div>{{ c.phone }}</div>
+                  @if (c.email) {
+                    <div class="text-xs text-muted">{{ c.email }}</div>
+                  }
+                </td>
+                <td>{{ c.city || '—' }}, {{ c.state || '—' }}</td>
+                <td class="text-right font-mono">
+                  @if (c.creditLimitPaise > 0) {
+                    <span class="font-bold">₹{{ (c.creditLimitPaise / 100).toLocaleString() }}</span>
+                    <div class="text-xs text-muted">{{ c.creditPeriodDays }} days</div>
+                  } @else {
+                    <span class="text-muted">₹0 (Cash Only)</span>
+                  }
+                </td>
+                <td>
+                  @if (c.isCreditHold) {
+                    <span class="status-indicator hold">Credit Hold</span>
+                  } @else {
+                    <span class="status-indicator active">Active</span>
+                  }
+                </td>
+                <td class="actions-cell text-center">
+                  <button type="button" class="btn-action" title="View Profile" (click)="viewCustomer(c)">👁️</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Footer / Pagination -->
+      <footer class="table-footer">
+        <div class="footer-count">Showing {{ customers().length }} of {{ totalCustomers }} customers</div>
+        <div class="pagination-buttons">
+          <button
+            type="button"
+            class="btn btn-sm"
+            [disabled]="currentPage <= 1"
+            (click)="currentPage = currentPage - 1; loadCustomers()"
+          >
+            ← Previous
+          </button>
+          <span class="page-indicator">Page {{ currentPage }}</span>
+          <button
+            type="button"
+            class="btn btn-sm"
+            [disabled]="customers().length < pageSize"
+            (click)="currentPage = currentPage + 1; loadCustomers()"
+          >
+            Next →
+          </button>
+        </div>
+      </footer>
+    }
+  </div>
+
+  <!-- View Customer Details Drawer -->
+  @if (selectedCustomer(); as c) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <aside class="detail-drawer" aria-labelledby="cust-drawer-title">
+      <div class="drawer-header">
+        <div>
+          <span class="drawer-badge">{{ c.customerCode }}</span>
+          <h2 id="cust-drawer-title" class="drawer-title">{{ c.name }}</h2>
+          <div class="drawer-subtitle">{{ getCustomerTypeLabel(c.customerType) }} · {{ getGstTypeLabel(c.gstType) }}</div>
+        </div>
+        <button type="button" class="btn-close" (click)="closeDrawers()" aria-label="Close drawer">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <!-- Integrity Notice for Balances -->
+        <div class="integration-notice">
+          <span class="notice-icon">🛡️</span>
+          <div>
+            <div class="notice-title">Financial Balance Governance</div>
+            <div class="notice-desc">
+              Outstanding receivables are strictly derived from real Accounts Receivable (AR) General Ledger vouchers (Account 11300). Manual balance overrides are prohibited by system financial rules.
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Contact & Identification</h3>
+          <div class="detail-grid">
+            <div class="grid-item">
+              <span class="lbl">Phone Number</span>
+              <span class="val font-bold">{{ c.phone }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Email Address</span>
+              <span class="val">{{ c.email || '—' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Contact Person</span>
+              <span class="val">{{ c.contactPerson || '—' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Customer Group</span>
+              <span class="val">{{ c.customerGroupName || 'Standard Group' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Statutory Taxation (Format Validated)</h3>
+          <div class="detail-grid">
+            <div class="grid-item">
+              <span class="lbl">GSTIN</span>
+              <span class="val font-mono font-bold">{{ c.gstin || 'Unregistered' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">PAN Number</span>
+              <span class="val font-mono">{{ c.pan || '—' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">GST Registration Type</span>
+              <span class="val">{{ getGstTypeLabel(c.gstType) }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">GL Control Account</span>
+              <span class="val font-mono text-xs">{{ c.glAccountCode || '11300 (AR Control)' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="section-header-row">
+            <h3>Credit Terms & Governance</h3>
+            <button type="button" class="btn btn-sm btn-outline" (click)="openCreditLimitDrawer(c)">
+              Update Credit Limit
+            </button>
+          </div>
+          <div class="detail-grid">
+            <div class="grid-item">
+              <span class="lbl">Approved Credit Limit</span>
+              <span class="val font-mono font-bold text-accent">₹{{ (c.creditLimitPaise / 100).toLocaleString() }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Credit Period</span>
+              <span class="val font-bold">{{ c.creditPeriodDays }} Days</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Credit Hold Status</span>
+              <span class="val">
+                <span class="status-indicator" [class.hold]="c.isCreditHold" [class.active]="!c.isCreditHold">
+                  {{ c.isCreditHold ? 'Credit Hold Active' : 'Normal / Allowed' }}
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        @if (c.addresses.length > 0) {
+          <div class="detail-section">
+            <h3>Billing & Shipping Address</h3>
+            @for (addr of c.addresses; track addr.id) {
+              <div class="address-box">
+                <div class="address-line">{{ addr.addressLine1 }}</div>
+                @if (addr.addressLine2) {
+                  <div class="address-line">{{ addr.addressLine2 }}</div>
+                }
+                <div class="address-line">{{ addr.city }}, {{ addr.state }} - {{ addr.pinCode }}</div>
+                <div class="text-xs text-muted">{{ addr.country }} · State Code: {{ addr.stateCode }}</div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="openEdit(c)">Edit Profile</button>
+        <button type="button" class="btn btn-outline" (click)="closeDrawers()">Close</button>
+      </div>
+    </aside>
+  }
+
+  <!-- Add / Edit Customer Drawer -->
+  @if (isCreateOpen() || isEditOpen()) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <aside class="detail-drawer form-drawer" aria-labelledby="cust-form-title">
+      <div class="drawer-header">
+        <h2 id="cust-form-title" class="drawer-title">
+          {{ isEditOpen() ? 'Edit Customer Profile' : 'Register New Customer' }}
+        </h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()" aria-label="Close form">✕</button>
+      </div>
+
+      <form (ngSubmit)="saveCustomer()" class="drawer-form">
+        <div class="drawer-body">
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="cust-code" class="form-label">Customer Code *</label>
+              <input
+                id="cust-code"
+                type="text"
+                class="form-control"
+                [(ngModel)]="formModel.customerCode"
+                name="customerCode"
+                placeholder="e.g. CUST-002"
+                [disabled]="isEditOpen()"
+                required
+              />
+            </div>
+            <div class="form-group flex-2">
+              <label for="cust-name" class="form-label">Full Name / Trade Entity *</label>
+              <input
+                id="cust-name"
+                type="text"
+                class="form-control"
+                [(ngModel)]="formModel.name"
+                name="name"
+                placeholder="e.g. Sri Krishna Traders or John Doe"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="cust-type" class="form-label">Customer Type</label>
+              <select id="cust-type" class="form-control" [(ngModel)]="formModel.customerType" name="customerType">
+                <option [ngValue]="1">Individual</option>
+                <option [ngValue]="2">Retail Consumer</option>
+                <option [ngValue]="3">Wholesale Distributor</option>
+                <option [ngValue]="4">B2B Corporate</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="cust-gst-type" class="form-label">GST Category</label>
+              <select id="cust-gst-type" class="form-control" [(ngModel)]="formModel.gstType" name="gstType">
+                <option [ngValue]="1">Registered (Regular)</option>
+                <option [ngValue]="2">Unregistered / Consumer</option>
+                <option [ngValue]="3">Composition Scheme</option>
+                <option [ngValue]="4">Overseas</option>
+                <option [ngValue]="5">Special Economic Zone</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="cust-group" class="form-label">Customer Group</label>
+              <select id="cust-group" class="form-control" [(ngModel)]="formModel.customerGroupId" name="customerGroupId">
+                <option value="">Standard Group</option>
+                @for (g of customerGroups(); track g.id) {
+                  <option [value]="g.id">{{ g.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="form-subheading">Statutory Identification (Format Validation)</div>
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label for="cust-gstin" class="form-label">GSTIN (15-Digit Format Validation)</label>
+              <input
+                id="cust-gstin"
+                type="text"
+                class="form-control font-mono uppercase"
+                [(ngModel)]="formModel.gstin"
+                name="gstin"
+                maxlength="15"
+                placeholder="e.g. 33AAAAA0000A1Z5"
+              />
+              <span class="text-xs text-muted">Format validation only; not government portal verification.</span>
+            </div>
+            <div class="form-group flex-1">
+              <label for="cust-pan" class="form-label">PAN (10-Digit)</label>
+              <input
+                id="cust-pan"
+                type="text"
+                class="form-control font-mono uppercase"
+                [(ngModel)]="formModel.pan"
+                name="pan"
+                maxlength="10"
+                placeholder="AAAAA0000A"
+              />
+            </div>
+          </div>
+
+          <div class="form-subheading">Contact Information</div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="cust-phone" class="form-label">Phone Number *</label>
+              <input
+                id="cust-phone"
+                type="tel"
+                class="form-control font-mono"
+                [(ngModel)]="formModel.phone"
+                name="phone"
+                placeholder="e.g. +91 9876543210"
+                required
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="cust-email" class="form-label">Email Address</label>
+              <input
+                id="cust-email"
+                type="email"
+                class="form-control"
+                [(ngModel)]="formModel.email"
+                name="email"
+                placeholder="customer@domain.com"
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="cust-contact-person" class="form-label">Contact Person</label>
+              <input
+                id="cust-contact-person"
+                type="text"
+                class="form-control"
+                [(ngModel)]="formModel.contactPerson"
+                name="contactPerson"
+                placeholder="Attention Name"
+              />
+            </div>
+          </div>
+
+          <div class="form-subheading">Credit Limit & Terms</div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="cust-credit-limit" class="form-label">Approved Credit Limit (₹)</label>
+              <input
+                id="cust-credit-limit"
+                type="number"
+                step="100"
+                min="0"
+                class="form-control font-mono"
+                [(ngModel)]="formModel.creditLimitRupees"
+                name="creditLimitRupees"
+                [disabled]="isEditOpen()"
+              />
+              @if (isEditOpen()) {
+                <span class="text-xs text-muted">Use dedicated 'Update Credit Limit' drawer to modify credit limit with audit logging.</span>
+              }
+            </div>
+            <div class="form-group flex-1">
+              <label for="cust-credit-days" class="form-label">Credit Period (Days)</label>
+              <input
+                id="cust-credit-days"
+                type="number"
+                min="0"
+                class="form-control font-mono"
+                [(ngModel)]="formModel.creditPeriodDays"
+                name="creditPeriodDays"
+              />
+            </div>
+          </div>
+
+          <div class="form-subheading">Primary Address</div>
+          <div class="form-group">
+            <label for="cust-addr" class="form-label">Address Line 1</label>
+            <input
+              id="cust-addr"
+              type="text"
+              class="form-control"
+              [(ngModel)]="formModel.addressLine1"
+              name="addressLine1"
+              placeholder="Door No, Street Name, Commercial Complex"
+            />
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="cust-city" class="form-label">City</label>
+              <input id="cust-city" type="text" class="form-control" [(ngModel)]="formModel.city" name="city" placeholder="City" />
+            </div>
+            <div class="form-group flex-1">
+              <label for="cust-state" class="form-label">State</label>
+              <input id="cust-state" type="text" class="form-control" [(ngModel)]="formModel.state" name="state" placeholder="State" />
+            </div>
+            <div class="form-group flex-1">
+              <label for="cust-pincode" class="form-label">PIN Code</label>
+              <input id="cust-pincode" type="text" class="form-control font-mono" [(ngModel)]="formModel.pinCode" name="pinCode" placeholder="641001" />
+            </div>
+          </div>
+        </div>
+
+        <div class="drawer-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'Saving...' : (isEditOpen() ? 'Save Profile' : 'Register Customer') }}
+          </button>
+        </div>
+      </form>
+    </aside>
+  }
+
+  <!-- Update Credit Limit Drawer -->
+  @if (isCreditLimitOpen()) {
+    <div class="drawer-backdrop" (click)="isCreditLimitOpen.set(false)"></div>
+    <aside class="detail-drawer" aria-labelledby="credit-title">
+      <div class="drawer-header">
+        <h2 id="credit-title" class="drawer-title">Authorize Credit Limit Change</h2>
+        <button type="button" class="btn-close" (click)="isCreditLimitOpen.set(false)">✕</button>
+      </div>
+
+      <form (ngSubmit)="submitCreditLimitUpdate()" class="drawer-form">
+        <div class="drawer-body">
+          <div class="integration-notice">
+            <span class="notice-icon">⚠️</span>
+            <div>
+              <div class="notice-title">Tamper-Evident Audit Event</div>
+              <div class="notice-desc">Modifying credit terms records an audit entry with your user ID and change justification.</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="new-credit" class="form-label">New Credit Limit (₹) *</label>
+            <input
+              id="new-credit"
+              type="number"
+              step="500"
+              min="0"
+              class="form-control font-mono"
+              [(ngModel)]="creditLimitModel.newCreditLimitRupees"
+              name="newCreditLimitRupees"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="new-credit-days" class="form-label">Credit Period (Days) *</label>
+            <input
+              id="new-credit-days"
+              type="number"
+              min="0"
+              class="form-control font-mono"
+              [(ngModel)]="creditLimitModel.creditPeriodDays"
+              name="creditPeriodDays"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <input type="checkbox" [(ngModel)]="creditLimitModel.isCreditHold" name="isCreditHold" />
+              Place Customer on Credit Hold (Blocks sales on credit)
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label for="credit-reason" class="form-label">Reason for Modification *</label>
+            <textarea
+              id="credit-reason"
+              rows="3"
+              class="form-control"
+              [(ngModel)]="creditLimitModel.reason"
+              name="reason"
+              placeholder="e.g. Higher credit sanctioned based on verified financial statements..."
+              required
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="drawer-footer">
+          <button type="button" class="btn btn-secondary" (click)="isCreditLimitOpen.set(false)">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'Authorizing...' : 'Authorize & Apply Limit' }}
+          </button>
+        </div>
+      </form>
+    </aside>
+  }
+</div>

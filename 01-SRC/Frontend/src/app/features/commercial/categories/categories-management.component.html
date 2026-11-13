@@ -1,0 +1,452 @@
+<div class="commercial-page-container">
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Billing & Catalog / Taxonomy</div>
+      <h1 class="page-title">Categories & Hierarchy</h1>
+      <p class="page-subtitle">Configure commercial category hierarchy, brands, and departmental groupings.</p>
+    </div>
+    <div class="header-actions">
+      @if (activeTab() === 'categories') {
+        <button type="button" class="btn btn-primary" (click)="openCreateCategory()">
+          <span class="btn-icon">+</span> Add Category
+        </button>
+      } @else if (activeTab() === 'brands') {
+        <button type="button" class="btn btn-primary" (click)="openCreateBrand()">
+          <span class="btn-icon">+</span> Add Brand
+        </button>
+      } @else {
+        <button type="button" class="btn btn-primary" (click)="openCreateDepartment()">
+          <span class="btn-icon">+</span> Add Department
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- Notification Banner -->
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type" role="alert">
+      <span class="alert-icon">{{ msg.type === 'ok' ? '✓' : '✕' }}</span>
+      <div class="alert-text">{{ msg.text }}</div>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <!-- Tab Switcher -->
+  <div class="tab-bar">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'categories'"
+      (click)="activeTab.set('categories')"
+    >
+      📁 Categories ({{ categories().length }})
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'brands'"
+      (click)="activeTab.set('brands')"
+    >
+      🏷️ Brands ({{ brands().length }})
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'departments'"
+      (click)="activeTab.set('departments')"
+    >
+      🏢 Departments ({{ departments().length }})
+    </button>
+  </div>
+
+  <!-- TAB 1: Categories Hierarchy View -->
+  @if (activeTab() === 'categories') {
+    <div class="card table-card">
+      @if (loading()) {
+        <div class="loading-state">Loading categories from PostgreSQL...</div>
+      } @else if (categories().length === 0) {
+        <div class="empty-state">
+          <div class="empty-icon">📁</div>
+          <h3>No Categories Configured</h3>
+          <p>Create your first category to start organizing commercial products.</p>
+          <button type="button" class="btn btn-outline" (click)="openCreateCategory()">Add Category</button>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Category Name</th>
+                <th>Department</th>
+                <th>HSN</th>
+                <th>Default GST</th>
+                <th>Order</th>
+                <th>Active Products</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (cat of categories(); track cat.id) {
+                <tr>
+                  <td class="font-mono font-bold">{{ cat.code }}</td>
+                  <td>
+                    <div class="cat-name-row">
+                      <span class="cat-folder-icon">📂</span>
+                      <span class="font-bold">{{ cat.name }}</span>
+                    </div>
+                    @if (cat.description) {
+                      <div class="cat-desc text-muted text-xs">{{ cat.description }}</div>
+                    }
+                  </td>
+                  <td>{{ cat.departmentName || '—' }}</td>
+                  <td class="font-mono text-xs">{{ cat.hsnCode || '—' }}</td>
+                  <td>{{ cat.defaultGstRate != null ? cat.defaultGstRate + '%' : 'Default' }}</td>
+                  <td>{{ cat.displayOrder }}</td>
+                  <td>
+                    <span class="badge" [class.badge-primary]="cat.productCount > 0">
+                      {{ cat.productCount }} products
+                    </span>
+                  </td>
+                  <td class="actions-cell text-center">
+                    <button type="button" class="btn-action" title="Edit" (click)="openEditCategory(cat)">✏️</button>
+                    <button
+                      type="button"
+                      class="btn-action danger"
+                      title="Delete"
+                      (click)="deleteCategory(cat)"
+                      [disabled]="cat.productCount > 0"
+                    >
+                      🗑️
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- TAB 2: Brands View -->
+  @if (activeTab() === 'brands') {
+    <div class="card table-card">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Brand Code</th>
+              <th>Brand Name</th>
+              <th>Description</th>
+              <th>Website</th>
+              <th>Products</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (b of brands(); track b.id) {
+              <tr>
+                <td class="font-mono font-bold">{{ b.code }}</td>
+                <td class="font-bold">{{ b.name }}</td>
+                <td class="text-muted">{{ b.description || '—' }}</td>
+                <td>
+                  @if (b.websiteUrl) {
+                    <a [href]="b.websiteUrl" target="_blank" rel="noopener noreferrer" class="link-external">
+                      {{ b.websiteUrl }} ↗
+                    </a>
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+                <td>
+                  <span class="badge badge-primary">{{ b.productCount }} products</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 3: Departments View -->
+  @if (activeTab() === 'departments') {
+    <div class="card table-card">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Dept Code</th>
+              <th>Department Name</th>
+              <th>Description</th>
+              <th>Products Linked</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of departments(); track d.id) {
+              <tr>
+                <td class="font-mono font-bold">{{ d.code }}</td>
+                <td class="font-bold">{{ d.name }}</td>
+                <td class="text-muted">{{ d.description || '—' }}</td>
+                <td>
+                  <span class="badge badge-primary">{{ d.productCount }} products</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- Category Drawer -->
+  @if (isCategoryDrawerOpen()) {
+    <div class="drawer-backdrop" (click)="closeCategoryDrawer()"></div>
+    <aside class="detail-drawer" aria-labelledby="cat-drawer-title">
+      <div class="drawer-header">
+        <h2 id="cat-drawer-title" class="drawer-title">
+          {{ isEditingCategory() ? 'Edit Category' : 'Add New Category' }}
+        </h2>
+        <button type="button" class="btn-close" (click)="closeCategoryDrawer()" aria-label="Close drawer">✕</button>
+      </div>
+
+      <form (ngSubmit)="saveCategory()" class="drawer-form">
+        <div class="drawer-body">
+          <div class="form-group">
+            <label for="cat-code" class="form-label">Category Code *</label>
+            <input
+              id="cat-code"
+              type="text"
+              class="form-control font-mono"
+              [(ngModel)]="categoryForm.code"
+              name="code"
+              placeholder="e.g. GROC, DAIRY, SNACKS"
+              [disabled]="isEditingCategory()"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="cat-name" class="form-label">Category Name *</label>
+            <input
+              id="cat-name"
+              type="text"
+              class="form-control"
+              [(ngModel)]="categoryForm.name"
+              name="name"
+              placeholder="e.g. Organic Groceries"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="cat-parent" class="form-label">Parent Category (Optional)</label>
+            <select
+              id="cat-parent"
+              class="form-control"
+              [(ngModel)]="categoryForm.parentCategoryId"
+              name="parentCategoryId"
+            >
+              <option value="">None (Top-Level Category)</option>
+              @for (p of getEligibleParents(); track p.id) {
+                <option [value]="p.id">{{ p.name }} ({{ p.code }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="cat-dept" class="form-label">Department</label>
+            <select
+              id="cat-dept"
+              class="form-control"
+              [(ngModel)]="categoryForm.departmentId"
+              name="departmentId"
+            >
+              <option value="">None</option>
+              @for (d of departments(); track d.id) {
+                <option [value]="d.id">{{ d.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="cat-hsn" class="form-label">Default HSN Code</label>
+              <input
+                id="cat-hsn"
+                type="text"
+                class="form-control font-mono"
+                [(ngModel)]="categoryForm.hsnCode"
+                name="hsnCode"
+                placeholder="e.g. 1006"
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="cat-gst" class="form-label">Default GST Rate %</label>
+              <select
+                id="cat-gst"
+                class="form-control"
+                [(ngModel)]="categoryForm.defaultGstRate"
+                name="defaultGstRate"
+              >
+                <option [ngValue]="0">0%</option>
+                <option [ngValue]="5">5%</option>
+                <option [ngValue]="12">12%</option>
+                <option [ngValue]="18">18%</option>
+                <option [ngValue]="28">28%</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="cat-order" class="form-label">Display Order</label>
+              <input
+                id="cat-order"
+                type="number"
+                class="form-control font-mono"
+                [(ngModel)]="categoryForm.displayOrder"
+                name="displayOrder"
+                min="1"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="cat-desc" class="form-label">Description</label>
+            <textarea
+              id="cat-desc"
+              rows="3"
+              class="form-control"
+              [(ngModel)]="categoryForm.description"
+              name="description"
+              placeholder="Commercial description of this product grouping..."
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="drawer-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeCategoryDrawer()">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'Saving...' : (isEditingCategory() ? 'Save Changes' : 'Create Category') }}
+          </button>
+        </div>
+      </form>
+    </aside>
+  }
+
+  <!-- Brand Creation Modal -->
+  @if (isBrandModalOpen()) {
+    <div class="modal-backdrop" (click)="isBrandModalOpen.set(false)"></div>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Register Brand</h3>
+        <button type="button" class="btn-close" (click)="isBrandModalOpen.set(false)">✕</button>
+      </div>
+      <form (ngSubmit)="saveBrand()">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="brand-code" class="form-label">Brand Code *</label>
+            <input
+              id="brand-code"
+              type="text"
+              class="form-control font-mono"
+              [(ngModel)]="brandForm.code"
+              name="code"
+              placeholder="e.g. NESTLE, AMUL"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="brand-name" class="form-label">Brand Name *</label>
+            <input
+              id="brand-name"
+              type="text"
+              class="form-control"
+              [(ngModel)]="brandForm.name"
+              name="name"
+              placeholder="Brand Trading Name"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="brand-web" class="form-label">Official Website</label>
+            <input
+              id="brand-web"
+              type="url"
+              class="form-control"
+              [(ngModel)]="brandForm.websiteUrl"
+              name="websiteUrl"
+              placeholder="https://..."
+            />
+          </div>
+          <div class="form-group">
+            <label for="brand-desc" class="form-label">Description</label>
+            <textarea
+              id="brand-desc"
+              rows="2"
+              class="form-control"
+              [(ngModel)]="brandForm.description"
+              name="description"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="isBrandModalOpen.set(false)">Cancel</button>
+          <button type="submit" class="btn btn-primary">Register Brand</button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <!-- Department Creation Modal -->
+  @if (isDeptModalOpen()) {
+    <div class="modal-backdrop" (click)="isDeptModalOpen.set(false)"></div>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Create Department</h3>
+        <button type="button" class="btn-close" (click)="isDeptModalOpen.set(false)">✕</button>
+      </div>
+      <form (ngSubmit)="saveDepartment()">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="dept-code" class="form-label">Department Code *</label>
+            <input
+              id="dept-code"
+              type="text"
+              class="form-control font-mono"
+              [(ngModel)]="deptForm.code"
+              name="code"
+              placeholder="e.g. FMCG, APPAR, ELEC"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="dept-name" class="form-label">Department Name *</label>
+            <input
+              id="dept-name"
+              type="text"
+              class="form-control"
+              [(ngModel)]="deptForm.name"
+              name="name"
+              placeholder="e.g. General Merchandise"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="dept-desc" class="form-label">Description</label>
+            <textarea
+              id="dept-desc"
+              rows="2"
+              class="form-control"
+              [(ngModel)]="deptForm.description"
+              name="description"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="isDeptModalOpen.set(false)">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Department</button>
+        </div>
+      </form>
+    </div>
+  }
+</div>

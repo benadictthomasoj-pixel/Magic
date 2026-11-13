@@ -114,15 +114,6 @@
           </div>
         </div>
 
-        <div class="quick-login-row">
-          <span class="quick-label">Quick Sign-in:</span>
-          <div class="quick-buttons">
-            <button type="button" class="quick-btn" (click)="fillCredentials('ben', '123123')">Ben (Admin)</button>
-            <button type="button" class="quick-btn" (click)="fillCredentials('admin', '123123')">Admin</button>
-            <button type="button" class="quick-btn" (click)="fillCredentials('accountant1', '123123')">Accountant</button>
-          </div>
-        </div>
-
         <button type="submit" class="submit-btn" [disabled]="isLoading()">
           @if (isLoading()) {
             <span class="loading-spinner" aria-hidden="true"></span>

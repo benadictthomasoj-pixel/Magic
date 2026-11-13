@@ -43,6 +43,20 @@ public sealed class SecurityDatabaseSeeder(
             ("billing:purchases:view", "Billing", "View purchase orders and vendor bills"),
             ("billing:inventory:view", "Billing", "View inventory stock levels and movements"),
 
+            // Commercial Masters (Phase B)
+            ("commercial:products:view", "Commercial", "View products, pricing, barcodes, and catalog"),
+            ("commercial:products:create", "Commercial", "Register new products, variants, and barcodes"),
+            ("commercial:products:edit", "Commercial", "Update product specifications and prices"),
+            ("commercial:products:archive", "Commercial", "Deactivate or archive products"),
+            ("commercial:categories:manage", "Commercial", "Manage categories, brands, and departments"),
+            ("commercial:pricing:manage", "Commercial", "Configure pricing tiers and price lists"),
+            ("commercial:customers:view", "Commercial", "View customer directory and credit terms"),
+            ("commercial:customers:manage", "Commercial", "Create and edit customer records"),
+            ("commercial:credit:approve", "Commercial", "Approve or modify customer credit limits"),
+            ("commercial:suppliers:view", "Commercial", "View supplier directory and payment terms"),
+            ("commercial:suppliers:manage", "Commercial", "Create and edit supplier records"),
+            ("commercial:suppliers:bank-details", "Commercial", "View unmasked supplier bank account details"),
+
             // Administration
             ("admin:users:manage", "Admin", "Create, edit, and assign roles to users"),
             ("admin:roles:manage", "Admin", "Manage custom roles and permission assignments"),
@@ -119,8 +133,8 @@ public sealed class SecurityDatabaseSeeder(
         {
             ["Administrator"] = permissionsToSeed.Select(p => p.Code).ToArray(),
             ["StoreManager"] = permissionsToSeed.Where(p => p.Module != "Admin").Select(p => p.Code).ToArray(),
-            ["Accountant"] = permissionsToSeed.Where(p => p.Module == "Accounting").Select(p => p.Code).ToArray(),
-            ["Cashier"] = ["billing:dashboard:view", "billing:pos:access", "billing:sales:view", "billing:sales:create"]
+            ["Accountant"] = permissionsToSeed.Where(p => p.Module == "Accounting" || p.Code == "commercial:products:view" || p.Code == "commercial:customers:view" || p.Code == "commercial:suppliers:view" || p.Code == "commercial:credit:approve" || p.Code == "commercial:suppliers:bank-details").Select(p => p.Code).ToArray(),
+            ["Cashier"] = ["billing:dashboard:view", "billing:pos:access", "billing:sales:view", "billing:sales:create", "commercial:products:view", "commercial:customers:view"]
         };
 
         var newRolePerms = new List<RolePermissionRecord>();

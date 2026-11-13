@@ -219,45 +219,7 @@
   }
 }
 
-.quick-login-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.25rem;
-  padding: 0.5rem 0.75rem;
-  background: #f8fafc;
-  border-radius: 6px;
-  border: 1px dashed #cbd5e1;
-}
 
-.quick-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #64748b;
-}
-
-.quick-buttons {
-  display: flex;
-  gap: 0.35rem;
-}
-
-.quick-btn {
-  padding: 0.2rem 0.5rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background: #ffffff;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: #334155;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  &:hover {
-    background: #e2e8f0;
-    color: #0f172a;
-    border-color: #94a3b8;
-  }
-}
 
 .submit-btn {
   width: 100%;

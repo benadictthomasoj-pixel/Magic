@@ -100,6 +100,7 @@ export class ShellComponent implements OnInit {
       title: 'Catalog & Inventory',
       items: [
         { path: '/billing/products', label: 'Products', icon: '🏷️' },
+        { path: '/billing/categories', label: 'Categories', icon: '📁' },
         { path: '/billing/inventory', label: 'Inventory', icon: '📦' },
         { path: '/billing/stock-management', label: 'Stock Management', icon: '🔄' },
       ],

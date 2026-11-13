@@ -42,6 +42,24 @@ public sealed class MagicDbContext(DbContextOptions<MagicDbContext> options) : D
     public DbSet<ApAllocationRecord> ApAllocations => Set<ApAllocationRecord>();
     public DbSet<AccountPeriodBalanceRecord> AccountPeriodBalances => Set<AccountPeriodBalanceRecord>();
 
+    // Commercial & Master Data schema (Phase B)
+    public DbSet<DepartmentRecord> Departments => Set<DepartmentRecord>();
+    public DbSet<CategoryRecord> Categories => Set<CategoryRecord>();
+    public DbSet<BrandRecord> Brands => Set<BrandRecord>();
+    public DbSet<UnitOfMeasureRecord> UnitsOfMeasure => Set<UnitOfMeasureRecord>();
+    public DbSet<TaxCodeRecord> TaxCodes => Set<TaxCodeRecord>();
+    public DbSet<ProductRecord> Products => Set<ProductRecord>();
+    public DbSet<ProductVariantRecord> ProductVariants => Set<ProductVariantRecord>();
+    public DbSet<ProductBarcodeRecord> ProductBarcodes => Set<ProductBarcodeRecord>();
+    public DbSet<ProductPriceRecord> ProductPrices => Set<ProductPriceRecord>();
+    public DbSet<ProductPriceHistoryRecord> ProductPriceHistories => Set<ProductPriceHistoryRecord>();
+    public DbSet<CustomerGroupRecord> CustomerGroups => Set<CustomerGroupRecord>();
+    public DbSet<CustomerRecord> Customers => Set<CustomerRecord>();
+    public DbSet<CustomerAddressRecord> CustomerAddresses => Set<CustomerAddressRecord>();
+    public DbSet<SupplierRecord> Suppliers => Set<SupplierRecord>();
+    public DbSet<SupplierAddressRecord> SupplierAddresses => Set<SupplierAddressRecord>();
+    public DbSet<SupplierBankAccountRecord> SupplierBankAccounts => Set<SupplierBankAccountRecord>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         ArgumentNullException.ThrowIfNull(configurationBuilder);

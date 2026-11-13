@@ -15,6 +15,10 @@ import { AccountingPeriodsComponent } from './features/accounting/periods/accoun
 import { SubledgersComponent } from './features/accounting/subledgers/subledgers.component';
 import { BillingDashboardComponent } from './features/billing/billing-dashboard.component';
 import { BillingFeaturePlaceholderComponent } from './features/billing/billing-feature-placeholder.component';
+import { ProductsListComponent } from './features/commercial/products/products-list.component';
+import { CategoriesManagementComponent } from './features/commercial/categories/categories-management.component';
+import { CustomersListComponent } from './features/commercial/customers/customers-list.component';
+import { SuppliersListComponent } from './features/commercial/suppliers/suppliers-list.component';
 import { ShellComponent } from './layouts/shell/shell.component';
 
 export const routes: Routes = [
@@ -149,19 +153,8 @@ export const routes: Routes = [
       },
       {
         path: 'billing/customers',
-        component: BillingFeaturePlaceholderComponent,
-        title: 'MAGIC · Customers',
-        data: {
-          title: 'Customer Directory',
-          category: 'Parties',
-          icon: '👥',
-          description: 'Manage retail and commercial customers, GSTIN verification, billing and shipping addresses, credit limits, and payment terms.',
-          scope: [
-            'B2B and B2C customer master database with state-wise GSTIN validation.',
-            'Credit limits, overdue flags, and pricing tier configurations.',
-            'Integrated customer transaction ledger and aging schedule.',
-          ],
-        },
+        component: CustomersListComponent,
+        title: 'MAGIC · Customer Directory',
       },
       {
         path: 'billing/customer-payments',
@@ -181,19 +174,13 @@ export const routes: Routes = [
       },
       {
         path: 'billing/products',
-        component: BillingFeaturePlaceholderComponent,
-        title: 'MAGIC · Products & Catalog',
-        data: {
-          title: 'Products & Price Lists',
-          category: 'Catalog Management',
-          icon: '🏷️',
-          description: 'Master product catalog, HSN/SAC codes, GST tax slabs, barcode management, standard cost, and tiered retail/wholesale price lists.',
-          scope: [
-            'Comprehensive item master with HSN code tax classification.',
-            'Multiple barcode aliases per product and unit of measurement conversions.',
-            'Retail MRP, Wholesale rate, and Minimum Selling Price (MSP) enforcement.',
-          ],
-        },
+        component: ProductsListComponent,
+        title: 'MAGIC · Products & Pricing Catalog',
+      },
+      {
+        path: 'billing/categories',
+        component: CategoriesManagementComponent,
+        title: 'MAGIC · Categories & Taxonomy',
       },
       {
         path: 'billing/inventory',
@@ -245,19 +232,8 @@ export const routes: Routes = [
       },
       {
         path: 'billing/suppliers',
-        component: BillingFeaturePlaceholderComponent,
+        component: SuppliersListComponent,
         title: 'MAGIC · Suppliers & Vendors',
-        data: {
-          title: 'Suppliers & Vendors',
-          category: 'Procurement',
-          icon: '🏢',
-          description: 'Vendor directory, GSTIN profiles, payment terms, bank account details for payouts, and historical procurement volume analysis.',
-          scope: [
-            'Vendor master records with MSME and GST statutory classifications.',
-            'Payment terms, credit periods, and vendor ledger balances.',
-            'Purchase transaction history and pending payable balances.',
-          ],
-        },
       },
       {
         path: 'billing/expenses',

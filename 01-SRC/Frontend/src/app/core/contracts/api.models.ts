@@ -6,10 +6,16 @@ export const MAGIC_HTTP_HEADERS = {
   supervisorAuthToken: 'X-Supervisor-Auth-Token',
 } as const;
 
-export interface ApiResponse<T> {
+export interface PaginationMeta {
+  readonly page: number;
+  readonly pageSize: number;
+  readonly totalCount: number;
+}
+
+export interface ApiResponse<T, TMeta = PaginationMeta | Record<string, unknown>> {
   readonly success: boolean;
   readonly data: T;
-  readonly meta?: Record<string, unknown> | null;
+  readonly meta?: TMeta | null;
   readonly correlationId: string;
   readonly timestampUtc: string;
 }

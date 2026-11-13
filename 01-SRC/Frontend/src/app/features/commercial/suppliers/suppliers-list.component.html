@@ -1,0 +1,562 @@
+<div class="commercial-page-container">
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Billing & Procurement / Suppliers</div>
+      <h1 class="page-title">Suppliers & Vendor Master</h1>
+      <p class="page-subtitle">Commercial supplier registry, statutory GSTIN/MSME classifications, and encrypted banking profiles.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="openCreate()">
+        <span class="btn-icon">+</span> Register Supplier
+      </button>
+    </div>
+  </header>
+
+  <!-- Notification Banner -->
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type" role="alert">
+      <span class="alert-icon">{{ msg.type === 'ok' ? '✓' : '✕' }}</span>
+      <div class="alert-text">{{ msg.text }}</div>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <!-- Filter Toolbar -->
+  <div class="card filter-toolbar">
+    <div class="search-box">
+      <input
+        type="text"
+        [(ngModel)]="filterSearch"
+        (input)="onSearchChange()"
+        placeholder="Search by supplier name, code, phone, or GSTIN..."
+        class="form-control"
+      />
+    </div>
+    <div class="filter-controls">
+      <select [(ngModel)]="filterCategory" (change)="onSearchChange()" class="form-control">
+        <option value="">All Categories</option>
+        <option value="Raw Materials">Raw Materials</option>
+        <option value="Packaging">Packaging</option>
+        <option value="Office Supplies">Office Supplies</option>
+        <option value="Logistics">Logistics</option>
+        <option value="Services">Services</option>
+      </select>
+
+      <select [(ngModel)]="filterMsme" (change)="onSearchChange()" class="form-control">
+        <option [ngValue]="undefined">All Suppliers</option>
+        <option [ngValue]="true">MSME Registered Only</option>
+        <option [ngValue]="false">Non-MSME</option>
+      </select>
+
+      <select [(ngModel)]="filterActive" (change)="onSearchChange()" class="form-control">
+        <option [ngValue]="undefined">All Statuses</option>
+        <option [ngValue]="true">Active Only</option>
+        <option [ngValue]="false">Inactive Only</option>
+      </select>
+
+      <button type="button" class="btn btn-secondary" (click)="loadSuppliers()">Refresh</button>
+    </div>
+  </div>
+
+  <!-- Suppliers Table -->
+  <div class="card table-card">
+    @if (loading()) {
+      <div class="loading-state">Loading suppliers from PostgreSQL...</div>
+    } @else if (suppliers().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon">🏢</div>
+        <h3>No Suppliers Found</h3>
+        <p>No vendors match your search filters, or no suppliers have been registered yet.</p>
+        <button type="button" class="btn btn-outline" (click)="openCreate()">Register First Supplier</button>
+      </div>
+    } @else {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Supplier Name</th>
+              <th>Category</th>
+              <th>GSTIN</th>
+              <th>Phone / Contact</th>
+              <th>Payment Terms</th>
+              <th>MSME</th>
+              <th>Status</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of suppliers(); track s.id) {
+              <tr>
+                <td class="font-mono font-bold">{{ s.supplierCode }}</td>
+                <td>
+                  <a href="javascript:void(0)" (click)="viewSupplier(s)" class="supplier-link font-bold">
+                    {{ s.name }}
+                  </a>
+                  @if (s.contactPerson) {
+                    <div class="text-xs text-muted">Attn: {{ s.contactPerson }}</div>
+                  }
+                </td>
+                <td><span class="badge badge-category">{{ s.category }}</span></td>
+                <td class="font-mono text-xs">{{ s.gstin || 'Unregistered' }}</td>
+                <td>
+                  <div>{{ s.phone }}</div>
+                  @if (s.email) {
+                    <div class="text-xs text-muted">{{ s.email }}</div>
+                  }
+                </td>
+                <td>
+                  <span class="font-bold">{{ s.paymentTerms }}</span>
+                  <div class="text-xs text-muted">{{ s.creditPeriodDays }} days credit</div>
+                </td>
+                <td>
+                  @if (s.isMsmeRegistered) {
+                    <span class="badge badge-msme">{{ s.msmeType || 'MSME' }}</span>
+                  } @else {
+                    <span class="text-muted text-xs">—</span>
+                  }
+                </td>
+                <td>
+                  <span class="status-indicator" [class.active]="s.isActive" [class.inactive]="!s.isActive">
+                    {{ s.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td class="actions-cell text-center">
+                  <button type="button" class="btn-action" title="View Profile" (click)="viewSupplier(s)">👁️</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Footer / Pagination -->
+      <footer class="table-footer">
+        <div class="footer-count">Showing {{ suppliers().length }} of {{ totalSuppliers }} suppliers</div>
+        <div class="pagination-buttons">
+          <button
+            type="button"
+            class="btn btn-sm"
+            [disabled]="currentPage <= 1"
+            (click)="currentPage = currentPage - 1; loadSuppliers()"
+          >
+            ← Previous
+          </button>
+          <span class="page-indicator">Page {{ currentPage }}</span>
+          <button
+            type="button"
+            class="btn btn-sm"
+            [disabled]="suppliers().length < pageSize"
+            (click)="currentPage = currentPage + 1; loadSuppliers()"
+          >
+            Next →
+          </button>
+        </div>
+      </footer>
+    }
+  </div>
+
+  <!-- Supplier Detail Drawer -->
+  @if (selectedSupplier(); as s) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <aside class="detail-drawer" aria-labelledby="supp-drawer-title">
+      <div class="drawer-header">
+        <div>
+          <span class="drawer-badge">{{ s.supplierCode }}</span>
+          <h2 id="supp-drawer-title" class="drawer-title">{{ s.name }}</h2>
+          <div class="drawer-subtitle">{{ s.category }} · Payment: {{ s.paymentTerms }}</div>
+        </div>
+        <button type="button" class="btn-close" (click)="closeDrawers()" aria-label="Close drawer">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="detail-section">
+          <h3>Contact & Procurement Information</h3>
+          <div class="detail-grid">
+            <div class="grid-item">
+              <span class="lbl">Phone</span>
+              <span class="val font-bold">{{ s.phone }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Email</span>
+              <span class="val">{{ s.email || '—' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Contact Person</span>
+              <span class="val">{{ s.contactPerson || '—' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Payment Terms</span>
+              <span class="val font-bold">{{ s.paymentTerms }} ({{ s.creditPeriodDays }} Days)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Statutory & MSME Classification</h3>
+          <div class="detail-grid">
+            <div class="grid-item">
+              <span class="lbl">GSTIN (Format Validated)</span>
+              <span class="val font-mono font-bold">{{ s.gstin || 'Unregistered' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">PAN Number</span>
+              <span class="val font-mono">{{ s.pan || '—' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">MSME Classification</span>
+              <span class="val">
+                @if (s.isMsmeRegistered) {
+                  <span class="badge badge-msme">Registered ({{ s.msmeType }})</span>
+                } @else {
+                  <span class="text-muted">Not Registered</span>
+                }
+              </span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Udyam Registration</span>
+              <span class="val font-mono">{{ s.udyamRegistrationNumber || '—' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bank Account Section with Cryptographic Encryption & Unmasking -->
+        <div class="detail-section">
+          <h3>Bank Account & Payout Details (AES-256-GCM Encrypted)</h3>
+          @if (s.bankAccounts.length === 0) {
+            <p class="text-muted text-xs">No bank account registered for this supplier.</p>
+          } @else {
+            @for (bank of s.bankAccounts; track bank.id) {
+              <div class="bank-card">
+                <div class="bank-header-row">
+                  <div class="bank-title">
+                    <span class="bank-icon">🏦</span>
+                    <span class="font-bold">{{ bank.bankName }} ({{ bank.branchName }})</span>
+                  </div>
+                  <span class="badge badge-type">{{ bank.accountType }}</span>
+                </div>
+
+                <div class="bank-grid">
+                  <div class="grid-item">
+                    <span class="lbl">IFSC Code</span>
+                    <span class="val font-mono font-bold">{{ bank.ifscCode }}</span>
+                  </div>
+                  <div class="grid-item">
+                    <span class="lbl">Account Number</span>
+                    <div class="account-number-row">
+                      @if (unmaskedAccounts()[bank.id]; as unmasked) {
+                        <span class="val font-mono font-bold text-accent">{{ unmasked }}</span>
+                        <span class="text-xs text-muted">(Auto-masks in 30s)</span>
+                      } @else {
+                        <span class="val font-mono text-muted">{{ bank.accountNumberMasked }}</span>
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-outline"
+                          (click)="revealBankAccount(bank.id)"
+                          [disabled]="isUnmasking()"
+                        >
+                          👁️ Reveal (Audited)
+                        </button>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          }
+        </div>
+
+        @if (s.addresses.length > 0) {
+          <div class="detail-section">
+            <h3>Registered Address</h3>
+            @for (addr of s.addresses; track addr.id) {
+              <div class="address-box">
+                <div>{{ addr.addressLine1 }}</div>
+                @if (addr.addressLine2) {
+                  <div>{{ addr.addressLine2 }}</div>
+                }
+                <div>{{ addr.city }}, {{ addr.state }} - {{ addr.pinCode }}</div>
+                <div class="text-xs text-muted">{{ addr.country }}</div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="openEdit(s)">Edit Profile</button>
+        <button type="button" class="btn btn-outline" (click)="closeDrawers()">Close</button>
+      </div>
+    </aside>
+  }
+
+  <!-- Add / Edit Supplier Drawer -->
+  @if (isCreateOpen() || isEditOpen()) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <aside class="detail-drawer form-drawer" aria-labelledby="supp-form-title">
+      <div class="drawer-header">
+        <h2 id="supp-form-title" class="drawer-title">
+          {{ isEditOpen() ? 'Edit Supplier Profile' : 'Register New Supplier' }}
+        </h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()" aria-label="Close form">✕</button>
+      </div>
+
+      <form (ngSubmit)="saveSupplier()" class="drawer-form">
+        <div class="drawer-body">
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="supp-code" class="form-label">Supplier Code *</label>
+              <input
+                id="supp-code"
+                type="text"
+                class="form-control font-mono"
+                [(ngModel)]="formModel.supplierCode"
+                name="supplierCode"
+                placeholder="e.g. SUPP-002"
+                [disabled]="isEditOpen()"
+                required
+              />
+            </div>
+            <div class="form-group flex-2">
+              <label for="supp-name" class="form-label">Supplier Trade Name *</label>
+              <input
+                id="supp-name"
+                type="text"
+                class="form-control"
+                [(ngModel)]="formModel.name"
+                name="name"
+                placeholder="e.g. Acme Mills Pvt Ltd"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="supp-category" class="form-label">Procurement Category</label>
+              <select id="supp-category" class="form-control" [(ngModel)]="formModel.category" name="category">
+                <option value="Raw Materials">Raw Materials</option>
+                <option value="Packaging">Packaging</option>
+                <option value="Office Supplies">Office Supplies</option>
+                <option value="Logistics">Logistics</option>
+                <option value="Services">Services</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="supp-gst-type" class="form-label">GST Category</label>
+              <select id="supp-gst-type" class="form-control" [(ngModel)]="formModel.gstType" name="gstType">
+                <option [ngValue]="1">Registered (Regular)</option>
+                <option [ngValue]="2">Unregistered</option>
+                <option [ngValue]="3">Composition Scheme</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="supp-terms" class="form-label">Payment Terms</label>
+              <input
+                id="supp-terms"
+                type="text"
+                class="form-control"
+                [(ngModel)]="formModel.paymentTerms"
+                name="paymentTerms"
+                placeholder="e.g. Net 30"
+              />
+            </div>
+          </div>
+
+          <div class="form-subheading">Statutory & Contact Information</div>
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label for="supp-gstin" class="form-label">GSTIN (15-Character Format Validation)</label>
+              <input
+                id="supp-gstin"
+                type="text"
+                class="form-control font-mono uppercase"
+                [(ngModel)]="formModel.gstin"
+                name="gstin"
+                maxlength="15"
+                placeholder="33AAAAA0000A1Z5"
+              />
+              <span class="text-xs text-muted">Format validation only; not government portal verification.</span>
+            </div>
+            <div class="form-group flex-1">
+              <label for="supp-pan" class="form-label">PAN (10-Digit)</label>
+              <input
+                id="supp-pan"
+                type="text"
+                class="form-control font-mono uppercase"
+                [(ngModel)]="formModel.pan"
+                name="pan"
+                maxlength="10"
+                placeholder="AAAAA0000A"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="supp-phone" class="form-label">Phone *</label>
+              <input
+                id="supp-phone"
+                type="tel"
+                class="form-control font-mono"
+                [(ngModel)]="formModel.phone"
+                name="phone"
+                placeholder="+91 9876543210"
+                required
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="supp-email" class="form-label">Email</label>
+              <input
+                id="supp-email"
+                type="email"
+                class="form-control"
+                [(ngModel)]="formModel.email"
+                name="email"
+                placeholder="vendor@domain.com"
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="supp-contact-person" class="form-label">Contact Person</label>
+              <input
+                id="supp-contact-person"
+                type="text"
+                class="form-control"
+                [(ngModel)]="formModel.contactPerson"
+                name="contactPerson"
+                placeholder="Sales Executive"
+              />
+            </div>
+          </div>
+
+          <div class="form-subheading">MSME Statutory Classification</div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label class="form-label">
+                <input type="checkbox" [(ngModel)]="formModel.isMsmeRegistered" name="isMsmeRegistered" />
+                Supplier is MSME Registered
+              </label>
+            </div>
+            @if (formModel.isMsmeRegistered) {
+              <div class="form-group flex-1">
+                <label for="supp-msme-type" class="form-label">MSME Category</label>
+                <select id="supp-msme-type" class="form-control" [(ngModel)]="formModel.msmeType" name="msmeType">
+                  <option value="Micro">Micro Enterprise</option>
+                  <option value="Small">Small Enterprise</option>
+                  <option value="Medium">Medium Enterprise</option>
+                </select>
+              </div>
+              <div class="form-group flex-1">
+                <label for="supp-udyam" class="form-label">Udyam Registration #</label>
+                <input
+                  id="supp-udyam"
+                  type="text"
+                  class="form-control font-mono"
+                  [(ngModel)]="formModel.udyamRegistrationNumber"
+                  name="udyamRegistrationNumber"
+                  placeholder="UDYAM-XX-00-0000000"
+                />
+              </div>
+            }
+          </div>
+
+          <div class="form-subheading">Primary Bank Account (Encrypted at Rest with AES-256-GCM)</div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="supp-bank-name" class="form-label">Bank Name</label>
+              <input
+                id="supp-bank-name"
+                type="text"
+                class="form-control"
+                [(ngModel)]="formModel.bankName"
+                name="bankName"
+                placeholder="e.g. HDFC Bank, SBI"
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="supp-bank-branch" class="form-label">Branch</label>
+              <input
+                id="supp-bank-branch"
+                type="text"
+                class="form-control"
+                [(ngModel)]="formModel.branchName"
+                name="branchName"
+                placeholder="Branch Location"
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="supp-bank-ifsc" class="form-label">IFSC Code</label>
+              <input
+                id="supp-bank-ifsc"
+                type="text"
+                class="form-control font-mono uppercase"
+                [(ngModel)]="formModel.ifscCode"
+                name="ifscCode"
+                placeholder="e.g. HDFC0001234"
+              />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label for="supp-bank-acc" class="form-label">Bank Account Number</label>
+              <input
+                id="supp-bank-acc"
+                type="text"
+                class="form-control font-mono"
+                [(ngModel)]="formModel.accountNumber"
+                name="accountNumber"
+                placeholder="Enter account number (encrypted automatically)"
+              />
+              @if (isEditOpen()) {
+                <span class="text-xs text-muted">Leave blank to retain current encrypted account number.</span>
+              }
+            </div>
+            <div class="form-group flex-1">
+              <label for="supp-bank-type" class="form-label">Account Type</label>
+              <select id="supp-bank-type" class="form-control" [(ngModel)]="formModel.accountType" name="accountType">
+                <option value="Current">Current Account</option>
+                <option value="Savings">Savings Account</option>
+                <option value="CashCredit">Cash Credit (CC)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-subheading">Registered Address</div>
+          <div class="form-group">
+            <label for="supp-addr" class="form-label">Address Line 1</label>
+            <input
+              id="supp-addr"
+              type="text"
+              class="form-control"
+              [(ngModel)]="formModel.addressLine1"
+              name="addressLine1"
+              placeholder="Door No, Street Name, Industrial Estate"
+            />
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="supp-city" class="form-label">City</label>
+              <input id="supp-city" type="text" class="form-control" [(ngModel)]="formModel.city" name="city" placeholder="City" />
+            </div>
+            <div class="form-group flex-1">
+              <label for="supp-state" class="form-label">State</label>
+              <input id="supp-state" type="text" class="form-control" [(ngModel)]="formModel.state" name="state" placeholder="State" />
+            </div>
+            <div class="form-group flex-1">
+              <label for="supp-pincode" class="form-label">PIN Code</label>
+              <input id="supp-pincode" type="text" class="form-control font-mono" [(ngModel)]="formModel.pinCode" name="pinCode" placeholder="641001" />
+            </div>
+          </div>
+        </div>
+
+        <div class="drawer-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'Saving...' : (isEditOpen() ? 'Save Profile' : 'Register Supplier') }}
+          </button>
+        </div>
+      </form>
+    </aside>
+  }
+</div>

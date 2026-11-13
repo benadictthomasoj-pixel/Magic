@@ -67,6 +67,13 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IAuthenticationApplicationService, AuthenticationApplicationService>();
         services.AddScoped<SecurityDatabaseSeeder>();
 
+        // Phase B: Commercial Masters & Products
+        services.AddSingleton<IBankDataEncryptionService, AesGcmBankDataEncryptionService>();
+        services.AddScoped<Magic.Application.Commercial.Services.IProductCatalogService, Magic.Infrastructure.Commercial.ProductCatalogService>();
+        services.AddScoped<Magic.Application.Commercial.Services.ICustomerPartyService, Magic.Infrastructure.Commercial.CustomerPartyService>();
+        services.AddScoped<Magic.Application.Commercial.Services.ISupplierPartyService, Magic.Infrastructure.Commercial.SupplierPartyService>();
+        services.AddScoped<CommercialDatabaseSeeder>();
+
         // Scoped request security/branch/terminal context
         services.AddScoped<MutableRequestContext>();
         services.AddScoped<IRequestContextSetter>(sp => sp.GetRequiredService<MutableRequestContext>());

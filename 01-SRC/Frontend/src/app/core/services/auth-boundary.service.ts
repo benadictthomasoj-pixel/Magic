@@ -110,6 +110,10 @@ export class AuthBoundaryService {
       return { success: false, error: 'Authentication failed. Please verify credentials.' };
     } catch (err: any) {
       const status = err.status;
+      if (status === 0) {
+        return { success: false, error: 'Cannot connect to server. Please ensure the backend service is running.' };
+      }
+
       const errorDetail = err.error?.detail || err.error?.title || 'Invalid credentials.';
 
       if (status === 423) {

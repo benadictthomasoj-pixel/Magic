@@ -13,10 +13,10 @@
 
 | Category | Modules | Count | Status Overview |
 |---|---|---|---|
-| **Fully Implemented & Verified** | Mod 06 (Accounting Core) | 1 | 8 screens, 7 REST controllers, 12 PostgreSQL tables, 100% tests passing |
-| **Partially Implemented & Active** | Mod 01 (Accounting BI), Mod 19 (Audit/Security Guard), Mod 21 (Platform) | 3 | Core features live, expanding in Phase A & G |
-| **Foundational Domain Primitives** | Mod 08 (Tax Math), Mod 18 (Multi-Branch Isolation) | 2 | Value objects and tenancy filters live, masters planned |
-| **Specified & Route-Configured** | Mod 02-05, 07, 09-17, 20 | 15 | UI routes & specification cards configured, planned across Phases B–G |
+| **Fully Implemented & Verified** | Mod 06 (Accounting Core), Mod 05 (Product & Pricing Master), Mod 09 (Customer CRM), Mod 10 (Supplier Management), Mod 19 (Security, RBAC & Auth) | 5 | All backend APIs, EF Core PostgreSQL tables, Angular UI workspaces, and 100% tests passing |
+| **Partially Implemented & Active** | Mod 01 (Accounting BI), Mod 18 (Multi-Branch Isolation), Mod 21 (Platform) | 3 | Core features live, expanding in Phase C–G |
+| **Foundational Domain Primitives** | Mod 08 (Tax Math) | 1 | Value objects and GST validators live, sales posting planned |
+| **Specified & Route-Configured** | Mod 02-04, 07, 11-17, 20 | 12 | UI routes configured, planned across Phases C–G |
 | **Total** | **All 21 Enterprise Modules** | **21** | **Controlled Phased Execution** |
 
 ---
@@ -29,12 +29,12 @@
 | **MOD-02** | **POS & Billing** | A | `pos` | Planned | Planned (`pos.*`) | Specification Card | Pending Backend | `Planned` | Phase D |
 | **MOD-03** | **Sales Management** | A | `sales` | Planned | Planned (`sales.*`) | Specification Card | Pending Backend | `Planned` | Phase D |
 | **MOD-04** | **Purchase & Procurement** | A / B | `purchases` | Planned | Planned (`purchases.*`) | Specification Card | Pending Backend | `Planned` | Phase C |
-| **MOD-05** | **Inventory & Warehouse** | B | `products`, `inventory` | Planned | Planned (`products.*`, `inventory.*`) | Specification Card | Passing (Domain Quantity) | `Planned` | Phase B / C |
+| **MOD-05** | **Product Master & Pricing** | B | `commercial` | Live (`ProductsController`, `CategoriesController`, `BrandsAndDepartmentsController`) | Live (`commercial.products`, `categories`, `brands`, `price_tiers`, etc.) | Live (`/billing/products`, `/billing/categories`) | Passing (Unit + Integration + Vitest) | `Independently Verified` | Phase B Complete |
 | **MOD-06** | **Accounting (Financial Core)** | C | `accounting` | Live (7 Controllers) | Live (12 Tables) | Live (8 Screens) | 89/89 Passing | `Independently Verified` | Phase 2 Complete |
 | **MOD-07** | **Financial Management & Treasury** | C | `finance` | Partial (Cash/Bank GL) | Live (GL Accounts) | Live (Ledger/Vouchers) | Passing (GL Tests) | `Partially Implemented` | Phase E |
-| **MOD-08** | **Tax & Statutory Compliance** | D | `tax` | Partial (GstMath) | Planned (`tax.*`) | Integrated in Vouchers | Passing (GstMathTests) | `Partially Implemented` | Phase B / E |
-| **MOD-09** | **Customer CRM** | E | `customers` | Partial (AR Subledger) | Live (`accounting.ar_*`) | Specification Card | Passing (Subledger API) | `Partially Implemented` | Phase B |
-| **MOD-10** | **Supplier Management** | B | `suppliers` | Partial (AP Subledger) | Live (`accounting.ap_*`) | Specification Card | Passing (Subledger API) | `Partially Implemented` | Phase B |
+| **MOD-08** | **Tax & Statutory Compliance** | D | `tax` | Partial (GstMath, GstinValidator) | Planned (`tax.*`) | Integrated in Products / Customers | Passing (GstMathTests, Integration) | `Partially Implemented` | Phase B / E |
+| **MOD-09** | **Customer CRM** | E | `commercial` | Live (`CustomersController`) | Live (`commercial.customers`, `addresses`, `groups`) | Live (`/billing/customers`) | Passing (Integration + Vitest) | `Independently Verified` | Phase B Complete |
+| **MOD-10** | **Supplier Management** | B | `commercial` | Live (`SuppliersController`) | Live (`commercial.suppliers`, `supplier_bank_accounts`) | Live (`/billing/suppliers`) | Passing (AES-GCM + Integration + Vitest) | `Independently Verified` | Phase B Complete |
 | **MOD-11** | **Expense Management** | C | `expenses` | Partial (GL Expense) | Live (GL Accounts) | Specification Card | Passing (GL Tests) | `Partially Implemented` | Phase F |
 | **MOD-12** | **Human Resources (HR)** | F | `employees` | Planned | Planned (`employees.*`) | Planned | Planned | `Planned` | Phase F |
 | **MOD-13** | **Payroll** | F | `payroll` | Planned | Planned (`payroll.*`) | Planned | Planned | `Planned` | Phase F |
@@ -43,7 +43,7 @@
 | **MOD-16** | **Service Management** | A | `services` | Planned | Planned (`services.*`) | Planned | Planned | `Planned` | Phase F |
 | **MOD-17** | **Reports & Analytics** | G | `reports` | Live (GL / TB / Vouchers) | Live (`accounting.*`) | Live (GL / TB / Registry) | Passing (Report APIs) | `Implemented` (Accounting) / `Planned` (Universal) | Phase G |
 | **MOD-18** | **Multi-Branch & Terminal** | F | `organization` | Context Enforced | Context Filters Live | Shell Header Display | Passing (Tenant Isolation) | `Implemented` (Tenancy) / `Planned` (Masters) | Phase A |
-| **MOD-19** | **Administration & Security** | G | `security`, `audit` | Live (Audit, Fail-Closed) | Live (`audit.system_audit_logs`) | Brand Showcase / Shell | Passing (Immutability/Audit) | `Implemented` (Audit) / `In Development` (OPEN-003) | Phase A |
+| **MOD-19** | **Administration & Security** | G | `security`, `audit` | Live (Auth, Roles, Perms, Terminals) | Live (`security.*`, `platform.security_audit_events`) | Live (`/login`, User/Role Auth, Shell) | Passing (Auth/Audit Tests) | `Independently Verified` | Phase A Complete |
 | **MOD-20** | **Automation & AI (Auto Stock)** | G | `automation` | Planned | Planned (`automation.*`) | Planned | Planned | `Planned` | Phase G |
 | **MOD-21** | **System Platform Foundation** | G | `platform` | Live (`SystemController`) | Live (`platform.*`) | Live (Status/Settings) | Passing (Health/Outbox) | `Implemented` | Phase 1 Complete |
 

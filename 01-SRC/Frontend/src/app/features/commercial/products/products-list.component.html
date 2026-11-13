@@ -1,0 +1,474 @@
+<div class="commercial-page-container">
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">Billing & Catalog / Products</div>
+      <h1 class="page-title">Product & Pricing Catalog</h1>
+      <p class="page-subtitle">Commercial product master with multi-tier pricing, GST rates, barcodes, and SKUs.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-primary" (click)="openCreate()">
+        <span class="btn-icon">+</span> Register New Product
+      </button>
+    </div>
+  </header>
+
+  <!-- Notification Banner -->
+  @if (actionMessage(); as msg) {
+    <div class="alert-banner" [ngClass]="'alert-' + msg.type" role="alert">
+      <span class="alert-icon">{{ msg.type === 'ok' ? '✓' : '✕' }}</span>
+      <div class="alert-text">{{ msg.text }}</div>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Dismiss">✕</button>
+    </div>
+  }
+
+  <!-- Barcode Scanner Quick Lookup Toolbar -->
+  <div class="card scanner-toolbar">
+    <div class="scanner-input-group">
+      <span class="scanner-icon">📟</span>
+      <input
+        type="text"
+        [(ngModel)]="quickBarcode"
+        (keyup.enter)="testBarcodeLookup()"
+        placeholder="Scan or enter Barcode to test lookup..."
+        class="form-control scanner-input"
+      />
+      <button type="button" class="btn btn-secondary" (click)="testBarcodeLookup()">Lookup Barcode</button>
+    </div>
+    @if (barcodeLookupResult(); as res) {
+      <div class="scanner-result" [class.not-found]="res.includes('No product')">
+        {{ res }}
+      </div>
+    }
+  </div>
+
+  <!-- Filter Toolbar -->
+  <div class="card filter-toolbar">
+    <div class="search-box">
+      <input
+        type="text"
+        [(ngModel)]="filterSearch"
+        (input)="onSearchChange()"
+        placeholder="Search by product name, SKU, barcode, or code..."
+        class="form-control"
+      />
+    </div>
+    <div class="filter-controls">
+      <select [(ngModel)]="filterCategoryId" (change)="onSearchChange()" class="form-control">
+        <option value="">All Categories</option>
+        @for (c of categories(); track c.id) {
+          <option [value]="c.id">{{ c.name }}</option>
+        }
+      </select>
+
+      <select [(ngModel)]="filterBrandId" (change)="onSearchChange()" class="form-control">
+        <option value="">All Brands</option>
+        @for (b of brands(); track b.id) {
+          <option [value]="b.id">{{ b.name }}</option>
+        }
+      </select>
+
+      <select [(ngModel)]="filterActive" (change)="onSearchChange()" class="form-control">
+        <option [ngValue]="undefined">All Statuses</option>
+        <option [ngValue]="true">Active Only</option>
+        <option [ngValue]="false">Inactive Only</option>
+      </select>
+
+      <button type="button" class="btn btn-secondary" (click)="loadProducts()">Refresh</button>
+    </div>
+  </div>
+
+  <!-- Products Data Table -->
+  <div class="card table-card">
+    @if (loading()) {
+      <div class="loading-state">
+        <span class="spinner"></span>
+        Loading products from PostgreSQL...
+      </div>
+    } @else if (products().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon">🏷️</div>
+        <h3>No Products Found</h3>
+        <p>No catalog items match your active filters, or no products have been registered yet.</p>
+        <button type="button" class="btn btn-outline" (click)="openCreate()">Register First Product</button>
+      </div>
+    } @else {
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Code / SKU</th>
+              <th>Product Name</th>
+              <th>Category</th>
+              <th>UOM</th>
+              <th>GST %</th>
+              <th class="text-right">Selling Price</th>
+              <th class="text-right">MRP</th>
+              <th>Barcode</th>
+              <th>Status</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of products(); track p.id) {
+              <tr [class.inactive-row]="!p.isActive">
+                <td class="code-cell">
+                  <div class="font-bold">{{ p.productCode }}</div>
+                  <div class="font-mono text-xs text-muted">{{ p.sku }}</div>
+                </td>
+                <td class="name-cell">
+                  <a href="javascript:void(0)" (click)="viewProduct(p)" class="product-link">
+                    {{ p.name }}
+                  </a>
+                  @if (p.brandName) {
+                    <span class="badge brand-badge">{{ p.brandName }}</span>
+                  }
+                </td>
+                <td>{{ p.categoryName }}</td>
+                <td><span class="badge badge-uom">{{ p.unitOfMeasureCode }}</span></td>
+                <td>{{ p.gstRatePercentage }}%</td>
+                <td class="text-right font-mono font-bold">₹{{ (p.sellingPricePaise / 100).toFixed(2) }}</td>
+                <td class="text-right font-mono text-muted">₹{{ (p.mrpPaise / 100).toFixed(2) }}</td>
+                <td class="font-mono text-xs">{{ p.primaryBarcode || '—' }}</td>
+                <td>
+                  <span class="status-indicator" [class.active]="p.isActive" [class.inactive]="!p.isActive">
+                    {{ p.isActive ? 'Active' : 'Archived' }}
+                  </span>
+                </td>
+                <td class="actions-cell text-center">
+                  <button type="button" class="btn-action" title="View details" (click)="viewProduct(p)">👁️</button>
+                  <button type="button" class="btn-action danger" title="Deactivate" (click)="deactivate(p)">🗑️</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Footer -->
+      <footer class="table-footer">
+        <div class="footer-count">Showing {{ products().length }} of {{ totalProducts }} products</div>
+        <div class="pagination-buttons">
+          <button
+            type="button"
+            class="btn btn-sm"
+            [disabled]="currentPage <= 1"
+            (click)="currentPage = currentPage - 1; loadProducts()"
+          >
+            ← Previous
+          </button>
+          <span class="page-indicator">Page {{ currentPage }}</span>
+          <button
+            type="button"
+            class="btn btn-sm"
+            [disabled]="products().length < pageSize"
+            (click)="currentPage = currentPage + 1; loadProducts()"
+          >
+            Next →
+          </button>
+        </div>
+      </footer>
+    }
+  </div>
+
+  <!-- Detail Drawer -->
+  @if (selectedProduct(); as p) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <aside class="detail-drawer" aria-labelledby="drawer-title">
+      <div class="drawer-header">
+        <div>
+          <span class="drawer-badge">{{ p.productCode }}</span>
+          <h2 id="drawer-title" class="drawer-title">{{ p.name }}</h2>
+          <div class="drawer-subtitle">{{ p.categoryName }} · {{ p.brandName || 'General Brand' }}</div>
+        </div>
+        <button type="button" class="btn-close" (click)="closeDrawers()" aria-label="Close drawer">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="detail-section">
+          <h3>Pricing Engine & Values</h3>
+          <div class="detail-grid">
+            <div class="grid-item">
+              <span class="lbl">Standard Selling Price</span>
+              <span class="val font-mono font-bold text-accent">₹{{ (p.sellingPricePaise / 100).toFixed(2) }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Maximum Retail Price (MRP)</span>
+              <span class="val font-mono">₹{{ (p.mrpPaise / 100).toFixed(2) }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Cost Price</span>
+              <span class="val font-mono">₹{{ (p.costPricePaise / 100).toFixed(2) }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Purchase Price</span>
+              <span class="val font-mono">₹{{ (p.purchasePricePaise / 100).toFixed(2) }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Minimum Selling Price</span>
+              <span class="val font-mono">₹{{ (p.minSellingPricePaise / 100).toFixed(2) }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Wholesale Price</span>
+              <span class="val font-mono">₹{{ (p.wholesalePricePaise / 100).toFixed(2) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Statutory GST & Codes</h3>
+          <div class="detail-grid">
+            <div class="grid-item">
+              <span class="lbl">HSN/SAC Code</span>
+              <span class="val font-mono">{{ p.hsnSacCode }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">GST Slab Rate</span>
+              <span class="val font-bold">{{ p.gstRatePercentage }}%</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">SKU Code</span>
+              <span class="val font-mono">{{ p.sku }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Primary Barcode</span>
+              <span class="val font-mono">{{ p.primaryBarcode || 'None' }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Unit of Measure</span>
+              <span class="val">{{ p.unitOfMeasureCode }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="lbl">Reorder Level</span>
+              <span class="val">{{ p.reorderLevel }} {{ p.unitOfMeasureCode }}</span>
+            </div>
+          </div>
+        </div>
+
+        @if (p.description) {
+          <div class="detail-section">
+            <h3>Description</h3>
+            <p class="description-text">{{ p.description }}</p>
+          </div>
+        }
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="openEdit(p)">Edit Product</button>
+        <button type="button" class="btn btn-outline" (click)="closeDrawers()">Close</button>
+      </div>
+    </aside>
+  }
+
+  <!-- Create / Edit Modal Drawer -->
+  @if (isCreateOpen() || isEditOpen()) {
+    <div class="drawer-backdrop" (click)="closeDrawers()"></div>
+    <aside class="detail-drawer form-drawer" aria-labelledby="form-drawer-title">
+      <div class="drawer-header">
+        <h2 id="form-drawer-title" class="drawer-title">
+          {{ isEditOpen() ? 'Edit Product' : 'Register New Product' }}
+        </h2>
+        <button type="button" class="btn-close" (click)="closeDrawers()" aria-label="Close form">✕</button>
+      </div>
+
+      <form (ngSubmit)="saveProduct()" class="drawer-form">
+        <div class="drawer-body">
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="prod-code" class="form-label">Product Code *</label>
+              <input
+                id="prod-code"
+                type="text"
+                class="form-control"
+                [(ngModel)]="formModel.productCode"
+                name="productCode"
+                placeholder="e.g. PRD-003"
+                [disabled]="isEditOpen()"
+                required
+              />
+            </div>
+            <div class="form-group flex-2">
+              <label for="prod-name" class="form-label">Product Name *</label>
+              <input
+                id="prod-name"
+                type="text"
+                class="form-control"
+                [(ngModel)]="formModel.name"
+                name="name"
+                placeholder="e.g. Organic Brown Rice 1kg"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="prod-category" class="form-label">Category *</label>
+              <select
+                id="prod-category"
+                class="form-control"
+                [(ngModel)]="formModel.categoryId"
+                name="categoryId"
+                required
+              >
+                @for (c of categories(); track c.id) {
+                  <option [value]="c.id">{{ c.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="prod-brand" class="form-label">Brand</label>
+              <select id="prod-brand" class="form-control" [(ngModel)]="formModel.brandId" name="brandId">
+                <option value="">General / None</option>
+                @for (b of brands(); track b.id) {
+                  <option [value]="b.id">{{ b.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="prod-uom" class="form-label">Unit of Measure *</label>
+              <select
+                id="prod-uom"
+                class="form-control"
+                [(ngModel)]="formModel.unitOfMeasureId"
+                name="unitOfMeasureId"
+                required
+              >
+                @for (u of units(); track u.id) {
+                  <option [value]="u.id">{{ u.name }} ({{ u.code }})</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="prod-sku" class="form-label">SKU (Stock Keeping Unit)</label>
+              <input
+                id="prod-sku"
+                type="text"
+                class="form-control font-mono"
+                [(ngModel)]="formModel.sku"
+                name="sku"
+                placeholder="Leave blank for auto-generation"
+                [disabled]="isEditOpen()"
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="prod-barcode" class="form-label">Primary Barcode (EAN-13)</label>
+              <input
+                id="prod-barcode"
+                type="text"
+                class="form-control font-mono"
+                [(ngModel)]="formModel.primaryBarcode"
+                name="primaryBarcode"
+                placeholder="Leave blank for auto-generation"
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="prod-hsn" class="form-label">HSN / SAC Code *</label>
+              <input
+                id="prod-hsn"
+                type="text"
+                class="form-control font-mono"
+                [(ngModel)]="formModel.hsnSacCode"
+                name="hsnSacCode"
+                placeholder="e.g. 1006"
+                required
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="prod-gst" class="form-label">GST Slab Rate *</label>
+              <select
+                id="prod-gst"
+                class="form-control"
+                [(ngModel)]="formModel.gstRatePercentage"
+                name="gstRatePercentage"
+              >
+                <option [ngValue]="0">0% (Nil / Exempt)</option>
+                <option [ngValue]="5">5% (Basic Staples)</option>
+                <option [ngValue]="12">12% (Standard S-1)</option>
+                <option [ngValue]="18">18% (Standard S-2)</option>
+                <option [ngValue]="28">28% (Luxury / De-merit)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Pricing Section -->
+          <div class="form-subheading">Pricing Engine (Stored as 64-Bit Integer Paise)</div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="prod-sell" class="form-label">Selling Price (₹) *</label>
+              <input
+                id="prod-sell"
+                type="number"
+                step="0.01"
+                min="0"
+                class="form-control font-mono"
+                [(ngModel)]="formModel.sellingPriceRupees"
+                name="sellingPriceRupees"
+                required
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="prod-mrp" class="form-label">MRP (₹) *</label>
+              <input
+                id="prod-mrp"
+                type="number"
+                step="0.01"
+                min="0"
+                class="form-control font-mono"
+                [(ngModel)]="formModel.mrpRupees"
+                name="mrpRupees"
+                required
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="prod-purchase" class="form-label">Purchase Price (₹)</label>
+              <input
+                id="prod-purchase"
+                type="number"
+                step="0.01"
+                min="0"
+                class="form-control font-mono"
+                [(ngModel)]="formModel.purchasePriceRupees"
+                name="purchasePriceRupees"
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="prod-cost" class="form-label">Cost Price (₹)</label>
+              <input
+                id="prod-cost"
+                type="number"
+                step="0.01"
+                min="0"
+                class="form-control font-mono"
+                [(ngModel)]="formModel.costPriceRupees"
+                name="costPriceRupees"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="prod-desc" class="form-label">Product Description</label>
+            <textarea
+              id="prod-desc"
+              rows="3"
+              class="form-control"
+              [(ngModel)]="formModel.description"
+              name="description"
+              placeholder="Commercial description and specifications..."
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="drawer-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeDrawers()">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'Saving Product...' : (isEditOpen() ? 'Save Changes' : 'Create Product') }}
+          </button>
+        </div>
+      </form>
+    </aside>
+  }
+</div>

@@ -137,6 +137,9 @@ if (app.Environment.IsDevelopment() && autoSeed)
     await securitySeeder.SeedAsync();
 
     await Magic.Infrastructure.Persistence.AccountingDatabaseSeeder.SeedDevelopmentAccountingAsync(app.Services);
+
+    var commercialSeeder = scope.ServiceProvider.GetRequiredService<Magic.Infrastructure.Persistence.CommercialDatabaseSeeder>();
+    await commercialSeeder.SeedAsync();
 }
 
 app.Run();
