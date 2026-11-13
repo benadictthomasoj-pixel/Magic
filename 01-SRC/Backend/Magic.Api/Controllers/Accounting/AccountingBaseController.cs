@@ -21,6 +21,24 @@ public abstract class AccountingBaseController(
 
     protected Guid ResolveCompanyId()
     {
+        if (currentUserContext.IsAuthenticated && currentUserContext.CompanyId.HasValue && currentUserContext.CompanyId.Value != Guid.Empty)
+        {
+            var authCompanyId = currentUserContext.CompanyId.Value;
+            if (Request.Headers.TryGetValue(MagicHttpHeaders.CompanyId, out var headerVal) &&
+                Guid.TryParse(headerVal, out var clientSuppliedCompanyId) && clientSuppliedCompanyId != Guid.Empty)
+            {
+                if (clientSuppliedCompanyId != authCompanyId)
+                {
+                    throw new DomainException(
+                        "TENANT_MISMATCH",
+                        $"Header X-Company-Id '{clientSuppliedCompanyId}' does not match authorized tenant '{authCompanyId}'.",
+                        StatusCodes.Status403Forbidden);
+                }
+            }
+
+            return authCompanyId;
+        }
+
         if (Request.Headers.TryGetValue(MagicHttpHeaders.CompanyId, out var val) &&
             Guid.TryParse(val, out var parsed) && parsed != Guid.Empty)
         {

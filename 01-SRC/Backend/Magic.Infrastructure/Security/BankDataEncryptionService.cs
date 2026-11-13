@@ -17,16 +17,32 @@ public sealed class AesGcmBankDataEncryptionService : IBankDataEncryptionService
 
     public AesGcmBankDataEncryptionService(IConfiguration configuration)
     {
-        // Derive or fetch 256-bit encryption key
+        ArgumentNullException.ThrowIfNull(configuration);
+
         var keyHex = configuration["Security:BankEncryptionKey"];
-        if (!string.IsNullOrWhiteSpace(keyHex) && keyHex.Length >= 64)
+        if (string.IsNullOrWhiteSpace(keyHex))
         {
-            _key = Convert.FromHexString(keyHex[..64]);
+            throw new InvalidOperationException(
+                "CRITICAL SECURITY CONFIGURATION ERROR: 'Security:BankEncryptionKey' is required. " +
+                "A 256-bit AES-GCM encryption key (64 hex characters) must be configured via environment variable " +
+                "'SECURITY__BANKENCRYPTIONKEY' or configuration.");
         }
-        else
+
+        var trimmed = keyHex.Trim();
+        if (trimmed.Length != 64)
         {
-            // Default deterministic secure key for development/test environment
-            _key = SHA256.HashData(Encoding.UTF8.GetBytes("MagicErp_CommercialMasters_SupplierBankSecretKey_2026!#$"));
+            throw new InvalidOperationException(
+                $"CRITICAL SECURITY CONFIGURATION ERROR: 'Security:BankEncryptionKey' must be exactly 64 hex characters (256 bits). Provided length was {trimmed.Length}.");
+        }
+
+        try
+        {
+            _key = Convert.FromHexString(trimmed);
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidOperationException(
+                "CRITICAL SECURITY CONFIGURATION ERROR: 'Security:BankEncryptionKey' is not a valid hex string.", ex);
         }
     }
 

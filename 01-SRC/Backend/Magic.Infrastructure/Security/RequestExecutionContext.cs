@@ -11,6 +11,7 @@ public interface IRequestContextSetter
     void SetAuthenticatedCaller(
         Guid userId,
         string username,
+        Guid companyId,
         IReadOnlyCollection<string> roles,
         IReadOnlyCollection<string> permissions);
 }
@@ -23,6 +24,7 @@ public sealed class MutableRequestContext : ICurrentUserContext, IBranchContext,
     public Guid? UserId { get; private set; }
     public string? Username { get; private set; }
     public bool IsAuthenticated { get; private set; }
+    public Guid? CompanyId { get; private set; }
     public IReadOnlyCollection<string> Roles { get; private set; } = [];
     public IReadOnlyCollection<string> Permissions { get; private set; } = [];
 
@@ -41,11 +43,13 @@ public sealed class MutableRequestContext : ICurrentUserContext, IBranchContext,
     public void SetAuthenticatedCaller(
         Guid userId,
         string username,
+        Guid companyId,
         IReadOnlyCollection<string> roles,
         IReadOnlyCollection<string> permissions)
     {
         UserId = userId;
         Username = username;
+        CompanyId = companyId;
         IsAuthenticated = true;
         Roles = roles;
         Permissions = permissions;

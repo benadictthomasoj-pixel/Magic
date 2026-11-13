@@ -11,6 +11,7 @@ public interface ICurrentUserContext
     bool IsAuthenticated { get; }
     IReadOnlyCollection<string> Roles { get; }
     IReadOnlyCollection<string> Permissions { get; }
+    Guid? CompanyId { get; }
 }
 
 /// <summary>

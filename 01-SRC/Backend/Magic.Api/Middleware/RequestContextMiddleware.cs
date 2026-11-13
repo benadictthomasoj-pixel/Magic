@@ -42,6 +42,9 @@ public sealed class RequestContextMiddleware(RequestDelegate next)
                 terminalId = claimTerminal;
             }
 
+            var companyClaim = context.User.FindFirst("company_id")?.Value;
+            var companyId = Guid.TryParse(companyClaim, out var claimCompany) ? claimCompany : Guid.Empty;
+
             var userIdClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                 ?? context.User.FindFirst("sub")?.Value;
             var userId = Guid.TryParse(userIdClaim, out var parsedUid) ? parsedUid : Guid.Empty;
@@ -51,9 +54,9 @@ public sealed class RequestContextMiddleware(RequestDelegate next)
             var roles = context.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToArray();
             var permissions = context.User.FindAll("permission").Select(c => c.Value).ToArray();
 
-            if (userId != Guid.Empty)
+            if (userId != Guid.Empty && companyId != Guid.Empty)
             {
-                requestContext.SetAuthenticatedCaller(userId, username, roles, permissions);
+                requestContext.SetAuthenticatedCaller(userId, username, companyId, roles, permissions);
             }
         }
 

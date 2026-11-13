@@ -21,6 +21,37 @@ public abstract class CommercialBaseController(
 
     protected Guid ResolveCompanyId()
     {
+        // 1. If caller is authenticated, the server-side JWT claim is the single source of truth
+        if (currentUserContext.IsAuthenticated && currentUserContext.CompanyId.HasValue && currentUserContext.CompanyId.Value != Guid.Empty)
+        {
+            var authCompanyId = currentUserContext.CompanyId.Value;
+
+            // Security Defense: If caller supplied X-Company-Id, reject any mismatch against the authenticated company
+            if (Request.Headers.TryGetValue(MagicHttpHeaders.CompanyId, out var headerVal) &&
+                Guid.TryParse(headerVal, out var clientSuppliedCompanyId) && clientSuppliedCompanyId != Guid.Empty)
+            {
+                if (clientSuppliedCompanyId != authCompanyId)
+                {
+                    throw new DomainException(
+                        "TENANT_MISMATCH",
+                        $"Header X-Company-Id '{clientSuppliedCompanyId}' does not match authorized tenant '{authCompanyId}'.",
+                        StatusCodes.Status403Forbidden);
+                }
+            }
+
+            return authCompanyId;
+        }
+
+        // 2. Protected commercial operations reject missing company context when authenticated
+        if (currentUserContext.IsAuthenticated)
+        {
+            throw new DomainException(
+                "TENANT_REQUIRED",
+                "Authenticated request lacks valid company tenancy context.",
+                StatusCodes.Status401Unauthorized);
+        }
+
+        // 3. Fallback for unauthenticated/testing harness without JWT
         if (Request.Headers.TryGetValue(MagicHttpHeaders.CompanyId, out var val) &&
             Guid.TryParse(val, out var parsed) && parsed != Guid.Empty)
         {
@@ -59,20 +90,25 @@ public abstract class CommercialBaseController(
 
     protected void EnsurePermission(string permissionCode)
     {
-        if (currentUserContext.IsAuthenticated)
+        if (!currentUserContext.IsAuthenticated)
         {
-            if (currentUserContext.Roles.Contains("Administrator", StringComparer.OrdinalIgnoreCase))
-            {
-                return;
-            }
+            throw new DomainException(
+                "AUTH_UNAUTHORIZED",
+                "Authentication is required to perform this commercial operation.",
+                StatusCodes.Status401Unauthorized);
+        }
 
-            if (!currentUserContext.Permissions.Contains(permissionCode, StringComparer.OrdinalIgnoreCase))
-            {
-                throw new DomainException(
-                    "AUTH_FORBIDDEN",
-                    $"User lacks required permission '{permissionCode}' for this commercial operation.",
-                    StatusCodes.Status403Forbidden);
-            }
+        if (currentUserContext.Roles.Contains("Administrator", StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!currentUserContext.Permissions.Contains(permissionCode, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new DomainException(
+                "AUTH_FORBIDDEN",
+                $"User lacks required permission '{permissionCode}' for this commercial operation.",
+                StatusCodes.Status403Forbidden);
         }
     }
 

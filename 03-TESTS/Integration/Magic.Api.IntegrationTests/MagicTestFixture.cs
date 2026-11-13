@@ -21,6 +21,7 @@ public class MagicTestFixture : WebApplicationFactory<Program>
         builder.UseEnvironment("Development");
         builder.UseSetting("ConnectionStrings:MagicDatabase", TestConnectionString);
         builder.UseSetting("Seeding:AutoSeedDevelopmentData", "false");
+        builder.UseSetting("Security:BankEncryptionKey", "3BE52C1C5E44B692983FDD2EB74372EEB5C5BC820D737189B83A5839134F5711");
 
         builder.ConfigureServices(services =>
         {
