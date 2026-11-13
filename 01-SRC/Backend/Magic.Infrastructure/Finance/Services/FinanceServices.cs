@@ -893,15 +893,47 @@ public sealed class PayablesService(
         // 5101: Commercial Goods Purchases (Expense)
         // 1131: Input CGST Credit (Asset)
         // 1132: Input SGST Credit (Asset)
+        // 1133: Input IGST Credit (Asset)
         // 2111: Trade Creditors Control Account (Liability)
         var accPurchases = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "5101", cancellationToken)
-            ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Purchases Account (5101) not found.", 500);
-        var accCgst = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "1131", cancellationToken)
-            ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Input CGST Account (1131) not found.", 500);
-        var accSgst = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "1132", cancellationToken)
-            ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Input SGST Account (1132) not found.", 500);
+            ?? await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.RootClass == AccountRootClass.Expense && a.IsActive, cancellationToken)
+            ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Purchases Account (5101) not found in Chart of Accounts.", 500);
+
         var accCreditors = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "2111", cancellationToken)
-            ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Trade Creditors Account (2111) not found.", 500);
+            ?? await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.ControlAccountType == "VendorControl" && a.IsActive, cancellationToken)
+            ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Trade Creditors Account (2111) not found in Chart of Accounts.", 500);
+
+        var isInterState = request.IsInterState ?? false;
+        if (!request.IsInterState.HasValue)
+        {
+            var supplierAddress = await dbContext.SupplierAddresses
+                .FirstOrDefaultAsync(a => a.SupplierId == supplier.Id, cancellationToken);
+            if (supplierAddress != null && !string.IsNullOrWhiteSpace(supplierAddress.State))
+            {
+                isInterState = !string.Equals(supplierAddress.State, "KA", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        Account? accCgst = null;
+        Account? accSgst = null;
+        Account? accIgst = null;
+
+        var accCgstLookup = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "1131", cancellationToken);
+        var accSgstLookup = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "1132", cancellationToken);
+        var accIgstLookup = await dbContext.Accounts.FirstOrDefaultAsync(a => a.CompanyId == companyId && a.Code == "1133", cancellationToken);
+
+        if (isInterState)
+        {
+            accIgst = accIgstLookup
+                ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Input IGST Account (1133) not found in Chart of Accounts.", 500);
+        }
+        else
+        {
+            accCgst = accCgstLookup
+                ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Input CGST Account (1131) not found in Chart of Accounts.", 500);
+            accSgst = accSgstLookup
+                ?? throw new DomainException("ACCOUNT_NOT_FOUND", "Input SGST Account (1132) not found in Chart of Accounts.", 500);
+        }
 
         long subTotal = 0;
         long totalTax = 0;
@@ -936,12 +968,8 @@ public sealed class PayablesService(
 
         // 1. Post Double-entry Journal Voucher (Purchase Type 3)
         // Debit: Commercial Purchases (subtotal)
-        // Debit: Input CGST (half tax)
-        // Debit: Input SGST (half tax)
+        // Debit: Input Tax (IGST or CGST+SGST)
         // Credit: Trade Creditors Control (total)
-        var cgstPaise = totalTax / 2;
-        var sgstPaise = totalTax - cgstPaise;
-
         var voucher = new JournalVoucher(
             companyId,
             branchId,
@@ -957,11 +985,22 @@ public sealed class PayablesService(
             sourceTransactionType: "SupplierInvoice");
 
         voucher.AddLine(accPurchases.Id, Money.FromPaise(subTotal), Money.Zero, $"Purchase expense - Bill {request.InvoiceNumber}", partyId: supplier.Id);
-        if (cgstPaise > 0)
+
+        if (totalTax > 0)
         {
-            voucher.AddLine(accCgst.Id, Money.FromPaise(cgstPaise), Money.Zero, "Input CGST credit", partyId: supplier.Id);
-            voucher.AddLine(accSgst.Id, Money.FromPaise(sgstPaise), Money.Zero, "Input SGST credit", partyId: supplier.Id);
+            if (isInterState && accIgst != null)
+            {
+                voucher.AddLine(accIgst.Id, Money.FromPaise(totalTax), Money.Zero, "Input IGST credit", partyId: supplier.Id);
+            }
+            else if (accCgst != null && accSgst != null)
+            {
+                var cgstPaise = totalTax / 2;
+                var sgstPaise = totalTax - cgstPaise;
+                voucher.AddLine(accCgst.Id, Money.FromPaise(cgstPaise), Money.Zero, "Input CGST credit", partyId: supplier.Id);
+                voucher.AddLine(accSgst.Id, Money.FromPaise(sgstPaise), Money.Zero, "Input SGST credit", partyId: supplier.Id);
+            }
         }
+
         voucher.AddLine(accCreditors.Id, Money.Zero, Money.FromPaise(totalBill), $"Creditor liability - {supplier.Name}", partyId: supplier.Id);
 
         var fyCode = period.FiscalYear?.Code ?? "FY2026-27";
@@ -1989,10 +2028,36 @@ public sealed class BankReconciliationService(
             .FirstOrDefaultAsync(l => l.Id == request.StatementLineId && l.StatementId == statementId, cancellationToken)
             ?? throw new DomainException("LINE_NOT_FOUND", "Statement line not found.", 404);
 
+        if (line.Statement?.Status == "RECONCILED")
+        {
+            throw new DomainException("STATEMENT_ALREADY_RECONCILED", "Cannot modify or match lines on an already reconciled bank statement.", 400);
+        }
+
+        if (line.IsReconciled)
+        {
+            throw new DomainException("LINE_ALREADY_MATCHED", "Statement line is already reconciled and matched.", 400);
+        }
+
+        var bankAccount = await dbContext.BankCashAccounts
+            .FirstOrDefaultAsync(b => b.Id == line.Statement!.BankAccountId && b.CompanyId == companyId, cancellationToken)
+            ?? throw new DomainException("BANK_ACCOUNT_NOT_FOUND", "Bank account not found.", 404);
+
         var jLine = await dbContext.JournalLines
             .Include(l => l.Voucher)
             .FirstOrDefaultAsync(l => l.Id == request.JournalLineId, cancellationToken)
             ?? throw new DomainException("JOURNAL_LINE_NOT_FOUND", "Journal line not found.", 404);
+
+        if (jLine.AccountId != bankAccount.GlAccountId)
+        {
+            throw new DomainException("INVALID_GL_ACCOUNT_MATCH", "Journal line does not belong to the bank account's mapped General Ledger account.", 400);
+        }
+
+        var isAlreadyMatched = await dbContext.BankStatementLines
+            .AnyAsync(l => l.MatchedVoucherLineId == jLine.Id, cancellationToken);
+        if (isAlreadyMatched)
+        {
+            throw new DomainException("JOURNAL_LINE_ALREADY_MATCHED", "Journal line is already matched to another statement line.", 400);
+        }
 
         line.IsReconciled = true;
         line.MatchedVoucherLineId = jLine.Id;
@@ -2011,8 +2076,14 @@ public sealed class BankReconciliationService(
         CancellationToken cancellationToken = default)
     {
         var line = await dbContext.BankStatementLines
+            .Include(l => l.Statement)
             .FirstOrDefaultAsync(l => l.Id == request.StatementLineId && l.StatementId == statementId, cancellationToken)
             ?? throw new DomainException("LINE_NOT_FOUND", "Statement line not found.", 404);
+
+        if (line.Statement?.Status == "RECONCILED")
+        {
+            throw new DomainException("STATEMENT_ALREADY_RECONCILED", "Cannot unmatch lines on an already reconciled bank statement.", 400);
+        }
 
         line.IsReconciled = false;
         line.MatchedVoucherLineId = null;
@@ -2035,6 +2106,11 @@ public sealed class BankReconciliationService(
             .Include(s => s.Lines)
             .FirstOrDefaultAsync(s => s.Id == statementId && s.CompanyId == companyId, cancellationToken)
             ?? throw new DomainException("STATEMENT_NOT_FOUND", "Statement not found.", 404);
+
+        if (statement.Status == "RECONCILED")
+        {
+            throw new DomainException("STATEMENT_ALREADY_RECONCILED", "Bank statement is already reconciled.", 400);
+        }
 
         statement.Status = "RECONCILED";
         await dbContext.SaveChangesAsync(cancellationToken);

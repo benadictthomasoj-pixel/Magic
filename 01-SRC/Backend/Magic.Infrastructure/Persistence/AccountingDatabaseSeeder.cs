@@ -97,8 +97,10 @@ public static partial class AccountingDatabaseSeeder
                 var accCreditors = new Account(companyId, branchId, grpAP.Id, "2111", "Trade Creditors Control Account", AccountRootClass.Liability, systemUserId, isControlAccount: true, controlAccountType: "VendorControl", allowDirectPosting: false);
                 var accOutCgst = new Account(companyId, branchId, grpGst.Id, "2121", "Output CGST Payable", AccountRootClass.Liability, systemUserId, isControlAccount: true, controlAccountType: "GstControl");
                 var accOutSgst = new Account(companyId, branchId, grpGst.Id, "2122", "Output SGST Payable", AccountRootClass.Liability, systemUserId, isControlAccount: true, controlAccountType: "GstControl");
+                var accOutIgst = new Account(companyId, branchId, grpGst.Id, "2123", "Output IGST Payable", AccountRootClass.Liability, systemUserId, isControlAccount: true, controlAccountType: "GstControl");
                 var accInCgst = new Account(companyId, branchId, grpGst.Id, "1131", "Input CGST Credit", AccountRootClass.Asset, systemUserId, isControlAccount: true, controlAccountType: "GstControl");
                 var accInSgst = new Account(companyId, branchId, grpGst.Id, "1132", "Input SGST Credit", AccountRootClass.Asset, systemUserId, isControlAccount: true, controlAccountType: "GstControl");
+                var accInIgst = new Account(companyId, branchId, grpGst.Id, "1133", "Input IGST Credit", AccountRootClass.Asset, systemUserId, isControlAccount: true, controlAccountType: "GstControl");
 
                 var accCap = new Account(companyId, branchId, grpCap.Id, "3101", "Owner's Equity & Capital", AccountRootClass.Equity, systemUserId);
                 var accSales = new Account(companyId, branchId, grpSales.Id, "4101", "General Commercial Sales", AccountRootClass.Revenue, systemUserId);
@@ -107,11 +109,30 @@ public static partial class AccountingDatabaseSeeder
 
                 dbContext.Accounts.AddRange(
                     accCash, accBank, accDebtors,
-                    accCreditors, accOutCgst, accOutSgst, accInCgst, accInSgst,
+                    accCreditors, accOutCgst, accOutSgst, accOutIgst, accInCgst, accInSgst, accInIgst,
                     accCap, accSales, accPurchases, accRent);
 
                 await dbContext.SaveChangesAsync();
                 LogSeedInfo(logger, "Standard Chart of Accounts taxonomy seeded successfully.");
+            }
+            else
+            {
+                // Ensure 1133 (Input IGST) and 2123 (Output IGST) exist even if groups were previously seeded
+                var grpGst = await dbContext.AccountGroups.FirstOrDefaultAsync(g => g.CompanyId == companyId && g.Code == "2120");
+                if (grpGst != null)
+                {
+                    if (!await dbContext.Accounts.AnyAsync(a => a.CompanyId == companyId && a.Code == "1133"))
+                    {
+                        var accInIgst = new Account(companyId, branchId, grpGst.Id, "1133", "Input IGST Credit", AccountRootClass.Asset, systemUserId, isControlAccount: true, controlAccountType: "GstControl");
+                        dbContext.Accounts.Add(accInIgst);
+                    }
+                    if (!await dbContext.Accounts.AnyAsync(a => a.CompanyId == companyId && a.Code == "2123"))
+                    {
+                        var accOutIgst = new Account(companyId, branchId, grpGst.Id, "2123", "Output IGST Payable", AccountRootClass.Liability, systemUserId, isControlAccount: true, controlAccountType: "GstControl");
+                        dbContext.Accounts.Add(accOutIgst);
+                    }
+                    await dbContext.SaveChangesAsync();
+                }
             }
         }
         catch (DbUpdateException)

@@ -231,6 +231,7 @@ public sealed record CreateSupplierBillRequest
     public required DateOnly DueDate { get; init; }
     public Guid? PoId { get; init; }
     public Guid? GrnId { get; init; }
+    public bool? IsInterState { get; init; }
     public string? Notes { get; init; }
     public required IReadOnlyList<CreateSupplierBillLineRequest> Lines { get; init; }
 }
