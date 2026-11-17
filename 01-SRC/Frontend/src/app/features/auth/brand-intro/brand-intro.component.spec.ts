@@ -47,34 +47,32 @@ describe('BrandIntroComponent', () => {
     expect(letterI).toBeTruthy();
     expect(letterC).toBeTruthy();
 
-    // Visual restrictions check: No skip button, no extra text, no cards
+    // Visual restrictions check: No skip button, no extra text, no cards, no replay/action buttons
     expect(compiled.querySelector('.skip-button')).toBeNull();
     expect(compiled.querySelector('.intro-skip-btn')).toBeNull();
     expect(compiled.querySelector('.login-card-container')).toBeNull();
+    expect(compiled.querySelector('.intro-actions')).toBeNull();
   });
 
-  it('displays action controls after animation completes at 3.8s and supports replay', () => {
+  it('automatically completes animation at 3.8s and emits transition to sign in page', () => {
     const fixture = TestBed.createComponent(BrandIntroComponent);
+    const completedSpy = vi.fn();
+    fixture.componentInstance.completed.subscribe(completedSpy);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.intro-actions')).toBeNull();
+    expect(completedSpy).not.toHaveBeenCalled();
+    expect(introState.hasCompletedIntro()).toBe(false);
 
-    // Fast-forward to 3800ms
+    // Fast-forward to 3800ms (end of calligraphy and settling)
     vi.advanceTimersByTime(3800);
     fixture.detectChanges();
 
-    const actions = fixture.nativeElement.querySelector('.intro-actions');
-    expect(actions).toBeTruthy();
-    const replayBtn = fixture.nativeElement.querySelector('.replay-btn') as HTMLButtonElement;
-    expect(replayBtn).toBeTruthy();
-
-    // Test replay click
-    replayBtn.click();
+    // Fast-forward through smooth fade-out exit transition (250ms)
+    vi.advanceTimersByTime(260);
     fixture.detectChanges();
 
-    // Fast-forward tick for remount
-    vi.advanceTimersByTime(35);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.logo-stage')).toBeTruthy();
+    expect(completedSpy).toHaveBeenCalled();
+    expect(introState.hasCompletedIntro()).toBe(true);
+    expect(fixture.nativeElement.querySelector('.intro-actions')).toBeNull();
   });
 });
