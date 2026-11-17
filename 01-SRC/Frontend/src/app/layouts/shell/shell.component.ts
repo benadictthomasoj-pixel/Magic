@@ -48,10 +48,17 @@ export class ShellComponent implements OnInit {
   // Active Business Module: 'billing' | 'accounting'
   protected readonly currentModule = signal<AppModule>('accounting');
 
-  // Enterprise Organizational Context
-  protected readonly companyName = signal('Universal Enterprises Ltd');
-  protected readonly branchName = signal('Headquarters (MAIN)');
+  // Enterprise Organizational Context & User Profile
+  protected readonly companyName = computed(() => this.auth.company()?.name || 'MAGIC Universal Enterprises Ltd');
+  protected readonly branchName = computed(() => this.auth.branch()?.name || 'Flagship Central Store (MAIN)');
   protected readonly fiscalYear = signal('FY 2026-27');
+  protected readonly userDisplayName = computed(() => this.auth.currentUser()?.displayName || this.auth.currentUsername() || 'Administrator');
+  protected readonly userRole = computed(() => this.auth.userRoles()[0] || 'System Admin');
+  protected readonly userInitials = computed(() => {
+    const name = this.userDisplayName();
+    return name.slice(0, 2).toUpperCase();
+  });
+  protected readonly lastSyncTime = signal<string>('Just now');
 
   // Accounting Module Navigation Sections
   private readonly accountingSections: readonly NavSection[] = [
@@ -95,23 +102,18 @@ export class ShellComponent implements OnInit {
     },
   ];
 
-  // Billing Module Navigation Sections (15 Planned Entries)
+  // Billing Module Navigation Sections (Desktop Architecture)
   private readonly billingSections: readonly NavSection[] = [
     {
-      title: 'POS & Desk Operations',
+      title: 'Billing Workspace',
       items: [
-        { path: '/billing/dashboard', label: 'Billing Dashboard', icon: '📊' },
+        { path: '/billing/dashboard', label: 'Dashboard', icon: '📊' },
         { path: '/billing/pos', label: 'POS / New Bill', icon: '💳' },
-        { path: '/billing/cash-closing', label: 'Cash Closing', icon: '🔒' },
-      ],
-    },
-    {
-      title: 'Sales & Parties',
-      items: [
         { path: '/billing/sales', label: 'Sales', icon: '🧾' },
         { path: '/billing/sales-returns', label: 'Sales Returns', icon: '↩️' },
         { path: '/billing/customers', label: 'Customers', icon: '👥' },
         { path: '/billing/customer-payments', label: 'Customer Payments', icon: '💵' },
+        { path: '/billing/cash-closing', label: 'Cash Closing', icon: '🔒' },
       ],
     },
     {
@@ -119,7 +121,6 @@ export class ShellComponent implements OnInit {
       items: [
         { path: '/billing/products', label: 'Products', icon: '🏷️' },
         { path: '/billing/categories', label: 'Categories', icon: '📁' },
-        { path: '/billing/customers', label: 'Customers', icon: '👥' },
         { path: '/billing/suppliers', label: 'Suppliers', icon: '🏢' },
       ],
     },
@@ -131,7 +132,7 @@ export class ShellComponent implements OnInit {
         { path: '/billing/stock-adjustments', label: 'Stock Adjustments', icon: '🔄' },
         { path: '/billing/stock-counts', label: 'Stock Counting', icon: '📝' },
         { path: '/billing/stock-transfers', label: 'Warehouse Transfers', icon: '🚚' },
-        { path: '/billing/reorder-management', label: 'Reorder Alerts', icon: '🔔' },
+        { path: '/billing/reorder-management', label: 'Reorder Management', icon: '🔔' },
       ],
     },
     {
@@ -139,13 +140,14 @@ export class ShellComponent implements OnInit {
       items: [
         { path: '/billing/purchase-orders', label: 'Purchase Orders', icon: '🛒' },
         { path: '/billing/goods-receipts', label: 'Goods Receipts (GRN)', icon: '📥' },
+        { path: '/accounting/payables', label: 'Supplier Bills', icon: '📄' },
         { path: '/billing/purchase-returns', label: 'Purchase Returns', icon: '↩️' },
       ],
     },
     {
-      title: 'Operations & Enterprise',
+      title: 'Operations & Services',
       items: [
-        { path: '/billing/orders', label: 'Advanced Orders', icon: '📦' },
+        { path: '/billing/orders', label: 'Sales Orders', icon: '📦' },
         { path: '/billing/service', label: 'Service Desk & Repairs', icon: '🛠️' },
         { path: '/billing/expenses', label: 'Operating Expenses', icon: '📉' },
         { path: '/billing/hr', label: 'Human Resources', icon: '👥' },
@@ -154,7 +156,7 @@ export class ShellComponent implements OnInit {
       ],
     },
     {
-      title: 'Enterprise & Intelligence',
+      title: 'Enterprise & Governance',
       items: [
         { path: '/billing/reports', label: 'Reports & Intelligence', icon: '📈' },
         { path: '/billing/branches', label: 'Branch & POS Terminals', icon: '🏢' },
@@ -205,6 +207,12 @@ export class ShellComponent implements OnInit {
 
   ngOnInit(): void {
     this.monitor.startPolling();
+    this.updateSyncTime();
+  }
+
+  private updateSyncTime(): void {
+    const now = new Date();
+    this.lastSyncTime.set(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
   }
 
   private syncModuleWithUrl(url: string): void {

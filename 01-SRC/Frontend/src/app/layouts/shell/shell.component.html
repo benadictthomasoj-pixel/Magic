@@ -26,7 +26,10 @@
           height="27"
         />
         <div class="brand-text-col">
-          <span class="brand-name">MAGIC</span>
+          <div class="brand-title-row">
+            <span class="brand-name">MAGIC</span>
+            <span class="version-tag">v1.0.0</span>
+          </div>
           <span class="brand-tag">Universal Business Management ERP</span>
         </div>
       </a>
@@ -38,7 +41,7 @@
         <button
           type="button"
           role="tab"
-          class="switcher-tab"
+          class="switcher-tab tab-billing"
           [class.active]="currentModule() === 'billing'"
           [attr.aria-selected]="currentModule() === 'billing'"
           (click)="switchModule('billing')"
@@ -52,7 +55,7 @@
         <button
           type="button"
           role="tab"
-          class="switcher-tab"
+          class="switcher-tab tab-accounting"
           [class.active]="currentModule() === 'accounting'"
           [attr.aria-selected]="currentModule() === 'accounting'"
           (click)="switchModule('accounting')"
@@ -65,7 +68,7 @@
       </nav>
     </div>
 
-    <!-- Header Right: Enterprise Context, Status & Controls -->
+    <!-- Header Right: Enterprise Context, Controls & User Profile -->
     <div class="header-right">
       <!-- Active Enterprise Context (Company, Branch, FY) -->
       <div class="enterprise-context-badge">
@@ -105,6 +108,34 @@
                   : 'error'
           "
         />
+
+        <button
+          type="button"
+          class="header-action-btn"
+          title="System Notifications"
+          aria-label="Application Notifications"
+        >
+          <span class="btn-icon" aria-hidden="true">🔔</span>
+        </button>
+
+        <a
+          routerLink="/system/status"
+          class="header-action-btn"
+          title="Help & System Info (F1)"
+          aria-label="Help and System Info"
+        >
+          <span class="btn-icon" aria-hidden="true">❓</span>
+          <span class="btn-text">Help</span>
+        </a>
+
+        <div class="user-profile-badge" title="Active User Profile">
+          <span class="user-avatar">{{ userInitials() }}</span>
+          <div class="user-info">
+            <span class="user-name">{{ userDisplayName() }}</span>
+            <span class="user-role">{{ userRole() }}</span>
+          </div>
+        </div>
+
         <button
           type="button"
           class="theme-cycle"
@@ -126,11 +157,12 @@
     </div>
   </header>
 
-  <!-- Navigation Sidebar (Filtered by Selected Module) -->
+  <!-- Navigation Sidebar (Dark Navy, Restrained Gold Accent for Billing) -->
   @if (!isNarrowScreen() || mobileNavOpen()) {
     <aside
       id="primary-navigation"
       class="shell-sidebar"
+      [class.billing-theme]="currentModule() === 'billing'"
       [class.drawer-open]="isNarrowScreen() && mobileNavOpen()"
       [cdkTrapFocus]="isNarrowScreen() && mobileNavOpen()"
     >
@@ -175,8 +207,8 @@
       </nav>
 
       <div class="sidebar-footer">
-        <p class="boundary-label">Security Protocol</p>
-        <p class="boundary-value">OPEN-003 Fail-Closed</p>
+        <p class="boundary-label">Desktop Engine</p>
+        <p class="boundary-value">WPF WebView2 · LAN</p>
       </div>
     </aside>
   }
@@ -186,9 +218,19 @@
     <router-outlet />
   </main>
 
-  <!-- App Footer -->
+  <!-- App Footer Status Bar -->
   <footer class="shell-footer">
-    <span>MAGIC Greenfield ERP · {{ currentModule() === 'billing' ? 'Commercial & POS Architecture' : 'Double-Entry General Ledger' }}</span>
-    <span>PostgreSQL 18.6 · ASP.NET Core 10 · Strict Online LAN (OPEN-001)</span>
+    <div class="footer-left">
+      <span class="status-item"><span class="status-dot dot-green"></span> Server: Online LAN (127.0.0.1:5000)</span>
+      <span class="footer-sep">|</span>
+      <span class="status-item"><span class="status-dot dot-green"></span> Database: PostgreSQL 18 (magic_dev) · Connected</span>
+      <span class="footer-sep">|</span>
+      <span class="status-item">Last Sync: {{ lastSyncTime() }}</span>
+    </div>
+    <div class="footer-right">
+      <span class="status-item shortcut-hint"><kbd>F1</kbd> Help</span>
+      <span class="footer-sep">|</span>
+      <span class="status-item">MAGIC ERP v1.0.0</span>
+    </div>
   </footer>
 </div>

@@ -1,70 +1,393 @@
 <div class="billing-dashboard-container">
-  <!-- Header -->
-  <header class="page-header">
-    <div class="header-left">
-      <div class="breadcrumb">Billing / Workspace Overview</div>
-      <h1 class="page-title">Billing & Operations Workspace</h1>
-      <p class="page-subtitle">Unified point of sale, sales invoicing, inventory tracking, and purchasing suite.</p>
+  <!-- Dashboard Heading with Branch, Period Filters & Refresh Action -->
+  <header class="dashboard-header">
+    <div class="header-titles">
+      <div class="breadcrumb" aria-label="Breadcrumb">
+        <span class="bc-item">Billing</span>
+        <span class="bc-sep">/</span>
+        <span class="bc-current">Dashboard</span>
+      </div>
+      <h1 class="page-title">Billing Dashboard</h1>
+      <p class="page-subtitle">Sales, POS, Inventory and Commercial Operations</p>
     </div>
-    <div class="header-actions">
-      <a routerLink="/accounting/dashboard" class="btn btn-outline">
-        <span class="icon">📊</span> Switch to Accounting
-      </a>
+
+    <div class="header-controls">
+      <!-- Branch Selector -->
+      <div class="control-group">
+        <label for="branch-select" class="control-label">Branch</label>
+        <div class="select-wrapper">
+          <select
+            id="branch-select"
+            class="form-select"
+            [value]="selectedBranchId()"
+            (change)="onBranchChange($event)"
+            [disabled]="loading() || refreshing()"
+          >
+            <option value="">All Branches</option>
+            @for (branch of branches(); track branch.id) {
+              <option [value]="branch.id">{{ branch.branchName }} ({{ branch.branchCode }})</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <!-- Date Period Selector -->
+      <div class="control-group">
+        <label for="period-select" class="control-label">Period</label>
+        <div class="select-wrapper">
+          <select
+            id="period-select"
+            class="form-select"
+            [value]="selectedPeriod()"
+            (change)="onPeriodChange($event)"
+            [disabled]="loading() || refreshing()"
+          >
+            <option value="today">Today</option>
+            <option value="this-week">This Week</option>
+            <option value="this-month">This Month</option>
+            <option value="this-quarter">This Quarter</option>
+            <option value="this-year">This Year</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Refresh Action -->
+      <div class="control-group action-group">
+        <button
+          type="button"
+          class="btn-refresh"
+          (click)="refreshDashboard()"
+          [disabled]="loading() || refreshing()"
+          title="Refresh dashboard data"
+        >
+          <span class="icon" [class.spinning]="refreshing()">↻</span>
+          <span>Refresh</span>
+        </button>
+      </div>
     </div>
   </header>
 
-  <!-- Architectural Status Banner -->
-  <div class="phase-notice-card">
-    <div class="notice-badge">Phase 3 Implementation Scheduled</div>
-    <div class="notice-body">
-      <h2>Billing & Commercial Operations Architecture</h2>
-      <p>
-        The <strong>MAGIC Phase 2 Accounting Foundation</strong> is fully operational with double-entry ledger posting,
-        audit trail immutability, and fiscal governance. The <strong>Billing Workspace</strong> will connect directly to this
-        accounting core in Phase 3, allowing every sale, POS checkout, purchase receipt, and inventory movement to post
-        balanced journal vouchers automatically.
-      </p>
-      <div class="notice-points">
-        <div class="point-item">
-          <span class="point-icon">✓</span>
-          <span>Zero manual ledger reconciliation</span>
+  <!-- Error State Banner if any -->
+  @if (error()) {
+    <div class="alert-banner alert-error" role="alert">
+      <span class="alert-icon">⚠️</span>
+      <span class="alert-message">{{ error() }}</span>
+      <button type="button" class="btn-retry" (click)="loadDashboardData()">Retry</button>
+    </div>
+  }
+
+  <!-- Loading Overlay State Indicator -->
+  @if (loading()) {
+    <div class="dashboard-loading-overlay">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Loading commercial metrics and live sales data...</p>
+    </div>
+  }
+
+  <!-- Dashboard Main Content Grid -->
+  <div class="dashboard-content" [class.content-dimmed]="refreshing()">
+    <!-- 4 Compact KPI Cards in One Horizontal Row -->
+    <section class="kpi-grid" aria-label="Key Performance Indicators">
+      <!-- 1. Total Sales -->
+      <div class="kpi-card" id="kpi-total-sales">
+        <div class="kpi-header">
+          <span class="kpi-title">Total Sales</span>
+          <span class="kpi-icon" aria-hidden="true">📈</span>
         </div>
-        <div class="point-item">
-          <span class="point-icon">✓</span>
-          <span>Native GST statutory e-Invoicing ready</span>
-        </div>
-        <div class="point-item">
-          <span class="point-icon">✓</span>
-          <span>Offline LAN resilient caching for high-speed POS</span>
+        <div class="kpi-body">
+          <div class="kpi-value">{{ formatPaise(totalSalesPaise()) }}</div>
+          <div class="kpi-note">Net sales in {{ periodLabel() }}</div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Planned Modules Grid -->
-  <div class="modules-overview">
-    <div class="section-title-row">
-      <h3 class="section-title">Planned Commercial Capabilities</h3>
-      <span class="section-badge">6 Core Functional Areas</span>
-    </div>
+      <!-- 2. Number of Bills -->
+      <div class="kpi-card" id="kpi-bills-count">
+        <div class="kpi-header">
+          <span class="kpi-title">Number of Bills</span>
+          <span class="kpi-icon" aria-hidden="true">🧾</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-value">{{ totalBillsCount() }}</div>
+          <div class="kpi-note">POS tickets & invoices</div>
+        </div>
+      </div>
 
-    <div class="capabilities-grid">
-      @for (item of plannedCapabilities; track item.title) {
-        <div class="capability-card">
-          <div class="card-top">
-            <span class="cap-icon">{{ item.icon }}</span>
-            <span class="cap-tag">{{ item.tag }}</span>
+      <!-- 3. Active Customers -->
+      <div class="kpi-card" id="kpi-active-customers">
+        <div class="kpi-header">
+          <span class="kpi-title">Active Customers</span>
+          <span class="kpi-icon" aria-hidden="true">👥</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-value">{{ activeCustomersCount() }}</div>
+          <div class="kpi-note">Registered active accounts</div>
+        </div>
+      </div>
+
+      <!-- 4. Stock Value -->
+      <div class="kpi-card" id="kpi-stock-value">
+        <div class="kpi-header">
+          <span class="kpi-title">Stock Value</span>
+          <span class="kpi-icon" aria-hidden="true">📦</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-value">{{ formatPaise(stockValuePaise()) }}</div>
+          <div class="kpi-note">Total inventory at cost</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Row 1: Sales Trend (50%) & Quick Actions (50%) -->
+    <div class="dashboard-row row-1">
+      <!-- Left: Sales Trend Line Chart -->
+      <section class="dashboard-panel panel-trend" aria-label="Sales Trend">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2 class="panel-title">Sales Trend</h2>
+            <span class="panel-subtitle">Revenue progression across {{ periodLabel() }}</span>
           </div>
-          <h4 class="cap-title">{{ item.title }}</h4>
-          <p class="cap-desc">{{ item.description }}</p>
-          <div class="cap-footer">
-            <span class="status-indicator">
-              <span class="dot"></span>
-              Scheduled for Phase 3
-            </span>
+          <div class="panel-badge">
+            {{ formatPaise(totalSalesPaise()) }}
           </div>
         </div>
-      }
+
+        <div class="panel-body chart-body">
+          <div class="chart-container">
+            <svg class="trend-chart" viewBox="0 0 540 220" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="salesTrendGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#e7aa1b" stop-opacity="0.25" />
+                  <stop offset="100%" stop-color="#e7aa1b" stop-opacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              <!-- Gridlines & Y-Axis Labels -->
+              <g class="grid-lines">
+                <!-- Top 100% -->
+                <line x1="65" y1="25" x2="520" y2="25" stroke="#e2e8f0" stroke-dasharray="3 3" />
+                <text x="60" y="29" class="axis-label y-axis" text-anchor="end">{{ chartMaxLabel() }}</text>
+
+                <!-- Mid 50% -->
+                <line x1="65" y1="105" x2="520" y2="105" stroke="#e2e8f0" stroke-dasharray="3 3" />
+                <text x="60" y="109" class="axis-label y-axis" text-anchor="end">{{ chartMidLabel() }}</text>
+
+                <!-- Base 0 -->
+                <line x1="65" y1="185" x2="520" y2="185" stroke="#cbd5e1" />
+                <text x="60" y="189" class="axis-label y-axis" text-anchor="end">₹0</text>
+              </g>
+
+              <!-- Area Fill -->
+              @if (chartAreaPath()) {
+                <path class="trend-area-path" [attr.d]="chartAreaPath()" fill="url(#salesTrendGradient)" />
+              }
+
+              <!-- Trend Line -->
+              @if (chartLinePath()) {
+                <path class="trend-line-path" [attr.d]="chartLinePath()" fill="none" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+              }
+
+              <!-- Data Point Dots -->
+              @for (point of chartPoints(); track point.label + '_' + $index) {
+                <circle
+                  [attr.cx]="point.x"
+                  [attr.cy]="point.y"
+                  r="4"
+                  fill="#ffffff"
+                  stroke="#d97706"
+                  stroke-width="2"
+                  class="chart-dot"
+                >
+                  <title>{{ point.label }}: {{ formatPaise(point.amountPaise) }}</title>
+                </circle>
+                <text [attr.x]="point.x" y="206" class="axis-label x-axis" text-anchor="middle">
+                  {{ point.shortLabel }}
+                </text>
+              }
+            </svg>
+          </div>
+          @if (isTrendZero()) {
+            <p class="chart-empty-hint">No sales activity in this period (showing ₹0 baseline).</p>
+          }
+        </div>
+      </section>
+
+      <!-- Right: Quick Actions (5 Practical Tiles) -->
+      <section class="dashboard-panel panel-quick-actions" aria-label="Quick Actions">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2 class="panel-title">Quick Actions</h2>
+            <span class="panel-subtitle">Frequent commercial and retail operations</span>
+          </div>
+        </div>
+
+        <div class="panel-body actions-body">
+          <div class="quick-actions-grid">
+            <!-- 1. New POS Bill -->
+            <a routerLink="/billing/pos" class="action-tile" id="action-pos-bill">
+              <div class="tile-icon-box">
+                <span class="tile-icon">💳</span>
+              </div>
+              <div class="tile-details">
+                <span class="tile-title">New POS Bill</span>
+                <span class="tile-desc">Fast barcode & cash cashier checkout</span>
+              </div>
+              <span class="tile-arrow" aria-hidden="true">→</span>
+            </a>
+
+            <!-- 2. New Sale -->
+            <a routerLink="/billing/sales" class="action-tile" id="action-new-sale">
+              <div class="tile-icon-box">
+                <span class="tile-icon">🧾</span>
+              </div>
+              <div class="tile-details">
+                <span class="tile-title">New Sale</span>
+                <span class="tile-desc">Commercial GST tax invoice & billing</span>
+              </div>
+              <span class="tile-arrow" aria-hidden="true">→</span>
+            </a>
+
+            <!-- 3. New Purchase Order -->
+            <a routerLink="/billing/purchase-orders" class="action-tile" id="action-new-po">
+              <div class="tile-icon-box">
+                <span class="tile-icon">🛒</span>
+              </div>
+              <div class="tile-details">
+                <span class="tile-title">New Purchase Order</span>
+                <span class="tile-desc">Inbound vendor procurement & PO</span>
+              </div>
+              <span class="tile-arrow" aria-hidden="true">→</span>
+            </a>
+
+            <!-- 4. Record GRN -->
+            <a routerLink="/billing/goods-receipts" class="action-tile" id="action-record-grn">
+              <div class="tile-icon-box">
+                <span class="tile-icon">📥</span>
+              </div>
+              <div class="tile-details">
+                <span class="tile-title">Record GRN</span>
+                <span class="tile-desc">Goods receipt & inward verification</span>
+              </div>
+              <span class="tile-arrow" aria-hidden="true">→</span>
+            </a>
+
+            <!-- 5. Receive Payment -->
+            <a routerLink="/billing/customer-payments" class="action-tile" id="action-receive-payment">
+              <div class="tile-icon-box">
+                <span class="tile-icon">💵</span>
+              </div>
+              <div class="tile-details">
+                <span class="tile-title">Receive Payment</span>
+                <span class="tile-desc">Customer dues & receipt allocation</span>
+              </div>
+              <span class="tile-arrow" aria-hidden="true">→</span>
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Row 2: Top Selling Products (40%) & Recent Transactions (60%) -->
+    <div class="dashboard-row row-2">
+      <!-- Left: Top Selling Products (40%) -->
+      <section class="dashboard-panel panel-top-products" aria-label="Top Selling Products">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2 class="panel-title">Top Selling Products</h2>
+            <span class="panel-subtitle">Highest volume and value items</span>
+          </div>
+        </div>
+
+        <div class="panel-body table-body">
+          @if (topProducts().length > 0) {
+            <div class="table-responsive">
+              <table class="desktop-table">
+                <thead>
+                  <tr>
+                    <th class="col-index">#</th>
+                    <th class="col-product">Product</th>
+                    <th class="col-qty text-right">Quantity Sold</th>
+                    <th class="col-amount text-right">Sales Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (prod of topProducts(); track prod.productId || $index) {
+                    <tr>
+                      <td class="col-index font-mono">{{ $index + 1 }}</td>
+                      <td class="col-product">
+                        <div class="product-cell">
+                          <span class="product-name font-medium">{{ prod.productName }}</span>
+                          <span class="product-code font-mono text-muted">{{ prod.productCode }}</span>
+                        </div>
+                      </td>
+                      <td class="col-qty text-right font-mono font-semibold">{{ prod.totalQuantitySold }}</td>
+                      <td class="col-amount text-right font-mono font-bold">{{ formatPaise(prod.totalRevenuePaise) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="empty-table-state">
+              <span class="empty-icon">📊</span>
+              <p class="empty-title">No Product Sales Recorded</p>
+              <p class="empty-desc">No products have been sold in the selected period and branch.</p>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- Right: Recent Transactions (60%) -->
+      <section class="dashboard-panel panel-recent-txns" aria-label="Recent Transactions">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2 class="panel-title">Recent Transactions</h2>
+            <span class="panel-subtitle">Latest invoices and sales entries</span>
+          </div>
+          <a routerLink="/billing/sales" class="panel-action-link" title="Open complete sales register">
+            <span>View All</span>
+            <span class="link-arrow">→</span>
+          </a>
+        </div>
+
+        <div class="panel-body table-body">
+          @if (recentTransactions().length > 0) {
+            <div class="table-responsive">
+              <table class="desktop-table">
+                <thead>
+                  <tr>
+                    <th class="col-time">Time</th>
+                    <th class="col-type">Transaction Type</th>
+                    <th class="col-ref">Reference</th>
+                    <th class="col-party">Customer / Supplier</th>
+                    <th class="col-amount text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (txn of recentTransactions(); track txn.id) {
+                    <tr>
+                      <td class="col-time font-mono text-muted">{{ formatTxnTime(txn.invoiceDateUtc) }}</td>
+                      <td class="col-type">
+                        <span class="txn-badge" [class.badge-pos]="txn.cashierSessionId" [class.badge-tax]="!txn.cashierSessionId">
+                          {{ txn.cashierSessionId ? 'POS Bill' : 'Tax Invoice' }}
+                        </span>
+                      </td>
+                      <td class="col-ref font-mono font-semibold">{{ txn.invoiceNumber }}</td>
+                      <td class="col-party font-medium">{{ txn.customerName || 'Walk-in Customer' }}</td>
+                      <td class="col-amount text-right font-mono font-bold">{{ formatPaise(txn.grandTotalPaise) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="empty-table-state">
+              <span class="empty-icon">🧾</span>
+              <p class="empty-title">No Recent Transactions</p>
+              <p class="empty-desc">No sales or invoices recorded for this filter selection.</p>
+            </div>
+          }
+        </div>
+      </section>
     </div>
   </div>
 </div>
