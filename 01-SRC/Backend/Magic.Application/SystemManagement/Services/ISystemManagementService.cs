@@ -13,3 +13,4 @@ public interface ISystemManagementService
     Task<IReadOnlyList<SystemConfigurationItemDto>> GetConfigurationsAsync(Guid companyId, string? category, CancellationToken cancellationToken = default);
     Task<SystemConfigurationItemDto> UpdateConfigurationAsync(Guid companyId, Guid userId, UpdateSystemConfigurationRequest request, CancellationToken cancellationToken = default);
 }
+

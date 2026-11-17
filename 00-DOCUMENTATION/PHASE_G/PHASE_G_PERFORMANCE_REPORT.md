@@ -33,3 +33,4 @@
 - PostgreSQL connection pooling managed efficiently via Npgsql.
 - No connection leaks detected across 139 consecutive integration test executions.
 - Background Outbox processor runs with non-blocking polling intervals preventing table locking on high transaction volume.
+

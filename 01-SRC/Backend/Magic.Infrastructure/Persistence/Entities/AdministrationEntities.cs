@@ -47,3 +47,4 @@ public sealed class ApprovalActionRecord
 
     public ApprovalRequestRecord? ApprovalRequest { get; set; }
 }
+

@@ -24,3 +24,4 @@ public sealed class ReportExportLogRecord
     public required string ExportedByUserName { get; set; }
     public DateTime ExportedAtUtc { get; set; } = DateTime.UtcNow;
 }
+

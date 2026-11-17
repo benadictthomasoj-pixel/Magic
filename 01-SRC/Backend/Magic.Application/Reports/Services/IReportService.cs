@@ -13,3 +13,4 @@ public interface IReportService
     Task<ReportResultDto> GetMarketingOrdersServicesReportAsync(Guid companyId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
     Task<ReportExportResultDto> ExportReportAsync(Guid companyId, ReportExportRequest request, Guid userId, string userName, CancellationToken cancellationToken = default);
 }
+

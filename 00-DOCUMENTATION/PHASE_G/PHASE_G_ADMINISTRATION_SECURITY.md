@@ -49,3 +49,4 @@ Configurable monetary threshold governance preventing unauthorized financial com
 
 - Centralized query API for `SecurityAuditEvents` filtering by date range, username, and event type.
 - Telemetry metrics calculating total active users, locked accounts, failed authentications within 24 hours, and active session tokens.
+

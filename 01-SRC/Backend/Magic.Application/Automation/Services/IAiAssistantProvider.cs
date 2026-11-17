@@ -11,3 +11,4 @@ public interface IAiAssistantProvider
         string groundedContextJson,
         CancellationToken cancellationToken = default);
 }
+

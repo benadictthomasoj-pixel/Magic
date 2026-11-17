@@ -188,8 +188,9 @@ public sealed class CommercialMastersTests : IClassFixture<MagicTestFixture>, IA
     {
         var client = CreateAdminClient();
         var code = $"CUST-{Guid.NewGuid().ToString("N")[..5].ToUpperInvariant()}";
+        var letters = new string(Enumerable.Range(0, 5).Select(_ => (char)Random.Shared.Next('A', 'Z' + 1)).ToArray());
         var uniqueDigits = Random.Shared.Next(1000, 9999).ToString(CultureInfo.InvariantCulture);
-        var uniqueGstin = $"33AAAAA{uniqueDigits}A1Z5";
+        var uniqueGstin = $"33{letters}{uniqueDigits}A1Z5";
 
         var request = new CreateCustomerRequest
         {

@@ -44,3 +44,4 @@ public sealed class NotificationRecord
     public DateTime? ReadAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
+

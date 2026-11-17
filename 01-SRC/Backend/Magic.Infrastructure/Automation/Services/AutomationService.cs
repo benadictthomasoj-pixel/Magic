@@ -159,6 +159,39 @@ public sealed class AutomationService(
             execution.ErrorDetails);
     }
 
+    public async Task<int> EvaluateAllActiveRulesAsync(CancellationToken cancellationToken = default)
+    {
+        var activeRules = await dbContext.AutomationRules
+            .Where(r => r.IsActive)
+            .ToListAsync(cancellationToken);
+
+        int executedCount = 0;
+        foreach (var rule in activeRules)
+        {
+            try
+            {
+                await TriggerRuleEvaluationAsync(rule.CompanyId, rule.Id, cancellationToken);
+                executedCount++;
+            }
+            catch (Exception ex)
+            {
+                dbContext.AutomationExecutions.Add(new AutomationExecutionRecord
+                {
+                    Id = Guid.NewGuid(),
+                    RuleId = rule.Id,
+                    TriggeredAtUtc = DateTime.UtcNow,
+                    Status = "Failed",
+                    ResultMessage = "Scheduled rule evaluation failed.",
+                    ErrorDetails = ex.Message,
+                    TraceCorrelationId = Guid.NewGuid().ToString()
+                });
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        return executedCount;
+    }
+
     public async Task<IReadOnlyList<NotificationDto>> GetNotificationsAsync(Guid companyId, Guid? userId, bool? unreadOnly, CancellationToken cancellationToken = default)
     {
         var query = dbContext.Notifications.AsNoTracking().Where(n => n.CompanyId == companyId);
@@ -200,3 +233,4 @@ public sealed class AutomationService(
             cancellationToken);
     }
 }
+

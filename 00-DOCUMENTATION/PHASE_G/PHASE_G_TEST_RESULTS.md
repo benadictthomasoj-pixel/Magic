@@ -40,3 +40,4 @@
 | 16 | `Scenario16_BackgroundJobStatus_AndOutboxDiagnostics_ReportsHealthy` | M21 | Passed (Background workers status reporting) |
 | 17 | `Scenario17_FinancialReport_ReconcilesWithGeneralLedger` | M17/M21 | Passed (GL trial balance debit/credit equality) |
 | 18 | `Scenario18_SystemDiagnostics_VerifiesSecretRedaction` | M21 | Passed (Secret masking with ***REDACTED***) |
+

@@ -444,6 +444,31 @@ public sealed class SecurityDatabaseSeeder(
             await dbContext.SaveChangesAsync(cancellationToken);
             logger.LogInformation("Seeded default terminal POS-01.");
         }
+
+        // 6. Ensure Default POS Terminal is Synchronized in branches.terminals (DEF-ARC-001)
+        var branchTerminalExists = await dbContext.TerminalRegistrations.AnyAsync(
+            t => t.CompanyId == DefaultCompanyId && t.TerminalCode == "POS-01",
+            cancellationToken);
+
+        if (!branchTerminalExists)
+        {
+            dbContext.TerminalRegistrations.Add(new TerminalRegistrationRecord
+            {
+                Id = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                CompanyId = DefaultCompanyId,
+                BranchId = DefaultBranchId,
+                TerminalCode = "POS-01",
+                MachineName = "COUNTER-TERM-01",
+                OperatingSystem = "Windows 11 Enterprise",
+                IsAuthorized = true,
+                RegisteredAtUtc = DateTime.UtcNow,
+                LastHeartbeatAtUtc = DateTime.UtcNow,
+                PosPrinterModel = "EPSON TM-T88VI",
+                ReceiptWidthMm = 80
+            });
+            await dbContext.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Synchronized default terminal POS-01 in branches.terminals.");
+        }
     }
 }
 

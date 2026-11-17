@@ -77,3 +77,4 @@ graph TD
 4. **Tenant Isolation**: Every query filters by `CompanyId` derived strictly from authenticated JWT user claims (`ResolveCompanyId()`).
 5. **No Raw SQL Execution**: The Grounded AI assistant processes natural-language intents via typed LINQ queries over `MagicDbContext` entities without raw SQL execution or LLM prompt injection vectors.
 6. **Authentication Freeze**: Pre-existing login, password hashing, and token issuing subsystems remain intact without modification.
+

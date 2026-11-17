@@ -19,3 +19,4 @@
 | **DEF-G-008** | High | `SystemManagementService` | Sensitive configurations masked with `********` instead of the mandated `***REDACTED***`. | Updated `RedactSensitiveData` to output `***REDACTED***` satisfying Section 8.5. | Resolved |
 | **DEF-G-009** | High | `ServiceDeskService` | Concurrent test runs caused unique index collision on `QuotationNumber` and `RequestNumber`. | Added short unique random GUID suffix to generated sequence numbers. | Resolved |
 | **DEF-G-010** | Medium | `PhaseFExtendedScenariosTests` | Reconcile test assumed initial balance 500,000 paise on newly created petty cash account which starts at 0. | Added explicit balance initialization in test fixture before running reconciliation scenarios. | Resolved |
+

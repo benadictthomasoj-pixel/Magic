@@ -40,3 +40,4 @@ Automated integration test `Scenario17_FinancialReport_ReconcilesWithGeneralLedg
 - Total Debits equal Total Credits across all posted financial vouchers.
 - Subsystem transaction sums (Sales, Purchases, Expenses) reconcile 100% with the respective GL account balances.
 - No orphan or unbalanced voucher entries exist in the system.
+

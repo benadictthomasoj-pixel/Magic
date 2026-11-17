@@ -17,3 +17,4 @@ public interface IEnterpriseAdministrationService
     Task<IReadOnlyList<AuditLogEntryDto>> QueryAuditLogsAsync(Guid companyId, AuditLogQueryRequest request, CancellationToken cancellationToken = default);
     Task<SecurityMetricsDto> GetSecurityMetricsAsync(Guid companyId, CancellationToken cancellationToken = default);
 }
+

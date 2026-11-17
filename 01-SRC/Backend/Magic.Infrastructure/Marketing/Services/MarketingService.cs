@@ -422,5 +422,35 @@ public sealed class MarketingService(MagicDbContext dbContext) : IMarketingServi
 
         return await GetCustomerLoyaltyBalanceAsync(companyId, request.CustomerId, cancellationToken);
     }
+
+    public async Task<LoyaltyBalanceDto> AdjustLoyaltyPointsAsync(
+        Guid companyId,
+        Guid customerId,
+        Guid? salesInvoiceId,
+        int pointsAdjustment,
+        string reason,
+        CancellationToken cancellationToken = default)
+    {
+        var currentBalance = (await GetCustomerLoyaltyBalanceAsync(companyId, customerId, cancellationToken)).TotalPointsBalance;
+        var newBalance = Math.Max(0, currentBalance + pointsAdjustment);
+
+        var tx = new LoyaltyTransactionRecord
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customerId,
+            CompanyId = companyId,
+            TransactionType = pointsAdjustment < 0 ? "Adjusted" : "Earned",
+            Points = pointsAdjustment,
+            BalanceAfterPoints = newBalance,
+            SalesInvoiceId = salesInvoiceId,
+            Notes = reason,
+            CreatedAtUtc = DateTimeOffset.UtcNow
+        };
+
+        dbContext.LoyaltyTransactions.Add(tx);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return await GetCustomerLoyaltyBalanceAsync(companyId, customerId, cancellationToken);
+    }
 }
 

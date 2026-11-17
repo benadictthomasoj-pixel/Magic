@@ -63,3 +63,4 @@ public sealed record AiDataDrilldownDto(
     string Label,
     string Value,
     string? RouteUrl);
+

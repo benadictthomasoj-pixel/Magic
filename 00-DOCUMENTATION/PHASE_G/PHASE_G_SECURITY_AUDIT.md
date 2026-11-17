@@ -48,3 +48,4 @@
 1. **Secret Masking:**
    - System configuration values containing passwords, signing keys, and secrets are masked as `***REDACTED***` in view APIs and logs.
    - Verified by integration test `Scenario18_SystemDiagnostics_VerifiesSecretRedaction`.
+

@@ -47,6 +47,7 @@ public sealed record CreatePosSaleRequest
     public string? PlaceOfSupplyStateCode { get; init; }
     public string? CustomerGstin { get; init; }
     public string? Notes { get; init; }
+    public string? CouponCode { get; init; }
     public required IReadOnlyList<PosSaleLineRequest> Lines { get; init; }
     public required IReadOnlyList<PosPaymentRequest> Payments { get; init; }
 }

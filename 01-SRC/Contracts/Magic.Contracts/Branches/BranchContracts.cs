@@ -114,3 +114,4 @@ public sealed record InterBranchTransferLineRequest(
     Guid ProductId,
     Guid? VariantId,
     decimal Quantity);
+

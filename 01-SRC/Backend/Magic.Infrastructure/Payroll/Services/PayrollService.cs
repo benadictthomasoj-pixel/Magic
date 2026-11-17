@@ -286,11 +286,16 @@ public sealed class PayrollService(
             .Where(e => e.CompanyId == companyId && e.BranchId == branchId && e.Status == "Active")
             .ToListAsync(cancellationToken);
 
-        var assignments = await dbContext.EmployeeSalaryAssignments
+        var rawAssignments = await dbContext.EmployeeSalaryAssignments
             .Include(a => a.SalaryStructure)
                 .ThenInclude(s => s!.Components)
             .Where(a => a.Employee!.CompanyId == companyId && a.IsActive)
-            .ToDictionaryAsync(a => a.EmployeeId, cancellationToken);
+            .OrderByDescending(a => a.EffectiveFrom)
+            .ToListAsync(cancellationToken);
+
+        var assignments = rawAssignments
+            .GroupBy(a => a.EmployeeId)
+            .ToDictionary(g => g.Key, g => g.First());
 
         // Attendance records for the month
         var attendanceRecords = await dbContext.AttendanceRecords

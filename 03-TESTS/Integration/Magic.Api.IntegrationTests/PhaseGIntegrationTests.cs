@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -229,6 +230,16 @@ public sealed class PhaseGIntegrationTests : IClassFixture<MagicTestFixture>, IA
         Assert.Equal(terminalCode, envelope.Data.TerminalCode);
         Assert.True(envelope.Data.IsAuthorized);
 
+        // Cross-Module Auth Verification (DEF-ARC-001): Terminal registered in branch is recognized by POS login
+        var loginResponse = await client.PostAsJsonAsync("/api/v1/auth/login", new Magic.Contracts.Security.LoginRequest
+        {
+            UsernameOrEmail = "admin",
+            Password = "123123",
+            BranchId = _defaultBranchId,
+            TerminalId = envelope.Data.Id
+        });
+        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+
         // Update status / deauthorize
         var updateResponse = await client.PutAsJsonAsync($"/api/v1/branches/terminals/{envelope.Data.Id}/status",
             new UpdateTerminalStatusRequest(false, null));
@@ -236,6 +247,16 @@ public sealed class PhaseGIntegrationTests : IClassFixture<MagicTestFixture>, IA
 
         var updatedEnvelope = await updateResponse.Content.ReadFromJsonAsync<ApiResponse<TerminalDetailsDto>>();
         Assert.False(updatedEnvelope!.Data.IsAuthorized);
+
+        // Deauthorized terminal must be rejected at login
+        var deauthLoginResponse = await client.PostAsJsonAsync("/api/v1/auth/login", new Magic.Contracts.Security.LoginRequest
+        {
+            UsernameOrEmail = "admin",
+            Password = "123123",
+            BranchId = _defaultBranchId,
+            TerminalId = envelope.Data.Id
+        });
+        Assert.Equal(HttpStatusCode.Forbidden, deauthLoginResponse.StatusCode);
     }
 
     // ==========================================
@@ -442,6 +463,16 @@ public sealed class PhaseGIntegrationTests : IClassFixture<MagicTestFixture>, IA
 
         var notifs = (await notifResp.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<NotificationDto>>>())!.Data;
         Assert.NotNull(notifs);
+
+        // Scheduled Evaluation Verification (DEF-ARC-003): Autonomous background evaluation of active rules
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var scopeFactory = scope.ServiceProvider.GetRequiredService<IServiceScopeFactory>();
+            var logger = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Magic.Infrastructure.Automation.AutomationRuleSchedulerBackgroundService>>();
+            var scheduler = new Magic.Infrastructure.Automation.AutomationRuleSchedulerBackgroundService(scopeFactory, logger);
+            var evaluatedCount = await scheduler.ProcessScheduledRulesAsync(CancellationToken.None);
+            Assert.True(evaluatedCount >= 1);
+        }
     }
 
     // ==========================================
@@ -625,5 +656,62 @@ public sealed class PhaseGIntegrationTests : IClassFixture<MagicTestFixture>, IA
         {
             Assert.Equal("***REDACTED***", cfg.ConfigValue);
         }
+    }
+
+    // ==========================================
+    // 19. Report Export Formats Verification (CSV, XLSX, PDF)
+    // ==========================================
+    [Fact]
+    public async Task Scenario19_ReportExport_SupportsCsvXlsxAndPdfFormats()
+    {
+        var client = CreateAdminClient();
+
+        // 1. Export as CSV
+        var csvReq = new ReportExportRequest(
+            ReportType: "sales",
+            Format: "CSV",
+            StartDate: DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-1)),
+            EndDate: DateOnly.FromDateTime(DateTime.UtcNow),
+            BranchId: null,
+            WarehouseId: null,
+            CustomerId: null,
+            SupplierId: null,
+            Status: null);
+
+        var csvResp = await client.PostAsJsonAsync("/api/v1/reports/export", csvReq);
+        Assert.Equal(HttpStatusCode.OK, csvResp.StatusCode);
+        Assert.Equal("text/csv", csvResp.Content.Headers.ContentType?.MediaType);
+        var csvBytes = await csvResp.Content.ReadAsByteArrayAsync();
+        Assert.NotEmpty(csvBytes);
+        var csvText = System.Text.Encoding.UTF8.GetString(csvBytes);
+        Assert.Contains("# Sales Analysis Report", csvText);
+
+        // 2. Export as XLSX
+        var xlsxReq = csvReq with { Format = "XLSX" };
+        var xlsxResp = await client.PostAsJsonAsync("/api/v1/reports/export", xlsxReq);
+        Assert.Equal(HttpStatusCode.OK, xlsxResp.StatusCode);
+        Assert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsxResp.Content.Headers.ContentType?.MediaType);
+        var xlsxBytes = await xlsxResp.Content.ReadAsByteArrayAsync();
+        Assert.True(xlsxBytes.Length > 100);
+        Assert.Equal(0x50, xlsxBytes[0]); // 'P'
+        Assert.Equal(0x4B, xlsxBytes[1]); // 'K'
+
+        using (var ms = new MemoryStream(xlsxBytes))
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Read))
+        {
+            Assert.NotNull(zip.GetEntry("[Content_Types].xml"));
+            Assert.NotNull(zip.GetEntry("xl/workbook.xml"));
+            Assert.NotNull(zip.GetEntry("xl/worksheets/sheet1.xml"));
+        }
+
+        // 3. Export as PDF
+        var pdfReq = csvReq with { Format = "PDF" };
+        var pdfResp = await client.PostAsJsonAsync("/api/v1/reports/export", pdfReq);
+        Assert.Equal(HttpStatusCode.OK, pdfResp.StatusCode);
+        Assert.Equal("application/pdf", pdfResp.Content.Headers.ContentType?.MediaType);
+        var pdfBytes = await pdfResp.Content.ReadAsByteArrayAsync();
+        Assert.True(pdfBytes.Length > 100);
+        var pdfHeader = System.Text.Encoding.ASCII.GetString(pdfBytes[..8]);
+        Assert.Equal("%PDF-1.4", pdfHeader);
     }
 }

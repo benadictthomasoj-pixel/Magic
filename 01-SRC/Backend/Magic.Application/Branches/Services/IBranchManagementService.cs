@@ -19,3 +19,4 @@ public interface IBranchManagementService
     Task<InterBranchTransferRequestDto> DispatchInterBranchTransferAsync(Guid companyId, Guid transferId, Guid userId, CancellationToken cancellationToken = default);
     Task<InterBranchTransferRequestDto> ReceiveInterBranchTransferAsync(Guid companyId, Guid transferId, Guid userId, CancellationToken cancellationToken = default);
 }
+

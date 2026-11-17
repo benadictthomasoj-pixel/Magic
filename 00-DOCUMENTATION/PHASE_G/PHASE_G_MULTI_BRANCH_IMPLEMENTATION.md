@@ -45,3 +45,4 @@ Stock transfers between branches follow a strict 4-stage lifecycle ensuring phys
    - Credits stock to the destination warehouse balance.
    - Records an inbound `StockMovementRecord` (`MovementType = "TransferIn"`, `Direction = "In"`).
    - Reconciles any intransit stock.
+

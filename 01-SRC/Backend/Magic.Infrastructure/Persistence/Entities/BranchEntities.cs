@@ -87,3 +87,4 @@ public sealed class InterBranchTransferLineRecord
 
     public InterBranchTransferRequestRecord? TransferRequest { get; set; }
 }
+

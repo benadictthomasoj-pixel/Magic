@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.IO.Compression;
+using System.Security;
 using System.Text;
 using Magic.Application.Reports.Services;
 using Magic.Contracts.Reports;
@@ -428,20 +430,39 @@ public sealed class ReportService(MagicDbContext dbContext) : IReportService
         });
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        string ext = request.Format.ToUpperInvariant() switch
+        string format = (request.Format ?? "CSV").ToUpperInvariant();
+        string ext = format switch
         {
-            "CSV" => "csv",
             "XLSX" => "xlsx",
-            _ => "pdf"
+            "PDF" => "pdf",
+            _ => "csv"
         };
 
         string mime = ext switch
         {
-            "csv" => "text/csv",
             "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            _ => "application/pdf"
+            "pdf" => "application/pdf",
+            _ => "text/csv"
         };
 
+        byte[] bytes = ext switch
+        {
+            "xlsx" => GenerateXlsx(report, userName),
+            "pdf" => GeneratePdf(report, userName),
+            _ => GenerateCsv(report, userName)
+        };
+
+        var fileName = $"{request.ReportType}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.{ext}";
+        return new ReportExportResultDto(fileName, mime, bytes, DateTime.UtcNow);
+    }
+
+    private static string EscapeXml(string? value)
+    {
+        return SecurityElement.Escape(value ?? string.Empty) ?? string.Empty;
+    }
+
+    private static byte[] GenerateCsv(ReportResultDto report, string userName)
+    {
         var sb = new StringBuilder();
         sb.AppendLine(CultureInfo.InvariantCulture, $"# {report.ReportTitle}");
         sb.AppendLine(CultureInfo.InvariantCulture, $"# Period: {report.PeriodDescription}");
@@ -454,10 +475,194 @@ public sealed class ReportService(MagicDbContext dbContext) : IReportService
         }
 
         sb.AppendLine(CultureInfo.InvariantCulture, $"# TOTALS,,,,{(double)report.TotalAmountPaise / 100:F2},{(double)report.TotalTaxAmountPaise / 100:F2},Records: {report.RecordCount}");
+        return Encoding.UTF8.GetBytes(sb.ToString());
+    }
 
-        var bytes = Encoding.UTF8.GetBytes(sb.ToString());
-        var fileName = $"{request.ReportType}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.{ext}";
+    private static byte[] GenerateXlsx(ReportResultDto report, string userName)
+    {
+        using var ms = new MemoryStream();
+        using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+        {
+            // 1. [Content_Types].xml
+            var contentTypes = archive.CreateEntry("[Content_Types].xml");
+            using (var writer = new StreamWriter(contentTypes.Open(), Encoding.UTF8))
+            {
+                writer.Write("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>""");
+            }
 
-        return new ReportExportResultDto(fileName, mime, bytes, DateTime.UtcNow);
+            // 2. _rels/.rels
+            var rels = archive.CreateEntry("_rels/.rels");
+            using (var writer = new StreamWriter(rels.Open(), Encoding.UTF8))
+            {
+                writer.Write("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>""");
+            }
+
+            // 3. xl/workbook.xml
+            var workbook = archive.CreateEntry("xl/workbook.xml");
+            using (var writer = new StreamWriter(workbook.Open(), Encoding.UTF8))
+            {
+                writer.Write("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Report" sheetId="1" r:id="rId1"/></sheets></workbook>""");
+            }
+
+            // 4. xl/_rels/workbook.xml.rels
+            var wbRels = archive.CreateEntry("xl/_rels/workbook.xml.rels");
+            using (var writer = new StreamWriter(wbRels.Open(), Encoding.UTF8))
+            {
+                writer.Write("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>""");
+            }
+
+            // 5. xl/worksheets/sheet1.xml
+            var sheet = archive.CreateEntry("xl/worksheets/sheet1.xml");
+            using (var writer = new StreamWriter(sheet.Open(), Encoding.UTF8))
+            {
+                writer.WriteLine("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""");
+                writer.WriteLine("""<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">""");
+                writer.WriteLine("""<sheetData>""");
+
+                int rowIdx = 1;
+                // Title row
+                writer.WriteLine($"""<row r="{rowIdx}"><c r="A{rowIdx}" t="inlineStr"><is><t>{EscapeXml(report.ReportTitle)}</t></is></c></row>""");
+                rowIdx++;
+                // Period row
+                writer.WriteLine($"""<row r="{rowIdx}"><c r="A{rowIdx}" t="inlineStr"><is><t>Period: {EscapeXml(report.PeriodDescription)}</t></is></c></row>""");
+                rowIdx++;
+                // Metadata row
+                writer.WriteLine($"""<row r="{rowIdx}"><c r="A{rowIdx}" t="inlineStr"><is><t>Generated: {report.GeneratedAtUtc:yyyy-MM-dd HH:mm:ss} UTC by {EscapeXml(userName)}</t></is></c></row>""");
+                rowIdx++;
+                // Header row
+                writer.WriteLine($"""<row r="{rowIdx}">""" +
+                    $"""<c r="A{rowIdx}" t="inlineStr"><is><t>Key</t></is></c>""" +
+                    $"""<c r="B{rowIdx}" t="inlineStr"><is><t>Label</t></is></c>""" +
+                    $"""<c r="C{rowIdx}" t="inlineStr"><is><t>Category</t></is></c>""" +
+                    $"""<c r="D{rowIdx}" t="inlineStr"><is><t>Quantity</t></is></c>""" +
+                    $"""<c r="E{rowIdx}" t="inlineStr"><is><t>Amount (INR)</t></is></c>""" +
+                    $"""<c r="F{rowIdx}" t="inlineStr"><is><t>Tax (INR)</t></is></c>""" +
+                    $"""<c r="G{rowIdx}" t="inlineStr"><is><t>Status</t></is></c>""" +
+                    $"""<c r="H{rowIdx}" t="inlineStr"><is><t>Reference</t></is></c>""" +
+                    """</row>""");
+                rowIdx++;
+
+                // Data rows
+                foreach (var r in report.Rows)
+                {
+                    var amt = ((double)r.AmountPaise / 100).ToString("F2", CultureInfo.InvariantCulture);
+                    var tax = ((double)r.TaxAmountPaise / 100).ToString("F2", CultureInfo.InvariantCulture);
+                    writer.WriteLine($"""<row r="{rowIdx}">""" +
+                        $"""<c r="A{rowIdx}" t="inlineStr"><is><t>{EscapeXml(r.Key)}</t></is></c>""" +
+                        $"""<c r="B{rowIdx}" t="inlineStr"><is><t>{EscapeXml(r.Label)}</t></is></c>""" +
+                        $"""<c r="C{rowIdx}" t="inlineStr"><is><t>{EscapeXml(r.Category)}</t></is></c>""" +
+                        $"""<c r="D{rowIdx}"><v>{r.Quantity.ToString(CultureInfo.InvariantCulture)}</v></c>""" +
+                        $"""<c r="E{rowIdx}"><v>{amt}</v></c>""" +
+                        $"""<c r="F{rowIdx}"><v>{tax}</v></c>""" +
+                        $"""<c r="G{rowIdx}" t="inlineStr"><is><t>{EscapeXml(r.Status)}</t></is></c>""" +
+                        $"""<c r="H{rowIdx}" t="inlineStr"><is><t>{EscapeXml(r.Reference ?? "")}</t></is></c>""" +
+                        """</row>""");
+                    rowIdx++;
+                }
+
+                // Totals row
+                var totalAmt = ((double)report.TotalAmountPaise / 100).ToString("F2", CultureInfo.InvariantCulture);
+                var totalTax = ((double)report.TotalTaxAmountPaise / 100).ToString("F2", CultureInfo.InvariantCulture);
+                writer.WriteLine($"""<row r="{rowIdx}">""" +
+                    $"""<c r="A{rowIdx}" t="inlineStr"><is><t>TOTALS</t></is></c>""" +
+                    $"""<c r="B{rowIdx}" t="inlineStr"><is><t></t></is></c>""" +
+                    $"""<c r="C{rowIdx}" t="inlineStr"><is><t></t></is></c>""" +
+                    $"""<c r="D{rowIdx}"><v>{report.TotalQuantity.ToString(CultureInfo.InvariantCulture)}</v></c>""" +
+                    $"""<c r="E{rowIdx}"><v>{totalAmt}</v></c>""" +
+                    $"""<c r="F{rowIdx}"><v>{totalTax}</v></c>""" +
+                    $"""<c r="G{rowIdx}" t="inlineStr"><is><t>Records: {report.RecordCount}</t></is></c>""" +
+                    $"""<c r="H{rowIdx}" t="inlineStr"><is><t></t></is></c>""" +
+                    """</row>""");
+
+                writer.WriteLine("""</sheetData>""");
+                writer.WriteLine("""</worksheet>""");
+            }
+        }
+        return ms.ToArray();
+    }
+
+    private static byte[] GeneratePdf(ReportResultDto report, string userName)
+    {
+        var contentLines = new List<string>
+        {
+            report.ReportTitle,
+            $"Period: {report.PeriodDescription}",
+            $"Generated by {userName} on {report.GeneratedAtUtc:yyyy-MM-dd HH:mm:ss} UTC",
+            "",
+            "Key | Label | Category | Qty | Amount(INR) | Tax(INR) | Status | Ref",
+            "----------------------------------------------------------------------"
+        };
+
+        foreach (var r in report.Rows.Take(40))
+        {
+            var amt = ((double)r.AmountPaise / 100).ToString("F2", CultureInfo.InvariantCulture);
+            var tax = ((double)r.TaxAmountPaise / 100).ToString("F2", CultureInfo.InvariantCulture);
+            contentLines.Add($"{r.Key} | {r.Label} | {r.Category} | {r.Quantity} | {amt} | {tax} | {r.Status} | {r.Reference}");
+        }
+
+        var totalAmt = ((double)report.TotalAmountPaise / 100).ToString("F2", CultureInfo.InvariantCulture);
+        var totalTax = ((double)report.TotalTaxAmountPaise / 100).ToString("F2", CultureInfo.InvariantCulture);
+        contentLines.Add("----------------------------------------------------------------------");
+        contentLines.Add($"TOTALS: Qty: {report.TotalQuantity} | Amt: {totalAmt} | Tax: {totalTax} | Records: {report.RecordCount}");
+
+        var sb = new StringBuilder();
+        sb.AppendLine("BT");
+        sb.AppendLine("/F1 9 Tf");
+        sb.AppendLine("40 780 Td");
+        sb.AppendLine("14 TL");
+
+        bool first = true;
+        foreach (var line in contentLines)
+        {
+            var sanitized = line.Replace("\\", "\\\\", StringComparison.Ordinal)
+                                .Replace("(", "\\(", StringComparison.Ordinal)
+                                .Replace(")", "\\)", StringComparison.Ordinal);
+            if (first)
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"({sanitized}) Tj");
+                first = false;
+            }
+            else
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"T* ({sanitized}) Tj");
+            }
+        }
+        sb.AppendLine("ET");
+
+        var streamBytes = Encoding.Latin1.GetBytes(sb.ToString());
+        using var ms = new MemoryStream();
+        using var writer = new StreamWriter(ms, Encoding.ASCII, leaveOpen: true);
+
+        writer.Write("%PDF-1.4\n");
+        writer.Flush();
+        var obj1Pos = ms.Position;
+        writer.Write("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+        writer.Flush();
+        var obj2Pos = ms.Position;
+        writer.Write("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
+        writer.Flush();
+        var obj3Pos = ms.Position;
+        writer.Write("3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n");
+        writer.Flush();
+        var obj4Pos = ms.Position;
+        writer.Write($"4 0 obj\n<< /Length {streamBytes.Length} >>\nstream\n");
+        writer.Flush();
+        ms.Write(streamBytes);
+        writer.Write("\nendstream\nendobj\n");
+        writer.Flush();
+        var obj5Pos = ms.Position;
+        writer.Write("5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n");
+        writer.Flush();
+        var xrefPos = ms.Position;
+        writer.Write("xref\n0 6\n0000000000 65535 f \n");
+        writer.Write($"{obj1Pos:D10} 00000 n \n");
+        writer.Write($"{obj2Pos:D10} 00000 n \n");
+        writer.Write($"{obj3Pos:D10} 00000 n \n");
+        writer.Write($"{obj4Pos:D10} 00000 n \n");
+        writer.Write($"{obj5Pos:D10} 00000 n \n");
+        writer.Write($"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n{xrefPos}\n%%EOF");
+        writer.Flush();
+
+        return ms.ToArray();
     }
 }

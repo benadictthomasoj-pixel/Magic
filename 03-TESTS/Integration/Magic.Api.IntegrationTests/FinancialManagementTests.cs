@@ -92,20 +92,10 @@ public sealed class FinancialManagementTests : IClassFixture<MagicTestFixture>, 
 
     private static async Task<SupplierSummaryDto> GetOrCreateSupplierAsync(HttpClient client)
     {
-        var listRes = await client.GetAsync("/api/v1/commercial/suppliers?pageSize=10");
-        if (listRes.IsSuccessStatusCode)
-        {
-            var env = await listRes.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<SupplierSummaryDto>>>();
-            if (env?.Data != null && env.Data.Count > 0)
-            {
-                return env.Data[0];
-            }
-        }
-
         var req = new CreateSupplierRequest
         {
-            SupplierCode = $"SUPP-{Guid.NewGuid().ToString("N")[..4].ToUpperInvariant()}",
-            Name = $"Fin Supplier {Guid.NewGuid().ToString("N")[..4]}",
+            SupplierCode = $"SUPP-{Guid.NewGuid().ToString("N")[..6].ToUpperInvariant()}",
+            Name = $"Fin Supplier {Guid.NewGuid().ToString("N")[..6]}",
             Category = "Manufacturer",
             Phone = "9876543211",
             PaymentTerms = "Net 30",

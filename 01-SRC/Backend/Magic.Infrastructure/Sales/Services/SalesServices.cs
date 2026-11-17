@@ -1,6 +1,10 @@
 using System.Globalization;
+using System.Text.Json;
 using Magic.Application.Accounting.Services;
+using Magic.Application.Marketing.Services;
 using Magic.Application.Sales.Services;
+using Magic.Contracts.Events;
+using Magic.Contracts.Marketing;
 using Magic.Contracts.Sales;
 using Magic.Domain.Accounting.Entities;
 using Magic.Domain.Accounting.Enums;
@@ -8,6 +12,7 @@ using Magic.Domain.Common;
 using Magic.Domain.ValueObjects;
 using Magic.Infrastructure.Persistence;
 using Magic.Infrastructure.Persistence.Entities;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace Magic.Infrastructure.Sales.Services;
@@ -48,7 +53,9 @@ public sealed class GstCalculationService : IGstCalculationService
 public sealed class PosService(
     MagicDbContext dbContext,
     IGstCalculationService gstService,
-    IPostingService postingService) : IPosService
+    IPostingService postingService,
+    IMarketingService marketingService,
+    IOutboxEventDispatcher outboxDispatcher) : IPosService
 {
     public async Task<IReadOnlyList<PosProductLookupDto>> LookupProductsAsync(
         Guid companyId,
@@ -247,6 +254,30 @@ public sealed class PosService(
                 BatchNumber = line.BatchNumber,
                 SerialNumber = line.SerialNumber
             });
+        }
+
+        // Apply Promotion Coupon Discount if provided (DEF-INT-002)
+        long couponDiscountPaise = 0;
+        Guid? appliedCouponId = null;
+        if (!string.IsNullOrWhiteSpace(request.CouponCode))
+        {
+            var couponValidation = await marketingService.ValidateCouponAsync(
+                companyId,
+                new ValidateCouponRequest(request.CouponCode, customer?.Id ?? Guid.Empty, subtotalPaise),
+                cancellationToken);
+
+            if (!couponValidation.IsValid)
+            {
+                throw new DomainException(
+                    "INVALID_COUPON",
+                    couponValidation.RejectionReason ?? $"Coupon code '{request.CouponCode}' is invalid or expired.",
+                    StatusCodes.Status400BadRequest);
+            }
+
+            appliedCouponId = couponValidation.CouponId;
+            couponDiscountPaise = Math.Min(couponValidation.CalculatedDiscountPaise, grandTotalPaise);
+            grandTotalPaise -= couponDiscountPaise;
+            discountPaise += couponDiscountPaise;
         }
 
         var totalPaidPaise = request.Payments.Sum(p => p.AmountPaise);
@@ -522,6 +553,29 @@ public sealed class PosService(
             dbContext.ArSubledgerItems.Add(arItem);
         }
 
+        // Enqueue Outbox Integration Event atomically (DEF-ARC-002)
+        await outboxDispatcher.EnqueueAsync(new IntegrationEventEnvelope
+        {
+            EventId = Guid.CreateVersion7(),
+            AggregateType = "SalesInvoice",
+            AggregateId = invoiceId,
+            EventType = "sales.invoice.created",
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                CompanyId = companyId,
+                BranchId = branchId,
+                InvoiceId = invoiceId,
+                InvoiceNumber = invoiceNumber,
+                CustomerId = customer?.Id,
+                GrandTotalPaise = grandTotalPaise,
+                SubtotalPaise = subtotalPaise,
+                DiscountPaise = discountPaise,
+                CouponCode = request.CouponCode
+            }),
+            CorrelationId = Guid.CreateVersion7(),
+            OccurredOnUtc = now
+        }, cancellationToken);
+
         // Concurrency-safe persistence with bounded retry (R8 / DEF-DE-008)
         const int maxRetries = 3;
         for (int attempt = 1; attempt <= maxRetries; attempt++)
@@ -554,6 +608,28 @@ public sealed class PosService(
 
                 await Task.Delay(50 * attempt, cancellationToken);
             }
+        }
+
+        // Record Coupon Redemption & Award Loyalty Points (DEF-INT-002)
+        if (appliedCouponId.HasValue && couponDiscountPaise > 0)
+        {
+            await marketingService.RecordCouponRedemptionAsync(
+                companyId,
+                appliedCouponId.Value,
+                customer?.Id ?? Guid.Empty,
+                invoiceId,
+                couponDiscountPaise,
+                cancellationToken);
+        }
+
+        if (customer != null)
+        {
+            await marketingService.AwardLoyaltyPointsAsync(
+                companyId,
+                customer.Id,
+                invoiceId,
+                subtotalPaise,
+                cancellationToken);
         }
 
         var cashierUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Id == currentUserId, cancellationToken);
@@ -974,7 +1050,11 @@ public sealed class SalesInvoiceService(MagicDbContext dbContext, IPostingServic
 // 4. Sales Return & Credit Note Service
 // ==========================================
 
-public sealed class SalesReturnService(MagicDbContext dbContext, IPostingService postingService) : ISalesReturnService
+public sealed class SalesReturnService(
+    MagicDbContext dbContext,
+    IPostingService postingService,
+    IMarketingService marketingService,
+    IOutboxEventDispatcher outboxDispatcher) : ISalesReturnService
 {
     public async Task<(IReadOnlyList<SalesReturnDto> Items, int TotalCount)> GetReturnsAsync(
         Guid companyId,
@@ -1360,7 +1440,48 @@ public sealed class SalesReturnService(MagicDbContext dbContext, IPostingService
             }
         }
 
+        // Enqueue Outbox Integration Event atomically (DEF-ARC-002)
+        await outboxDispatcher.EnqueueAsync(new IntegrationEventEnvelope
+        {
+            EventId = Guid.CreateVersion7(),
+            AggregateType = "SalesReturn",
+            AggregateId = returnId,
+            EventType = "sales.return.created",
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                CompanyId = companyId,
+                BranchId = branchId,
+                ReturnId = returnId,
+                ReturnNumber = returnNumber,
+                InvoiceId = invoice.Id,
+                CustomerId = invoice.CustomerId,
+                TotalRefundPaise = totalRefundPaise
+            }),
+            CorrelationId = Guid.CreateVersion7(),
+            OccurredOnUtc = now
+        }, cancellationToken);
+
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Reverse Loyalty Points for Returned Goods (DEF-INT-002)
+        if (invoice.CustomerId.HasValue)
+        {
+            var program = await dbContext.LoyaltyPrograms.FirstOrDefaultAsync(p => p.CompanyId == companyId && p.IsActive, cancellationToken);
+            if (program != null && program.PointsPerHundredSpent > 0)
+            {
+                var pointsToReverse = (int)(totalRefundPaise / 10000) * program.PointsPerHundredSpent;
+                if (pointsToReverse > 0)
+                {
+                    await marketingService.AdjustLoyaltyPointsAsync(
+                        companyId,
+                        invoice.CustomerId.Value,
+                        invoice.Id,
+                        -pointsToReverse,
+                        $"Points reversed for Sales Return {returnNumber}",
+                        cancellationToken);
+                }
+            }
+        }
 
         return new SalesReturnDto
         {

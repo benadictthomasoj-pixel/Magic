@@ -48,6 +48,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IDatabaseConnectivityProbe, PostgresConnectivityProbe>();
         services.AddScoped<IAuditLogger, PostgresAuditLogger>();
         services.AddScoped<IOutboxEventDispatcher, OutboxEventDispatcher>();
+        services.AddScoped<IIntegrationEventConsumer, SalesNotificationEventConsumer>();
+        services.AddScoped<IIntegrationEventConsumer, StockAlertEventConsumer>();
 
         // Accounting Persistence & Posting Infrastructure
         services.AddScoped<Magic.Application.Accounting.Persistence.IVoucherNumberGenerator, Magic.Infrastructure.Persistence.Repositories.PostgresVoucherNumberGenerator>();
@@ -130,6 +132,7 @@ public static class InfrastructureServiceCollectionExtensions
 
         // OPEN-004: Approved native .NET 10 BackgroundService outbox processor
         services.AddHostedService<OutboxProcessorBackgroundService>();
+        services.AddHostedService<Magic.Infrastructure.Automation.AutomationRuleSchedulerBackgroundService>();
 
         services.AddHealthChecks()
             .AddCheck<PostgresHealthCheck>("postgresql", tags: ["ready"]);

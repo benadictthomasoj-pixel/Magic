@@ -78,6 +78,20 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseExceptionHandler();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi().WithDocumentPerVersion();
+}
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
+
+app.UseCors("MagicClientPolicy");
+app.UseAuthentication();
 app.UseMiddleware<RequestContextMiddleware>();
 app.UseSerilogRequestLogging(options =>
 {
@@ -99,21 +113,6 @@ app.UseSerilogRequestLogging(options =>
         }
     };
 });
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi().WithDocumentPerVersion();
-}
-
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHsts();
-    app.UseHttpsRedirection();
-}
-
-app.UseCors("MagicClientPolicy");
-app.UseAuthentication();
-app.UseMiddleware<RequestContextMiddleware>();
 app.UseAuthorization();
 app.UseMiddleware<IdempotencyMiddleware>();
 

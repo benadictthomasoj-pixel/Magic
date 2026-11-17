@@ -211,3 +211,4 @@ export class BranchManagementComponent implements OnInit {
     setTimeout(() => this.actionMessage.set(null), 4000);
   }
 }
+

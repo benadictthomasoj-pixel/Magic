@@ -47,3 +47,4 @@ The Executive Dashboard aggregates high-level operational telemetry from all cor
 - Generates structured binary PDF representations using tabular layouts and metadata headers.
 - Emits download streams with appropriate `Content-Disposition` and `Content-Type` headers.
 - Logs all export actions to `reporting.report_export_logs` for compliance auditing.
+

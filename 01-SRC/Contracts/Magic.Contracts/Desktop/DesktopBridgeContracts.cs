@@ -24,3 +24,27 @@ public sealed record DesktopHostCapabilitiesDto
     public required string ShellVersion { get; init; }
 }
 
+public sealed record PrintReceiptRequest
+{
+    public required string PrinterName { get; init; }
+    public string? RawEscPosBase64 { get; init; }
+    public string? PlainText { get; init; }
+    public bool CutPaper { get; init; } = true;
+    public bool OpenCashDrawer { get; init; }
+}
+
+public sealed record PrintReceiptResponse
+{
+    public required bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
+    public bool FallbackToBrowserPrint { get; init; }
+}
+
+public sealed record WeighScaleReadingDto
+{
+    public required bool Success { get; init; }
+    public decimal WeightKg { get; init; }
+    public bool IsStable { get; init; }
+    public string? ErrorMessage { get; init; }
+}
+

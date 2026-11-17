@@ -72,3 +72,4 @@ public sealed record ReportExportResultDto(
     string ContentType,
     byte[] Content,
     DateTime GeneratedAtUtc);
+

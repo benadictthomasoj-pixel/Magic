@@ -10,8 +10,10 @@ import {
   SupplierStatementDto,
 } from '../../../core/contracts/finance.models';
 import { SupplierSummaryDto } from '../../../core/contracts/commercial.models';
+import { GoodsReceiptNoteDto } from '../../../core/contracts/inventory.models';
 import { CommercialApiService } from '../../../core/services/commercial-api.service';
 import { FinanceApiService } from '../../../core/services/finance-api.service';
+import { InventoryApiService } from '../../../core/services/inventory-api.service';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 
 interface BillFormLine {
@@ -32,6 +34,7 @@ interface BillFormLine {
 export class PayablesManagementComponent implements OnInit {
   private readonly api = inject(FinanceApiService);
   private readonly commercialApi = inject(CommercialApiService);
+  private readonly inventoryApi = inject(InventoryApiService);
 
   protected readonly activeTab = signal<'bills' | 'aging'>('bills');
   protected readonly summary = signal<PayablesSummaryDto | null>(null);
@@ -41,10 +44,14 @@ export class PayablesManagementComponent implements OnInit {
   protected readonly loading = signal(true);
   protected readonly isCreatingBill = signal(false);
 
-  // New Supplier Bill Modal
+  // New Supplier Bill Modal (with 3-Way Matching support - DEF-INT-003)
   protected showBillModal = false;
   protected suppliers = signal<readonly SupplierSummaryDto[]>([]);
+  protected supplierGrns = signal<readonly GoodsReceiptNoteDto[]>([]);
   protected billSupplierId = '';
+  protected selectedGrnId = '';
+  protected billPoId: string | null = null;
+  protected billGrnId: string | null = null;
   protected billInvoiceNumber = '';
   protected billInvoiceDate = new Date().toISOString().split('T')[0];
   protected billDueDate = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
@@ -109,6 +116,56 @@ export class PayablesManagementComponent implements OnInit {
     });
   }
 
+  protected onSupplierChange(): void {
+    this.selectedGrnId = '';
+    this.billPoId = null;
+    this.billGrnId = null;
+    if (!this.billSupplierId) {
+      this.supplierGrns.set([]);
+      return;
+    }
+
+    this.inventoryApi.getGoodsReceipts({
+      supplierId: this.billSupplierId,
+      status: 'Confirmed',
+      pageSize: 50,
+    }).subscribe({
+      next: (res) => this.supplierGrns.set(res.items),
+      error: () => this.supplierGrns.set([]),
+    });
+  }
+
+  protected onGrnSelected(): void {
+    if (!this.selectedGrnId) {
+      this.billGrnId = null;
+      this.billPoId = null;
+      return;
+    }
+
+    const grnSummary = this.supplierGrns().find((g) => g.id === this.selectedGrnId);
+    if (!grnSummary) return;
+
+    this.billGrnId = grnSummary.id;
+    this.billPoId = grnSummary.purchaseOrderId || null;
+    if (grnSummary.supplierInvoiceNumber && !this.billInvoiceNumber) {
+      this.billInvoiceNumber = grnSummary.supplierInvoiceNumber;
+    }
+
+    this.inventoryApi.getGoodsReceipt(this.selectedGrnId).subscribe({
+      next: (grn) => {
+        if (grn.lines && grn.lines.length > 0) {
+          this.billLines = grn.lines.map((l) => ({
+            description: `${l.productName || l.productCode || 'Item'} (GRN: ${grn.grnNumber})`,
+            quantity: l.acceptedQuantity > 0 ? l.acceptedQuantity : l.receivedQuantity,
+            unitPrice: l.unitPricePaise / 100,
+            taxRate: l.gstRatePercentage || 18,
+          }));
+        }
+      },
+      error: () => {},
+    });
+  }
+
   protected addBillLine(): void {
     this.billLines.push({ description: '', quantity: 1, unitPrice: 0, taxRate: 18 });
   }
@@ -149,6 +206,8 @@ export class PayablesManagementComponent implements OnInit {
       invoiceNumber: this.billInvoiceNumber.trim(),
       invoiceDate: this.billInvoiceDate,
       dueDate: this.billDueDate,
+      poId: this.billPoId || undefined,
+      grnId: this.billGrnId || undefined,
       notes: this.billNotes || undefined,
       lines: linesReq,
     }).subscribe({
@@ -157,6 +216,9 @@ export class PayablesManagementComponent implements OnInit {
         this.showBillModal = false;
         this.billLines = [{ description: '', quantity: 1, unitPrice: 0, taxRate: 18 }];
         this.billInvoiceNumber = '';
+        this.selectedGrnId = '';
+        this.billPoId = null;
+        this.billGrnId = null;
         this.loadSummary();
         this.loadPayables();
       },

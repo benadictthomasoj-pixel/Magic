@@ -28,3 +28,4 @@ public sealed class SystemConfigurationRecord
     public Guid UpdatedByUserId { get; set; }
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
 }
+

@@ -22,5 +22,6 @@ public interface IMarketingService
     Task<IReadOnlyList<LoyaltyTransactionDto>> GetCustomerLoyaltyHistoryAsync(Guid companyId, Guid customerId, CancellationToken cancellationToken = default);
     Task<LoyaltyBalanceDto> AwardLoyaltyPointsAsync(Guid companyId, Guid customerId, Guid salesInvoiceId, long orderSubtotalPaise, CancellationToken cancellationToken = default);
     Task<LoyaltyBalanceDto> RedeemLoyaltyPointsAsync(Guid companyId, RedeemLoyaltyPointsRequest request, CancellationToken cancellationToken = default);
+    Task<LoyaltyBalanceDto> AdjustLoyaltyPointsAsync(Guid companyId, Guid customerId, Guid? salesInvoiceId, int pointsAdjustment, string reason, CancellationToken cancellationToken = default);
 }
 

@@ -241,6 +241,33 @@ public sealed class BranchManagementService(MagicDbContext dbContext) : IBranchM
                 t.ReceiptWidthMm));
         }
 
+        // Include any Security terminals that have not yet been registered in BranchTerminals (DEF-ARC-001)
+        var secQuery = dbContext.Terminals.AsNoTracking().Where(t => t.CompanyId == companyId);
+        if (branchId.HasValue) secQuery = secQuery.Where(t => t.BranchId == branchId.Value);
+        var secTerminals = await secQuery.ToListAsync(cancellationToken);
+
+        foreach (var st in secTerminals)
+        {
+            if (list.All(item => item.Id != st.Id && !string.Equals(item.TerminalCode, st.TerminalCode, StringComparison.OrdinalIgnoreCase)))
+            {
+                var branch = await dbContext.Branches.FirstOrDefaultAsync(b => b.Id == st.BranchId, cancellationToken);
+                list.Add(new TerminalDetailsDto(
+                    st.Id,
+                    st.CompanyId,
+                    st.BranchId,
+                    branch?.BranchName ?? "Central Store",
+                    st.TerminalCode,
+                    st.MachineName,
+                    st.OperatingSystem,
+                    null,
+                    st.IsAuthorized,
+                    st.RegisteredAtUtc,
+                    st.LastHeartbeatAtUtc,
+                    "Default Thermal",
+                    80));
+            }
+        }
+
         return list;
     }
 
@@ -249,23 +276,43 @@ public sealed class BranchManagementService(MagicDbContext dbContext) : IBranchM
         var branch = await dbContext.Branches.FirstOrDefaultAsync(b => b.Id == request.BranchId && b.CompanyId == companyId, cancellationToken)
             ?? throw new DomainException("BRANCH_NOT_FOUND", "Branch not found.", StatusCodes.Status404NotFound);
 
-        var exists = await dbContext.TerminalRegistrations.AnyAsync(t => t.CompanyId == companyId && t.TerminalCode == request.TerminalCode, cancellationToken);
-        if (exists)
+        var normCode = request.TerminalCode.Trim().ToUpperInvariant();
+        var existsBranch = await dbContext.TerminalRegistrations.AnyAsync(t => t.CompanyId == companyId && t.TerminalCode == normCode, cancellationToken);
+        var existsSec = await dbContext.Terminals.AnyAsync(t => t.CompanyId == companyId && t.TerminalCode == normCode, cancellationToken);
+        if (existsBranch || existsSec)
             throw new DomainException("DUPLICATE_TERMINAL_CODE", $"Terminal {request.TerminalCode} already registered.", StatusCodes.Status400BadRequest);
+
+        var terminalId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        // Authoritative Security Terminal Identity (DEF-ARC-001)
+        var secTerminal = new TerminalRecord
+        {
+            Id = terminalId,
+            CompanyId = companyId,
+            BranchId = branch.Id,
+            TerminalCode = normCode,
+            MachineName = request.MachineName.Trim(),
+            OperatingSystem = request.OperatingSystem,
+            IsAuthorized = true,
+            RegisteredAtUtc = now,
+            LastHeartbeatAtUtc = now
+        };
+        dbContext.Terminals.Add(secTerminal);
 
         var terminal = new TerminalRegistrationRecord
         {
-            Id = Guid.NewGuid(),
+            Id = terminalId,
             CompanyId = companyId,
             BranchId = branch.Id,
-            TerminalCode = request.TerminalCode.Trim().ToUpperInvariant(),
+            TerminalCode = normCode,
             MachineName = request.MachineName.Trim(),
             OperatingSystem = request.OperatingSystem,
             PosPrinterModel = request.PosPrinterModel,
             ReceiptWidthMm = request.ReceiptWidthMm > 0 ? request.ReceiptWidthMm : 80,
             IsAuthorized = true,
-            RegisteredAtUtc = DateTime.UtcNow,
-            LastHeartbeatAtUtc = DateTime.UtcNow
+            RegisteredAtUtc = now,
+            LastHeartbeatAtUtc = now
         };
 
         dbContext.TerminalRegistrations.Add(terminal);
@@ -289,16 +336,48 @@ public sealed class BranchManagementService(MagicDbContext dbContext) : IBranchM
 
     public async Task<TerminalDetailsDto> UpdateTerminalStatusAsync(Guid companyId, Guid terminalId, UpdateTerminalStatusRequest request, CancellationToken cancellationToken = default)
     {
-        var terminal = await dbContext.TerminalRegistrations.FirstOrDefaultAsync(t => t.Id == terminalId && t.CompanyId == companyId, cancellationToken)
-            ?? throw new DomainException("TERMINAL_NOT_FOUND", "Terminal not found.", StatusCodes.Status404NotFound);
+        var terminal = await dbContext.TerminalRegistrations.FirstOrDefaultAsync(t => t.Id == terminalId && t.CompanyId == companyId, cancellationToken);
+        var secTerminal = await dbContext.Terminals.FirstOrDefaultAsync(t => t.Id == terminalId && t.CompanyId == companyId, cancellationToken);
 
-        terminal.IsAuthorized = request.IsAuthorized;
-        terminal.AssignedCashierUserId = request.AssignedCashierUserId;
-        terminal.LastHeartbeatAtUtc = DateTime.UtcNow;
+        if (terminal == null && secTerminal == null)
+            throw new DomainException("TERMINAL_NOT_FOUND", "Terminal not found.", StatusCodes.Status404NotFound);
+
+        var now = DateTime.UtcNow;
+        var branchId = terminal?.BranchId ?? secTerminal!.BranchId;
+
+        if (terminal != null)
+        {
+            terminal.IsAuthorized = request.IsAuthorized;
+            terminal.AssignedCashierUserId = request.AssignedCashierUserId;
+            terminal.LastHeartbeatAtUtc = now;
+        }
+        else
+        {
+            terminal = new TerminalRegistrationRecord
+            {
+                Id = terminalId,
+                CompanyId = companyId,
+                BranchId = branchId,
+                TerminalCode = secTerminal!.TerminalCode,
+                MachineName = secTerminal.MachineName,
+                OperatingSystem = secTerminal.OperatingSystem,
+                AssignedCashierUserId = request.AssignedCashierUserId,
+                IsAuthorized = request.IsAuthorized,
+                RegisteredAtUtc = secTerminal.RegisteredAtUtc,
+                LastHeartbeatAtUtc = now
+            };
+            dbContext.TerminalRegistrations.Add(terminal);
+        }
+
+        if (secTerminal != null)
+        {
+            secTerminal.IsAuthorized = request.IsAuthorized;
+            secTerminal.LastHeartbeatAtUtc = now;
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var branch = await dbContext.Branches.FirstOrDefaultAsync(b => b.Id == terminal.BranchId, cancellationToken);
+        var branch = await dbContext.Branches.FirstOrDefaultAsync(b => b.Id == branchId, cancellationToken);
         string? cashierName = null;
         if (terminal.AssignedCashierUserId.HasValue)
         {

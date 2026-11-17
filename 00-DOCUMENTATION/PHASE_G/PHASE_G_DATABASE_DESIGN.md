@@ -43,3 +43,4 @@ Phase G introduces 15 new relational tables distributed across 5 dedicated schem
 
 2. **Monetary Precision Standards:**
    - All monetary columns (`amount_paise`, `labor_total_paise`, `parts_total_paise`, `tax_amount_paise`, `minimum_amount_paise`) are strictly mapped as `bigint NOT NULL`.
+

@@ -26,4 +26,19 @@ describe('PayablesManagementComponent', () => {
   it('should create payables management component', () => {
     expect(component).toBeTruthy();
   });
+
+  it('should load confirmed GRNs on supplier change (DEF-INT-003)', () => {
+    (component as any).billSupplierId = '11111111-1111-1111-1111-111111111111';
+    (component as any).onSupplierChange();
+    expect((component as any).selectedGrnId).toBe('');
+    expect((component as any).billGrnId).toBeNull();
+    expect((component as any).billPoId).toBeNull();
+  });
+
+  it('should clear GRN selection when direct billing is selected', () => {
+    (component as any).selectedGrnId = '';
+    (component as any).onGrnSelected();
+    expect((component as any).billGrnId).toBeNull();
+    expect((component as any).billPoId).toBeNull();
+  });
 });

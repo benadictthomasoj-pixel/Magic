@@ -82,3 +82,4 @@ All endpoints require JWT Bearer authorization (`Authorization: Bearer <token>`)
 - `GET /api/v1/system-management/jobs` -> `IReadOnlyList<BackgroundJobStatusDto>`
 - `GET /api/v1/system-management/configurations?category={string}` -> `IReadOnlyList<SystemConfigurationItemDto>`
 - `PUT /api/v1/system-management/configurations` -> `UpdateSystemConfigurationRequest` -> `SystemConfigurationItemDto`
+

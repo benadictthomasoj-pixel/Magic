@@ -108,3 +108,4 @@ public sealed record SecurityMetricsDto(
     int ActiveSessionsCount,
     int RevokedTokensCount,
     DateTime EvaluatedAtUtc);
+

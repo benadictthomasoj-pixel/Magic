@@ -500,6 +500,29 @@ public sealed class AuthenticationApplicationService(
         };
 
         dbContext.Terminals.Add(terminal);
+
+        var branchTerminalExists = await dbContext.TerminalRegistrations.AnyAsync(
+            t => t.CompanyId == companyId && t.TerminalCode == terminal.TerminalCode,
+            cancellationToken);
+
+        if (!branchTerminalExists)
+        {
+            dbContext.TerminalRegistrations.Add(new TerminalRegistrationRecord
+            {
+                Id = terminal.Id,
+                CompanyId = companyId,
+                BranchId = request.BranchId,
+                TerminalCode = terminal.TerminalCode,
+                MachineName = terminal.MachineName,
+                OperatingSystem = terminal.OperatingSystem,
+                IsAuthorized = terminal.IsAuthorized,
+                RegisteredAtUtc = terminal.RegisteredAtUtc,
+                LastHeartbeatAtUtc = terminal.LastHeartbeatAtUtc,
+                PosPrinterModel = "Default Thermal",
+                ReceiptWidthMm = 80
+            });
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         await auditService.LogEventAsync(

@@ -149,7 +149,7 @@ public sealed class ExpenseService(
             ?? throw new DomainException("GL_ACCOUNT_NOT_FOUND", "GL account does not exist.", StatusCodes.Status404NotFound);
 
         var expenseCount = await dbContext.Expenses.CountAsync(e => e.CompanyId == companyId, cancellationToken);
-        var expenseNumber = $"EXP-{DateTime.UtcNow:yyyyMM}-{expenseCount + 1:D4}";
+        var expenseNumber = $"EXP-{DateTime.UtcNow:yyyyMM}-{expenseCount + 1:D4}-{Guid.NewGuid().ToString("N")[..4].ToUpperInvariant()}";
 
         var expense = new ExpenseRecord
         {

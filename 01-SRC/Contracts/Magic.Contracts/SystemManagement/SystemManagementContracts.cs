@@ -72,3 +72,4 @@ public sealed record SystemConfigurationItemDto(
 public sealed record UpdateSystemConfigurationRequest(
     string ConfigKey,
     string ConfigValue);
+
