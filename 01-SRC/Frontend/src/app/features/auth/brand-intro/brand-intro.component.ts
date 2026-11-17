@@ -25,6 +25,7 @@ import { IntroStateService } from '../../../core/services/intro-state.service';
   template: `
     <div
       class="intro-backdrop"
+      [class.intro-exiting]="isExiting()"
       role="region"
       aria-label="MAGIC Brand Presentation"
     >
@@ -37,15 +38,13 @@ import { IntroStateService } from '../../../core/services/intro-state.service';
             class="emblem-dark"
           />
 
-          <!-- 2. Gold Wing with Smooth Diagonal Sweep (Reveals 0.8s - 1.6s) -->
+          <!-- 2. Gold Wing with Smooth Continuous Sweep (Reveals 0.8s - 1.6s) -->
           <div class="gold-wing-container">
             <img
               src="/branding/magic-emblem-gold-tight.png"
               alt=""
               class="emblem-gold"
             />
-            <!-- Subtle Golden Light Sweep (1.25s - 1.75s) -->
-            <div class="gold-light-sweep" aria-hidden="true"></div>
           </div>
 
           <!-- 3. MAGIC Wordmark: Continuous Calligraphy Handwriting (1.80s - 3.55s) -->
@@ -56,13 +55,10 @@ import { IntroStateService } from '../../../core/services/intro-state.service';
             <img src="/branding/magic-letter-i-tight.png" alt="I" class="letter-glyph letter-i" />
             <img src="/branding/magic-letter-c-tight.png" alt="C" class="letter-glyph letter-c" />
           </div>
-
-          <!-- 4. Subtle Gold Reflection across Completed Emblem (3.85s - 4.45s) -->
-          <div class="emblem-reflection" aria-hidden="true"></div>
         </div>
       }
 
-      <!-- Elegant Action Controls (Fade in after animation completion at ~3.8s) -->
+      <!-- Elegant Action Controls (Fade in after animation completion at ~3.8s without layout shift) -->
       @if (isComplete() && showActions()) {
         <div class="intro-actions" role="group" aria-label="Brand Actions">
           <button type="button" class="action-btn replay-btn" (click)="replay()">
@@ -102,12 +98,14 @@ export class BrandIntroComponent implements OnInit {
 
   protected readonly isMounted = signal(true);
   protected readonly isComplete = signal(false);
+  protected readonly isExiting = signal(false);
 
   ngOnInit(): void {
     this.scheduleCompletion();
   }
 
   protected replay(): void {
+    this.isExiting.set(false);
     this.isMounted.set(false);
     this.isComplete.set(false);
     setTimeout(() => {
@@ -117,8 +115,14 @@ export class BrandIntroComponent implements OnInit {
   }
 
   protected proceed(): void {
-    this.introState.markCompleted();
-    this.completed.emit();
+    if (this.isExiting()) {
+      return;
+    }
+    this.isExiting.set(true);
+    setTimeout(() => {
+      this.introState.markCompleted();
+      this.completed.emit();
+    }, 200);
   }
 
   private scheduleCompletion(): void {
