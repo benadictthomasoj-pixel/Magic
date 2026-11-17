@@ -2,20 +2,20 @@
   :root {
     color-scheme: light dark;
 
-    /* Fallback tokens (browsers without light-dark()) — Light default */
-    --magic-surface-canvas: #f4f6f9;
+    /* Fallback tokens (browsers without light-dark()) — Light Sky Blue & White default */
+    --magic-surface-canvas: #f0f9ff;
     --magic-surface-elevated: #ffffff;
-    --magic-surface-subtle: #e9eef5;
+    --magic-surface-subtle: #e0f2fe;
     --magic-text-primary: #0f172a;
-    --magic-text-secondary: #334155;
-    --magic-text-muted: #475569;
-    --magic-border-subtle: #cbd5e1;
-    --magic-border-strong: #64748b;
+    --magic-text-secondary: #0369a1;
+    --magic-text-muted: #64748b;
+    --magic-border-subtle: #bae6fd;
+    --magic-border-strong: #0284c7;
 
-    --magic-accent: #1d4ed8;
+    --magic-accent: #0284c7;
     --magic-accent-contrast: #ffffff;
-    --magic-accent-soft: #dbeafe;
-    --magic-focus-ring: #1d4ed8;
+    --magic-accent-soft: #e0f2fe;
+    --magic-focus-ring: #0284c7;
 
     --magic-status-ok-bg: #dcfce7;
     --magic-status-ok-fg: #14532d;
@@ -51,19 +51,19 @@
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --magic-surface-canvas: #0b1120;
-      --magic-surface-elevated: #111827;
-      --magic-surface-subtle: #1e293b;
-      --magic-text-primary: #f1f5f9;
-      --magic-text-secondary: #cbd5e1;
-      --magic-text-muted: #94a3b8;
-      --magic-border-subtle: #334155;
-      --magic-border-strong: #64748b;
+      --magic-surface-canvas: #082f49;
+      --magic-surface-elevated: #0c4a6e;
+      --magic-surface-subtle: #075985;
+      --magic-text-primary: #f0f9ff;
+      --magic-text-secondary: #bae6fd;
+      --magic-text-muted: #7dd3fc;
+      --magic-border-subtle: #0369a1;
+      --magic-border-strong: #38bdf8;
 
-      --magic-accent: #93c5fd;
-      --magic-accent-contrast: #0f172a;
-      --magic-accent-soft: #1e3a8a;
-      --magic-focus-ring: #93c5fd;
+      --magic-accent: #38bdf8;
+      --magic-accent-contrast: #082f49;
+      --magic-accent-soft: #0369a1;
+      --magic-focus-ring: #38bdf8;
 
       --magic-status-ok-bg: #052e16;
       --magic-status-ok-fg: #bbf7d0;
@@ -87,22 +87,22 @@
 
   @supports (color: light-dark(white, black)) {
     :root {
-      --magic-surface-canvas: light-dark(#f4f6f9, #0b1120);
-      --magic-surface-elevated: light-dark(#ffffff, #111827);
-      --magic-surface-subtle: light-dark(#e9eef5, #1e293b);
-      --magic-text-primary: light-dark(#0f172a, #f1f5f9);
-      --magic-text-secondary: light-dark(#334155, #cbd5e1);
-      --magic-text-muted: light-dark(#475569, #94a3b8);
-      --magic-border-subtle: light-dark(#cbd5e1, #334155);
-      --magic-border-strong: light-dark(#64748b, #64748b);
+      --magic-surface-canvas: light-dark(#f0f9ff, #082f49);
+      --magic-surface-elevated: light-dark(#ffffff, #0c4a6e);
+      --magic-surface-subtle: light-dark(#e0f2fe, #075985);
+      --magic-text-primary: light-dark(#0f172a, #f0f9ff);
+      --magic-text-secondary: light-dark(#0369a1, #bae6fd);
+      --magic-text-muted: light-dark(#64748b, #7dd3fc);
+      --magic-border-subtle: light-dark(#bae6fd, #0369a1);
+      --magic-border-strong: light-dark(#0284c7, #38bdf8);
 
-      --magic-accent: light-dark(#1d4ed8, #93c5fd);
-      --magic-accent-contrast: light-dark(#ffffff, #0f172a);
+      --magic-accent: light-dark(#0284c7, #38bdf8);
+      --magic-accent-contrast: light-dark(#ffffff, #082f49);
       --magic-accent-soft: light-dark(
-        color-mix(in oklab, #1d4ed8 14%, #ffffff),
-        color-mix(in oklab, #93c5fd 22%, #111827)
+        color-mix(in oklab, #0284c7 14%, #ffffff),
+        color-mix(in oklab, #38bdf8 22%, #0c4a6e)
       );
-      --magic-focus-ring: light-dark(#1d4ed8, #93c5fd);
+      --magic-focus-ring: light-dark(#0284c7, #38bdf8);
 
       --magic-status-ok-bg: light-dark(#dcfce7, #052e16);
       --magic-status-ok-fg: light-dark(#14532d, #bbf7d0);

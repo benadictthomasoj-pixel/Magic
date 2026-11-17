@@ -106,8 +106,8 @@
 
     &:focus {
       outline: none;
-      border-color: #d97706;
-      box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.15);
+      border-color: #0284c7;
+      box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
     }
 
     &:disabled {
@@ -151,8 +151,8 @@
 
   &:focus-visible {
     outline: none;
-    border-color: #d97706;
-    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.15);
+    border-color: #0284c7;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
   }
 
   &:disabled {
@@ -220,8 +220,8 @@
   .loading-spinner {
     width: 20px;
     height: 20px;
-    border: 2px solid #e2e8f0;
-    border-top-color: #d97706;
+    border: 2px solid #e0f2fe;
+    border-top-color: #0284c7;
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
   }
@@ -395,12 +395,12 @@
     gap: 4px;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #d97706;
+    color: #0284c7;
     text-decoration: none;
     transition: color 120ms ease;
 
     &:hover {
-      color: #b45309;
+      color: #0369a1;
       text-decoration: underline;
     }
 
@@ -520,21 +520,21 @@
   }
 
   &:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    background: #f0f9ff;
+    border-color: #bae6fd;
+    box-shadow: 0 1px 3px rgba(2, 132, 199, 0.08);
 
     .tile-icon-box {
       background: #ffffff;
-      border-color: #d97706;
+      border-color: #0284c7;
     }
 
     .tile-title {
-      color: #d97706;
+      color: #0284c7;
     }
 
     .tile-arrow {
-      color: #d97706;
+      color: #0284c7;
       transform: translateX(2px);
     }
   }
@@ -555,26 +555,26 @@
   font-size: 0.8125rem;
 
   thead th {
-    background: #f8fafc;
-    color: #475569;
+    background: #f0f9ff;
+    color: #0369a1;
     font-size: 0.6875rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding: 8px 14px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #bae6fd;
     white-space: nowrap;
   }
 
   tbody td {
     padding: 10px 14px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f0f9ff;
     color: #1e293b;
     vertical-align: middle;
   }
 
   tbody tr:hover {
-    background-color: #f8fafc;
+    background-color: #f0f9ff;
   }
 
   tbody tr:last-child td {
