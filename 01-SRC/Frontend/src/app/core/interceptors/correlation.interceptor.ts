@@ -1,5 +1,7 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { from, throwError } from 'rxjs';
+import { catchError, switchMap } from 'rxjs/operators';
 import { MAGIC_HTTP_HEADERS } from '../contracts/api.models';
 import { AuthBoundaryService } from '../services/auth-boundary.service';
 import { WorkspaceContextService } from '../services/workspace-context.service';
@@ -33,10 +35,28 @@ export const correlationInterceptor: HttpInterceptorFn = (req, next) => {
     headersToSet[MAGIC_HTTP_HEADERS.terminalId] = current.terminalId;
   }
 
-  if (Object.keys(headersToSet).length === 0) {
-    return next(req);
-  }
+  const outgoingReq = Object.keys(headersToSet).length === 0 ? req : req.clone({ setHeaders: headersToSet });
 
-  return next(req.clone({ setHeaders: headersToSet }));
+  return next(outgoingReq).pipe(
+    catchError((err: unknown) => {
+      if (err instanceof HttpErrorResponse && err.status === 401 && !req.url.includes('/auth/')) {
+        return from(auth.refreshSession()).pipe(
+          switchMap((refreshed) => {
+            if (refreshed) {
+              const newToken = auth.accessToken();
+              const retriedReq = req.clone({
+                setHeaders: {
+                  ...headersToSet,
+                  Authorization: `Bearer ${newToken}`,
+                },
+              });
+              return next(retriedReq);
+            }
+            return throwError(() => err);
+          })
+        );
+      }
+      return throwError(() => err);
+    })
+  );
 };
-

@@ -74,6 +74,24 @@ public sealed partial class GlobalExceptionHandler(
                 "Business Rule Violation",
                 domainEx.Message,
                 []),
+            InvalidOperationException invalidOpEx => (
+                StatusCodes.Status409Conflict,
+                "BUSINESS_CONFLICT",
+                "Conflict",
+                invalidOpEx.Message,
+                []),
+            KeyNotFoundException keyNotFoundEx => (
+                StatusCodes.Status404NotFound,
+                "NOT_FOUND",
+                "Resource Not Found",
+                keyNotFoundEx.Message,
+                []),
+            ArgumentException argEx => (
+                StatusCodes.Status400BadRequest,
+                "INVALID_ARGUMENT",
+                "Invalid Argument",
+                argEx.Message,
+                []),
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "SYS_UNHANDLED_ERROR",
